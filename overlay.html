@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1080, height=1920, initial-scale=1.0" />
+  <title>🌎 Ranking de Países — TikTok LIVE</title>
+  <meta name="description"
+    content="Overlay de ranking de países en tiempo real para TikTok LIVE basado en regalos recibidos." />
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌎</text></svg>" />
+  <link rel="stylesheet" href="/style.css" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap"
+    rel="stylesheet" />
+</head>
+
+<body>
+  <!-- Fondo de estrellas -->
+  <div id="stars-container"></div>
+  <div id="particles-container"></div>
+
+  <!-- Contenedor principal -->
+  <div id="overlay">
+    <!-- Header con marco ornamental -->
+    <header id="header">
+      <div id="header-ornament"></div>
+      <div id="header-inner">
+        <div id="timer-left">
+          <span id="timer-elapsed">00:00:00</span>
+        </div>
+        <h1 id="title">
+          <span class="title-icon">⚔️</span>
+          <span class="title-text">BATALLA DE PAÍSES</span>
+          <span class="title-icon">⚔️</span>
+        </h1>
+        <div id="timer-right">
+          <span id="timer">07:00</span>
+        </div>
+      </div>
+      <!-- Barra de escala -->
+      <div id="scale-bar">
+        <div id="scale-labels">
+          <span>0</span>
+          <span>500</span>
+          <span>1K</span>
+        </div>
+        <div id="timer-progress-bg">
+          <div id="timer-progress"></div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Status de conexión -->
+    <div id="status-badge">
+      <span id="status-dot"></span>
+      <span id="status-text">Conectando...</span>
+    </div>
+
+    <!-- Ranking -->
+    <div id="ranking-container">
+      <div id="ranking-empty">
+        <div class="empty-icon">🌎</div>
+        <div class="empty-text">Esperando regalos...</div>
+        <div class="empty-sub">Los países aparecerán cuando los espectadores envíen regalos</div>
+      </div>
+    </div>
+
+    <!-- Efecto de regalo grande -->
+    <div id="big-gift-overlay" class="hidden">
+      <div id="big-gift-content">
+        <div id="big-gift-burst"></div>
+        <div id="big-gift-avatar"></div>
+        <div id="big-gift-info">
+          <div id="big-gift-username"></div>
+          <div id="big-gift-amount"></div>
+          <div id="big-gift-country"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Efecto de cambio de líder -->
+    <div id="leader-change-overlay" class="hidden">
+      <div id="leader-change-content">
+        <div class="crown-mega">👑</div>
+        <div id="leader-flag-mega"></div>
+        <div id="leader-name-mega"></div>
+        <div id="leader-score-mega"></div>
+      </div>
+    </div>
+
+    <!-- Efecto de fin de ronda -->
+    <div id="round-reset-overlay" class="hidden">
+      <div id="round-reset-content">
+        <div class="trophy-icon">🏆</div>
+        <div id="winner-flag"></div>
+        <div id="winner-name"></div>
+        <div id="winner-score"></div>
+        <div class="new-round-text">¡NUEVA RONDA!</div>
+      </div>
+    </div>
+
+    <!-- Reacciones flotantes -->
+    <div id="reactions-container"></div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/overlay.js"></script>
+</body>
+
+</html>
