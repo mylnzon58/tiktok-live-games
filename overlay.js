@@ -16,6 +16,145 @@ let elapsedSeconds = 0;
 let elapsedInterval = null;
 
 // ──────────────────────────────────────────────────────────────
+// 🔊 Sistema de Sonido (Web Audio API)
+// ──────────────────────────────────────────────────────────────
+let audioCtx = null;
+
+function getAudioCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+}
+
+// Sonido: regalo normal (cha-ching moneda)
+function playCoinSound() {
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+    // Nota aguda tipo moneda
+    [1200, 1600, 2000].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + i * 0.08);
+        gain.gain.setValueAtTime(0.15, now + i * 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.15);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now + i * 0.08);
+        osc.stop(now + i * 0.08 + 0.15);
+    });
+}
+
+// Sonido: regalo grande (fanfarria épica)
+function playBigGiftSound() {
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+    const notes = [523, 659, 784, 1047, 1319, 1568];
+    notes.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(freq, now + i * 0.1);
+        gain.gain.setValueAtTime(0.12, now + i * 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.3);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now + i * 0.1);
+        osc.stop(now + i * 0.1 + 0.3);
+    });
+    // Sub bass boom
+    const bass = ctx.createOscillator();
+    const bassGain = ctx.createGain();
+    bass.type = 'sine';
+    bass.frequency.setValueAtTime(80, now);
+    bass.frequency.exponentialRampToValueAtTime(40, now + 0.5);
+    bassGain.gain.setValueAtTime(0.3, now);
+    bassGain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+    bass.connect(bassGain).connect(ctx.destination);
+    bass.start(now);
+    bass.stop(now + 0.5);
+}
+
+// Sonido: cambio de líder (trompetas triunfantes)
+function playLeaderSound() {
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+    const melody = [
+        { f: 523, t: 0, d: 0.15 },
+        { f: 659, t: 0.15, d: 0.15 },
+        { f: 784, t: 0.3, d: 0.15 },
+        { f: 1047, t: 0.45, d: 0.4 },
+    ];
+    melody.forEach(({ f, t, d }) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(f, now + t);
+        gain.gain.setValueAtTime(0.08, now + t);
+        gain.gain.setValueAtTime(0.08, now + t + d * 0.7);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + t + d);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now + t);
+        osc.stop(now + t + d);
+    });
+}
+
+// Sonido: victoria de ronda
+function playVictorySound() {
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+    const fanfare = [
+        { f: 392, t: 0, d: 0.2 },
+        { f: 523, t: 0.2, d: 0.2 },
+        { f: 659, t: 0.4, d: 0.2 },
+        { f: 784, t: 0.6, d: 0.15 },
+        { f: 1047, t: 0.75, d: 0.5 },
+    ];
+    fanfare.forEach(({ f, t, d }) => {
+        ['sawtooth', 'square'].forEach((type, ti) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(f * (ti === 1 ? 1.005 : 1), now + t);
+            gain.gain.setValueAtTime(0.06, now + t);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + t + d);
+            osc.connect(gain).connect(ctx.destination);
+            osc.start(now + t);
+            osc.stop(now + t + d);
+        });
+    });
+}
+
+// Sonido: warning del timer
+function playTickSound() {
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, now);
+    gain.gain.setValueAtTime(0.1, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.08);
+}
+
+// Sonido: subida de ranking (whoosh ascendente)
+function playRankUpSound() {
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(400, now);
+    osc.frequency.exponentialRampToValueAtTime(1200, now + 0.2);
+    gain.gain.setValueAtTime(0.1, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.25);
+}
+
+// ──────────────────────────────────────────────────────────────
 // Inicialización
 // ──────────────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
@@ -142,8 +281,10 @@ socket.on("timerUpdate", (seconds) => {
     timerEl.classList.remove("warning", "critical");
     if (seconds <= 30) {
         timerEl.classList.add("critical");
+        if (seconds > 0 && seconds % 2 === 0) playTickSound();
     } else if (seconds <= 60) {
         timerEl.classList.add("warning");
+        if (seconds % 5 === 0) playTickSound();
     }
 
     // Actualizar escala dinámica
@@ -286,6 +427,7 @@ function renderRanking(countries) {
             setTimeout(() => row.classList.remove("flash"), 500);
 
             spawnReaction("💎");
+            playCoinSound();
         }
 
         fragment.appendChild(row);
@@ -329,6 +471,7 @@ socket.on("leaderChanged", (leader) => {
     for (let i = 0; i < 8; i++) {
         setTimeout(() => spawnReaction("👑"), i * 200);
     }
+    playLeaderSound();
 });
 
 // ──────────────────────────────────────────────────────────────
@@ -361,6 +504,7 @@ socket.on("bigGift", (data) => {
     for (let i = 0; i < 10; i++) {
         setTimeout(() => spawnReaction("💥"), i * 150);
     }
+    playBigGiftSound();
 });
 
 // ──────────────────────────────────────────────────────────────
@@ -392,6 +536,7 @@ socket.on("roundReset", (data) => {
     for (let i = 0; i < 10; i++) {
         setTimeout(() => spawnReaction("🎉"), i * 200);
     }
+    playVictorySound();
 });
 
 // ──────────────────────────────────────────────────────────────
