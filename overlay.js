@@ -178,7 +178,6 @@ function renderRanking(countries) {
 
     // Solo mostrar países con score > 0
     const sorted = Object.entries(countries)
-        .filter(([, v]) => v.score > 0)
         .sort((a, b) => b[1].score - a[1].score)
         .slice(0, MAX_VISIBLE);
 
