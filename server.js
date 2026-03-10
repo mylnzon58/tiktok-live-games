@@ -323,22 +323,50 @@ setInterval(() => {
   const playerIds = Object.keys(arenaPlayers);
   const totalPlayers = playerIds.length;
 
-  for (const id of playerIds) {
-    const idleTime = now - arenaPlayers[id].lastActive;
+  // Obtener IDs ordenadas por puntaje (para saber quiénes son los Top y quiénes los más bajos)
+  const sortedByScore = playerIds.slice().sort((a, b) => arenaPlayers[b].score - arenaPlayers[a].score);
+  const topHighscoreIds = sortedByScore.slice(0, 5); // El Top 5 siempre está protegido
 
-    // Si la pantalla está llena (> 30 jugadores), borramos a los AFK de 30 segundos.
-    // Si hay espacio, los dejamos vivir como "fantasmas" hasta 5 minutos (300 segs) para mantener bulto.
-    const shouldRemove = (totalPlayers > 30 && idleTime > 30 * 1000) || (idleTime > 300 * 1000);
+  for (const id of playerIds) {
+    const p = arenaPlayers[id];
+    const idleTime = now - p.lastActive;
+
+    // --- PROTECCIÓN VIP (DONADORES) ---
+    // Si tienen buen score (Top 5 o > 1000 puntos), los consideramos "Legendarios"
+    // No se borran por el tiempo estándar de 5 minutos.
+    const isVIP = topHighscoreIds.includes(id) || p.score >= 1000;
+
+    let shouldRemove = false;
+
+    if (totalPlayers > 30) {
+      // Si está lleno, borramos a los inactivos de 30s que NO sean VIPs.
+      // Si todos son VIPs inactivos, se borrará al de menor puntaje de la lista total.
+      if (!isVIP && idleTime > 30 * 1000) {
+        shouldRemove = true;
+      } else if (idleTime > 60 * 1000) {
+        // Si incluso un VIP está AFK mucho tiempo en sala llena, 
+        // solo lo borramos si es uno de los 5 con MENOR puntaje de la sala.
+        const lowestScoreIds = sortedByScore.slice(-5);
+        if (lowestScoreIds.includes(id)) {
+          shouldRemove = true;
+        }
+      }
+    } else {
+      // Si hay espacio, los VIPs son inmortales. Los normales mueren a los 5 min.
+      if (!isVIP && idleTime > 300 * 1000) {
+        shouldRemove = true;
+      }
+    }
 
     if (shouldRemove) {
       delete arenaPlayers[id];
       changed = true;
       io.emit("arena:leave", { id });
-      console.log(`🧹 ARENA SWEEP: Removido jugador inactivo ${id}`);
+      console.log(`🧹 ARENA SWEEP: Removido (${isVIP ? 'VIP' : 'Normal'}) inactivo ${id}`);
     }
   }
   if (changed) {
-    broadcastArenaSync(true); // Forzar sincronización en sweep
+    broadcastArenaSync(true);
   }
 }, 5000);
 
