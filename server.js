@@ -361,32 +361,42 @@ setInterval(() => {
     }
   }
 
-  // 2. Limpiar Arena (Lucha activa)
-  // Hall of Fame Top 5 está protegido de borrado por AFK
+  // 2. Limpiar Arena (Lucha activa) con Prioridad de Mérito (Neuromarketing)
+  // Hall of Fame Top 5 está protegido de borrado por AFK estándar
   const topHallOfFameIds = Object.values(arenaHallOfFame)
     .sort((a, b) => b.score - a.score)
     .slice(0, 5)
     .map(p => p.id);
 
-  for (const id of playerIds) {
+  // Ordenamos los jugadores actuales por score ASCENDENTE (los más pobres primero)
+  const playersSortedAsc = playerIds.slice().sort((a, b) => (arenaPlayers[a].score || 0) - (arenaPlayers[b].score || 0));
+
+  for (const id of playersSortedAsc) {
     const p = arenaPlayers[id];
+    if (!p) continue;
+
     const idleTime = now - p.lastActive;
-    const isVIP = topHallOfFameIds.includes(id) || p.score >= 1000;
+    const isKing = topHallOfFameIds.includes(id);
+    const score = p.score || 0;
 
     let shouldRemove = false;
 
     if (totalPlayers > 30) {
-      if (!isVIP && idleTime > 30 * 1000) {
+      // REGLA DE ORO: Si el cuarto está lleno, los que entran pero NO donan se van rápido (30s)
+      if (!isKing && score < 100 && idleTime > 30 * 1000) {
         shouldRemove = true;
-      } else if (idleTime > 300 * 1000) {
-        // Incluso un VIP puede ser borrado si el cuarto está súper lleno y lleva 5 min AFK
-        // Pero solo si no es el Top 1 actual
-        if (id !== topHallOfFameIds[0]) shouldRemove = true;
+      }
+      // Si son donadores medios pero están AFK, se van a los 5 min para dar espacio
+      else if (!isKing && idleTime > 300 * 1000) {
+        shouldRemove = true;
+      }
+      // Si es un Rey (Top 5) pero lleva 1 hora AFK en sala llena, se retira (12h en HOF se mantiene)
+      else if (isKing && idleTime > 3600 * 1000) {
+        shouldRemove = true;
       }
     } else {
-      // Si hay espacio, los VIPs (Top 5 o score alto) duran hasta 12h (por el HOF)
-      // Los normales se van a los 10 min
-      if (!isVIP && idleTime > 600 * 1000) {
+      // Si hay espacio, los Reyes son inmortales. Los normales se van a los 10 min.
+      if (!isKing && idleTime > 600 * 1000) {
         shouldRemove = true;
       }
     }
@@ -395,7 +405,7 @@ setInterval(() => {
       delete arenaPlayers[id];
       changed = true;
       io.emit("arena:leave", { id });
-      console.log(`🧹 ARENA SWEEP: Removido (${isVIP ? 'VIP' : 'Normal'}) inactivo ${id}`);
+      console.log(`🧹 ARENA SWEEP: Removido (${isKing ? 'REY' : 'Peón'}) ${id} (Score:${score})`);
     }
   }
   if (changed) {
