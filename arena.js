@@ -20,26 +20,19 @@ window.addEventListener("resize", () => {
 let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 let soundEnabled = true; // Por defecto lo activamos
 
-const obsUnlocker = document.getElementById('obs-audio-unlocker');
-
-// Attempt auto-unlock de AudioContext y ocultar overlay
+// Attempt auto-unlock de AudioContext silencioso
 function tryUnlockAudio() {
     if (audioCtx.state === 'suspended') {
-        // Al interactuar forzar resume
         audioCtx.resume().then(() => {
-            checkAndHideUnlocker();
+            checkAudioState();
         }).catch(e => { });
     } else {
-        checkAndHideUnlocker();
+        checkAudioState();
     }
 }
 
-function checkAndHideUnlocker() {
+function checkAudioState() {
     if (audioCtx.state === 'running' || audioCtx.state === 'closed') {
-        if (obsUnlocker) {
-            obsUnlocker.style.opacity = '0';
-            setTimeout(() => obsUnlocker.style.display = 'none', 500);
-        }
         if (!isBgmPlaying && typeof startBgm === 'function') {
             startBgm();
         }
@@ -59,7 +52,7 @@ document.addEventListener('keydown', tryUnlockAudio);
 let ctxUnlocker = setInterval(() => {
     if (audioCtx.state === 'running') {
         clearInterval(ctxUnlocker);
-        checkAndHideUnlocker();
+        checkAudioState();
     } else {
         // Intento silencioso constante
         audioCtx.resume().catch(e => { });
@@ -73,7 +66,7 @@ soundBtn.classList.add('active');
 soundBtn.addEventListener('click', (e) => {
     e.stopPropagation(); // Evitar doble ejecución accidental
     if (audioCtx.state === 'suspended') {
-        audioCtx.resume().then(() => checkAndHideUnlocker());
+        audioCtx.resume().then(() => checkAudioState());
     }
     soundEnabled = !soundEnabled;
     e.target.textContent = soundEnabled ? '🔊 Sonido ON' : '🔇 Sonido OFF';
