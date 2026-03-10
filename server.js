@@ -448,8 +448,6 @@ function connectToTikTok() {
       }
 
       // ── LOGICA PARA MODO ARENA ──
-      // Emisión incondicional para que la arena la capte independientemente
-      // El avatar pudo haber mandado un regalo por primera vez, asegurar su spawn
       const arenaUserObj = data.user || {
         uniqueId: data.uniqueId,
         nickname: data.nickname || data.uniqueId,
@@ -458,13 +456,22 @@ function connectToTikTok() {
 
       initOrUpdateArenaPlayer(arenaUserObj);
 
-      // Despachar a arena!
+      // Limpieza de datos numéricos vitales para la formula del daño
+      const finalCount = Math.max(data.repeatCount || data.count || 1, 1);
+
+      // Mucho ojo: diamondCount a veces viene en data.gift.diamond_count o data.diamondCount
+      let finalDiamonds = 1;
+      if (typeof data.diamondCount === "number") finalDiamonds = data.diamondCount;
+      else if (data.gift && typeof data.gift.diamond_count === "number") finalDiamonds = data.gift.diamond_count;
+
+      console.log(`⚔️ [ARENA GIFT] @${arenaUserObj.uniqueId} -> ${data.giftName} (Q:${finalCount} D:${finalDiamonds})`);
+
       io.emit("arena:gift", {
         userId: arenaUserObj.uniqueId || arenaUserObj.userId || data.uniqueId,
-        giftName: data.giftName || "Rose",
-        giftId: data.giftId,
-        count: Math.max(repeatCount, 1),
-        diamondCount: Math.max(diamondCount, 1)
+        giftName: data.giftName || "Rosa",
+        giftId: data.giftId || 1,
+        count: finalCount,
+        diamondCount: finalDiamonds
       });
 
     } catch (err) {
