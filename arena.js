@@ -476,7 +476,7 @@ class Player {
             const decayFactor = Math.min((idleTime - 15000) / 10000, 1);
 
             // SPECTATOR MODE: No desaparecen del todo hasta que el servidor los borre
-            const minRadius = 15;
+            const minRadius = PLAYER_RADIUS; // El usuario pidió que no se achiquen menos que el tamaño inicial
             const minOpacity = 0.35;
 
             // Limitar encogimiento y transparencia
