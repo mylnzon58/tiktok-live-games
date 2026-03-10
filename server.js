@@ -6,6 +6,7 @@ const http = require("http");
 const { Server } = require("socket.io");
 const path = require("path");
 const { WebcastPushConnection } = require("tiktok-live-connector");
+const fs = require("fs");
 
 // ──────────────────────────────────────────────────────────────
 // Config
@@ -14,6 +15,7 @@ const PORT = process.env.PORT || 3000;
 const TIKTOK_USERNAME = process.env.TIKTOK_USERNAME || "juanjoclassic";
 const ROUND_DURATION = 7 * 60; // 7 minutos en segundos
 const BIG_GIFT_THRESHOLD = 1000; // coins mínimos para efecto especial
+const LIKES_PER_POINT = 100; // cada 100 likes = 1 punto
 
 // ──────────────────────────────────────────────────────────────
 // Express + Socket.io
@@ -28,16 +30,68 @@ app.get("/overlay", (_req, res) => {
   res.sendFile(path.join(__dirname, "overlay.html"));
 });
 
+// NUEVO: Ruta para el segundo juego (Arena)
+app.get("/arena", (_req, res) => {
+  res.sendFile(path.join(__dirname, "arena.html"));
+});
+
+// LOGICA TEMPORAL DE PRUEBA (TEST BOT)
+app.get("/test-arena-bot", (_req, res) => {
+  res.send("<h1>🤖 Bot Arena Iniciado</h1><p>Vuelve al overlay de la Arena, el bot lanzará regalos durante 15 segundos.</p>");
+
+  const botNames = ["Morita 🥊", "Juanjo 🇦🇷", "Ninja", "Destroyer", "DarkKnight"];
+  const gifts = ["Rose", "Donut", "Perfume", "Chili", "Lion"];
+
+  // Spanw 5 bots
+  botNames.forEach((name, i) => {
+    initOrUpdateArenaPlayer({ uniqueId: `bot_${i}`, nickname: name, profilePictureUrl: "https://p16-webcast.tiktokcdn.com/webcast-va/new_gifter_badge_v3.png~tplv-obj.image" });
+  });
+
+  // Lanzar regalos y ataques aleatorios
+  let ticks = 0;
+  const t = setInterval(() => {
+    ticks++;
+    if (ticks > 30) { clearInterval(t); return; } // para en 15 segs
+
+    const randomGiver = `bot_${Math.floor(Math.random() * botNames.length)}`;
+    const randomGift = gifts[Math.floor(Math.random() * gifts.length)];
+    const isLike = Math.random() > 0.8;
+
+    if (isLike) {
+      io.emit("arena:like", { userId: randomGiver, likeCount: 20 });
+    } else {
+      io.emit("arena:gift", {
+        userId: randomGiver,
+        giftName: randomGift,
+        giftId: 100,
+        count: Math.floor(Math.random() * 3) + 1,
+        diamondCount: Math.floor(Math.random() * 20) + 1
+      });
+    }
+  }, 500);
+});
+
 app.get("/", (_req, res) => {
   res.redirect("/overlay");
 });
+
+// ──────────────────────────────────────────────────────────────
+// Helper para banderas emoji desde código de país ISO
+// ──────────────────────────────────────────────────────────────
+function countryCodeToFlag(code) {
+  if (!code || code.length !== 2) return "🌍";
+  const upper = code.toUpperCase();
+  return String.fromCodePoint(
+    ...[...upper].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65)
+  );
+}
 
 // ──────────────────────────────────────────────────────────────
 // Países iniciales
 // ──────────────────────────────────────────────────────────────
 const DEFAULT_COUNTRIES = {
   // ── LATINOAMÉRICA & CARIBE ──
-  AR: { score: 0, flag: "🇦🇷", name: "Argentina", avatars: [], donors: 0 },
+  AR: { score: 0, flag: "🇦🇷", name: "Argentina" },
   MX: { score: 0, flag: "🇲🇽", name: "México" },
   BR: { score: 0, flag: "🇧🇷", name: "Brasil" },
   CO: { score: 0, flag: "🇨🇴", name: "Colombia" },
@@ -143,35 +197,28 @@ const DEFAULT_COUNTRIES = {
   UZ: { score: 0, flag: "🇺🇿", name: "Uzbekistán" },
   KZ: { score: 0, flag: "🇰🇿", name: "Kazajistán" },
   MN: { score: 0, flag: "🇲🇳", name: "Mongolia" },
+  // ── GLOBAL ──
+  GLOBAL: { score: 0, flag: "🌍", name: "Mundo" },
 };
 
-// Inicializar países con avatars vacíos
+// Inicializar países asegurando que tengan la estructura completa para el overlay
 function initCountries() {
   const c = JSON.parse(JSON.stringify(DEFAULT_COUNTRIES));
   for (const code in c) {
     if (!c[code].avatars) c[code].avatars = [];
     if (!c[code].donors) c[code].donors = 0;
+    if (!c[code].likesAccumulated) c[code].likesAccumulated = 0;
   }
   return c;
 }
 let countries = initCountries();
 
 // ──────────────────────────────────────────────────────────────
-// Helper para banderas emoji desde código de país ISO
-// ──────────────────────────────────────────────────────────────
-function countryCodeToFlag(code) {
-  if (!code || code.length !== 2) return "🏳️";
-  const upper = code.toUpperCase();
-  return String.fromCodePoint(
-    ...[...upper].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65)
-  );
-}
-
-// ──────────────────────────────────────────────────────────────
-// Timer de ronda
+// Timer de ronda y Líder
 // ──────────────────────────────────────────────────────────────
 let timeRemaining = ROUND_DURATION;
 let timerInterval = null;
+let currentLeader = null;
 
 function startTimer() {
   clearInterval(timerInterval);
@@ -205,11 +252,6 @@ function resetRound() {
   console.log("🔄 Nueva ronda iniciada" + (winner ? ` — Ganador: ${winner.flag} ${winner.code}` : ""));
 }
 
-// ──────────────────────────────────────────────────────────────
-// Líder actual
-// ──────────────────────────────────────────────────────────────
-let currentLeader = null;
-
 function checkLeaderChange() {
   const sorted = Object.entries(countries)
     .filter(([, v]) => v.score > 0)
@@ -231,20 +273,100 @@ function checkLeaderChange() {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Conexión a TikTok LIVE
+// Estado del Modo Arena (Segundo Juego)
+// ──────────────────────────────────────────────────────────────
+const arenaPlayers = {};
+
+function initOrUpdateArenaPlayer(user) {
+  if (!user || (!user.uniqueId && !user.userId)) return null;
+  const id = user.uniqueId || user.userId;
+
+  if (!arenaPlayers[id]) {
+    // Si no existe, lo creamos y le damos spawn random en el cliente
+    arenaPlayers[id] = {
+      id: id,
+      name: user.nickname || id,
+      avatar: user.profilePictureUrl || "",
+      hp: 1000,
+      score: 0
+    };
+    // Emitir que un nuevo gladiador entró
+    io.emit("arena:join", arenaPlayers[id]);
+  } else {
+    // Actualizar nombre o avatar en caso cambien
+    arenaPlayers[id].name = user.nickname || arenaPlayers[id].name;
+    if (user.profilePictureUrl) arenaPlayers[id].avatar = user.profilePictureUrl;
+  }
+  return arenaPlayers[id];
+}
+
+// ──────────────────────────────────────────────────────────────
+// Sistema de Overrides (Forzar país manualmente)
+// ──────────────────────────────────────────────────────────────
+const userCountryOverrides = {};
+
+// ──────────────────────────────────────────────────────────────
+// Safe Country Resolver
+// ──────────────────────────────────────────────────────────────
+function resolveCountry(data) {
+  try {
+    const uniqueId = (data.uniqueId || "").toLowerCase();
+
+    // 1. Detect country code typed in chat (manual override)
+    if (uniqueId && userCountryOverrides[uniqueId]) {
+      return userCountryOverrides[uniqueId];
+    }
+
+    // 2. Detect flag emoji inside username/nickname
+    const name = (data.nickname || uniqueId || "").toUpperCase();
+    const flags = {
+      "🇦🇷": "AR", "🇲🇽": "MX", "🇧🇷": "BR", "🇨🇴": "CO", "🇺🇸": "US",
+      "🇪🇸": "ES", "🇻🇪": "VE", "🇵🇪": "PE", "🇬🇹": "GT", "🇨🇦": "CA",
+      "🇪🇨": "EC", "🇭🇳": "HN", "🇳🇮": "NI", "🇨🇷": "CR", "🇸🇻": "SV",
+      "🇬🇧": "GB", "🇩🇪": "DE", "🇮🇱": "IL", "🇦🇱": "AL", "🇨🇺": "CU",
+      "🇨🇱": "CL", "🇵🇭": "PH", "🇮🇹": "IT", "🇫🇷": "FR"
+    };
+
+    for (const flag in flags) {
+      if (name.includes(flag)) return flags[flag];
+    }
+
+    // 3. Fallback to profile country location (lowest priority)
+    let countryCode = (data.user?.countryCode || data.countryCode || "").toUpperCase();
+    if (countryCode && countryCode.length === 2 && countryCode !== 'XX') {
+      return countryCode; // Retornamos si ya lo tiene válido
+    }
+    let location = (data.user?.location || "").toUpperCase();
+    if (location && location.length === 2) {
+      return location;
+    }
+
+    // Si llega aquí, es "GLOBAL"
+    return "GLOBAL";
+  } catch (err) {
+    console.error("❌ Error en resolveCountry:", err.message);
+    return "GLOBAL";
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// Conexión a TikTok LIVE (Usando la nueva API)
 // ──────────────────────────────────────────────────────────────
 let tiktokLive = null;
 let reconnectAttempts = 0;
 const MAX_RECONNECT_DELAY = 30000;
+let reconnectTimer = null;
 
 function connectToTikTok() {
+  if (tiktokLive) {
+    try {
+      tiktokLive.disconnect();
+    } catch (e) { }
+  }
+
   console.log(`🔌 Conectando a TikTok LIVE: @${TIKTOK_USERNAME}...`);
 
-  tiktokLive = new WebcastPushConnection(TIKTOK_USERNAME, {
-    processInitialData: true,
-    enableExtendedGiftInfo: true,
-    enableWebsocketUpgrade: true,
-  });
+  tiktokLive = new WebcastPushConnection(TIKTOK_USERNAME);
 
   tiktokLive
     .connect()
@@ -252,7 +374,6 @@ function connectToTikTok() {
       reconnectAttempts = 0;
       console.log(`✅ Conectado a TikTok LIVE de @${TIKTOK_USERNAME}`);
       console.log(`   Room ID: ${state.roomId}`);
-      console.log(`   Espectadores: ${state.viewerCount}`);
       io.emit("status", { connected: true, username: TIKTOK_USERNAME });
     })
     .catch((err) => {
@@ -263,117 +384,232 @@ function connectToTikTok() {
   // ── Gift event ──
   tiktokLive.on("gift", (data) => {
     try {
-      const countryCode = (
-        data.uniqueId?.slice(-2) ||
-        data.user?.countryCode ||
-        data.countryCode ||
-        ""
-      ).toUpperCase();
+      // Registrar data temporal para análisis si se desea (opcional)
+      fs.writeFileSync(path.join(__dirname, "last_gift.json"), JSON.stringify(data, null, 2));
 
-      // Si no tiene código de país, intentar usar el de la biografía o ignorar
-      if (!countryCode || countryCode.length !== 2) {
-        console.log(`⚠️ Regalo sin país válido de @${data.uniqueId || "desconocido"}`);
+      // Resolver país de forma segura
+      let country = resolveCountry(data);
+
+      const repeatCount = data.repeatCount || 1;
+      const diamondCount = data.diamondCount || 1;
+      const coins = diamondCount * repeatCount;
+
+      // Si es un regalo de racha y NO ha terminado, ignoramos el evento
+      if (data.giftType === 1 && !data.repeatEnd) {
         return;
       }
 
-      // Calcular valor real del regalo
-      const diamonds = data.diamondCount || data.giftValue || 1;
-      const repeat = data.repeatCount || 1;
-      const coins = diamonds * repeat;
-
-      // Solo procesar si es un regalo finalizado o no es repetible
-      if (data.giftType === 1 && data.repeatEnd === false) {
-        // Es un regalo repetible que aún no terminó, esperar
-        return;
-      }
-
-      // Crear país si no existe
-      if (!countries[countryCode]) {
-        countries[countryCode] = {
+      // Si un nuevo código de país aparece, crearlo dinámicamente
+      if (!countries[country]) {
+        countries[country] = {
           score: 0,
-          flag: countryCodeToFlag(countryCode),
-          name: countryCode,
+          flag: country === "GLOBAL" ? "🌍" : countryCodeToFlag(country),
+          name: country,
           avatars: [],
           donors: 0,
+          likesAccumulated: 0
         };
       }
 
-      countries[countryCode].score += coins;
-      countries[countryCode].donors++;
+      countries[country].score += coins;
+      countries[country].donors++;
 
-      // Guardar avatar del donante (máximo 5 por país)
-      const avatarUrl = data.profilePictureUrl || "";
-      if (avatarUrl && countries[countryCode].avatars.length < 5) {
-        if (!countries[countryCode].avatars.includes(avatarUrl)) {
-          countries[countryCode].avatars.push(avatarUrl);
+      // Guardar avatar
+      const avatarUrl = data.profilePictureUrl || data.user?.profilePictureUrl || "";
+      if (avatarUrl && countries[country].avatars.length < 5) {
+        if (!countries[country].avatars.includes(avatarUrl)) {
+          countries[country].avatars.push(avatarUrl);
         }
       }
 
-      console.log(
-        `🎁 ${data.uniqueId || "?"} (${countryCode}) → ${data.giftName || "regalo"} x${repeat} = ${coins} 💎`
-      );
+      console.log(`✅ 🎁 @${data.uniqueId || "?"} (${country}) → ${data.giftName || "regalo"} x${repeatCount} = ${coins} 💎`);
 
-      // Emitir actualización
       io.emit("rankingUpdate", countries);
       checkLeaderChange();
 
-      // Efecto de regalo grande
+      // Efecto especial
       if (coins >= BIG_GIFT_THRESHOLD) {
         io.emit("bigGift", {
-          country: countryCode,
-          flag: countries[countryCode].flag,
+          country: country,
+          flag: countries[country].flag,
           coins,
           giftName: data.giftName || "Regalo",
           username: data.uniqueId || "?",
-          avatarUrl: data.profilePictureUrl || "",
+          avatarUrl: avatarUrl,
         });
-        console.log(`💥 ¡REGALO GRANDE! ${coins} 💎 de @${data.uniqueId}`);
       }
+
+      // --- EMISIÓN PARA ARENA ---
+      if (data.user) {
+        initOrUpdateArenaPlayer(data.user);
+        // Enviamos el regalo a la Arena para que lo anime (Ej. rosa = ataque, donut = rayo)
+        io.emit("arena:gift", {
+          userId: data.uniqueId || data.userId,
+          giftName: data.giftName || "Rose",
+          giftId: data.giftId,
+          count: repeatCount,
+          diamondCount: diamondCount
+        });
+      }
+
     } catch (err) {
-      console.error("Error procesando regalo:", err.message);
+      console.error("❌ Crasheo evitado en evento gift:", err);
     }
   });
 
   // ── Like event ──
   tiktokLive.on("like", (data) => {
-    console.log(`❤️ @${data.uniqueId || "?"} dio ${data.likeCount || 1} likes`);
+    try {
+      let country = resolveCountry(data);
+
+      if (!countries[country]) {
+        countries[country] = {
+          score: 0,
+          flag: country === "GLOBAL" ? "🌍" : countryCodeToFlag(country),
+          name: country,
+          avatars: [],
+          donors: 0,
+          likesAccumulated: 0
+        };
+      }
+
+      if (countries[country].likesAccumulated === undefined) {
+        countries[country].likesAccumulated = 0;
+      }
+
+      countries[country].likesAccumulated += (data.likeCount || 1);
+
+      if (countries[country].likesAccumulated >= LIKES_PER_POINT) {
+        const pointsToAdd = Math.floor(countries[country].likesAccumulated / LIKES_PER_POINT);
+        countries[country].score += pointsToAdd;
+        countries[country].likesAccumulated %= LIKES_PER_POINT;
+
+        io.emit("rankingUpdate", countries);
+        checkLeaderChange();
+      }
+
+      // --- EMISIÓN PARA ARENA (Likes curan) ---
+      if (data.user) {
+        initOrUpdateArenaPlayer(data.user);
+        io.emit("arena:like", {
+          userId: data.uniqueId || data.userId,
+          likeCount: data.likeCount || 1,
+          totalLikeCount: data.totalLikeCount
+        });
+      }
+
+    } catch (err) {
+      console.error("❌ Crasheo evitado en evento like:", err);
+    }
   });
 
-  // ── Follow event ──
-  tiktokLive.on("follow", (data) => {
-    console.log(`➕ Nuevo seguidor: @${data.uniqueId || "?"}`);
+  // ── Chat event (Mandos manuales / Detección de país) ──
+  tiktokLive.on("chat", (data) => {
+    try {
+      const text = (data.comment || "").trim().toUpperCase();
+      const uniqueId = (data.uniqueId || "").toLowerCase();
+
+      // 1. Detectar si el usuario escribe su país (Ejemplo: "AR", "MX", "CO")
+      // Validamos si es la palabra exacta, ej: "AR"
+      if (text.length === 2 && DEFAULT_COUNTRIES[text]) {
+        userCountryOverrides[uniqueId] = text;
+        console.log(`💬 CHAT DETECT (código exacto): @${uniqueId} es de ${text}`);
+      } else {
+        // 2. Si es una frase, buscar códigos seguros
+        const safeCodes = ["AR", "MX", "CO", "CL", "PE", "VE", "EC", "BO", "PY", "UY", "US", "GT", "HN", "CR", "SV", "PR", "CU", "PA", "BR", "IT", "FR", "GB", "RU", "JP", "KR", "CN"];
+        const words = text.split(/[\\s,.;!?]+/);
+        let found = false;
+        for (const word of words) {
+          if (word.length === 2 && safeCodes.includes(word)) {
+            userCountryOverrides[uniqueId] = word;
+            console.log(`💬 CHAT DETECT (en frase): @${uniqueId} es de ${word}`);
+            found = true;
+            break; // Stop at first valid
+          }
+        }
+
+        // 3. Buscar banderas en el chat
+        if (!found) {
+          const flags = {
+            "🇦🇷": "AR", "🇲🇽": "MX", "🇧🇷": "BR", "🇨🇴": "CO", "🇺🇸": "US",
+            "🇪🇸": "ES", "🇻🇪": "VE", "🇵🇪": "PE", "🇬🇹": "GT", "🇨🇦": "CA",
+            "🇪🇨": "EC", "🇭🇳": "HN", "🇳🇮": "NI", "🇨🇷": "CR", "🇸🇻": "SV",
+            "🇬🇧": "GB", "🇩🇪": "DE", "🇮🇱": "IL", "🇦🇱": "AL", "🇨🇺": "CU",
+            "🇨🇱": "CL", "🇵🇭": "PH", "🇮🇹": "IT", "🇫🇷": "FR"
+          };
+          for (const flag in flags) {
+            if (text.includes(flag)) {
+              userCountryOverrides[uniqueId] = flags[flag];
+              console.log(`💬 CHAT DETECT (Bandera): @${uniqueId} es de ${flags[flag]}`);
+              break;
+            }
+          }
+        }
+      }
+
+      // Mandos manuales (Moderadores/Admin)
+      if (data.isModerator || (uniqueId && uniqueId === TIKTOK_USERNAME.toLowerCase())) {
+        if (text.startsWith("!PAIS")) {
+          const parts = text.split(" ");
+          if (parts.length >= 3) {
+            let targetUser = parts[1].replace("@", "").toLowerCase();
+            const targetCountry = parts[2].toUpperCase();
+
+            if (targetCountry.length === 2 || targetCountry === "GLOBAL") {
+              userCountryOverrides[targetUser] = targetCountry;
+              console.log(`🛠️ ADMIN OVERRIDE: @${targetUser} -> ${targetCountry}`);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("❌ Crasheo evitado en evento chat:", err);
+    }
   });
 
-  // ── Member join event ──
-  tiktokLive.on("member", (data) => {
-    console.log(`👋 @${data.uniqueId || "?"} se unió al LIVE`);
-  });
-
-  // ── Disconnected ──
+  // ── Manejo de errores ──
   tiktokLive.on("disconnected", () => {
     console.log("⚡ Desconectado de TikTok LIVE");
     io.emit("status", { connected: false });
     scheduleReconnect();
   });
 
-  // ── Stream end ──
   tiktokLive.on("streamEnd", (actionId) => {
-    console.log(`📴 Stream terminado (acción: ${actionId})`);
+    console.log(`📴 Stream finalizado`);
     io.emit("status", { connected: false, streamEnded: true });
     scheduleReconnect();
   });
 
-  // ── Error ──
   tiktokLive.on("error", (err) => {
-    console.error("❌ Error de TikTok:", err.message);
+    console.error("❌ Error de TikTok (ignorado para evitar crasheo):", err.message);
   });
+
+  // ── Member event (Entrada al LIVE) ──
+  tiktokLive.on("member", (data) => {
+    try {
+      // Intentar extraer el usuario de data.userId o data.uniqueId si no viene en data.user propiamente
+      const userObj = data.user || {
+        uniqueId: data.uniqueId,
+        nickname: data.nickname || data.uniqueId,
+        profilePictureUrl: data.profilePictureUrl
+      };
+
+      if (userObj && (userObj.uniqueId || userObj.userId)) {
+        initOrUpdateArenaPlayer(userObj);
+      }
+    } catch (e) { }
+  });
+
+  // ── Receive death/score update from Arena Overlay (para consistencia simple) ──
+  // Nota: Esto ocurre al lado de las conexiones de cliente en io.on('connection')
 }
 
 function scheduleReconnect() {
+  clearTimeout(reconnectTimer);
   reconnectAttempts++;
   const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), MAX_RECONNECT_DELAY);
   console.log(`🔄 Reintentando conexión en ${delay / 1000}s (intento ${reconnectAttempts})...`);
-  setTimeout(connectToTikTok, delay);
+  reconnectTimer = setTimeout(connectToTikTok, delay);
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -381,8 +617,19 @@ function scheduleReconnect() {
 // ──────────────────────────────────────────────────────────────
 io.on("connection", (socket) => {
   console.log("🖥️  Overlay conectado");
+  // País State
   socket.emit("rankingUpdate", countries);
   socket.emit("timerUpdate", timeRemaining);
+  // Arena State
+  socket.emit("arena:sync", arenaPlayers);
+
+  // Escuchar si la arena reporta muerte o kill de un jugador
+  socket.on("arena:updatePlayer", (data) => {
+    if (data && data.id && arenaPlayers[data.id]) {
+      arenaPlayers[data.id].hp = data.hp;
+      arenaPlayers[data.id].score = data.score;
+    }
+  });
 
   socket.on("disconnect", () => {
     console.log("🖥️  Overlay desconectado");

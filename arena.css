@@ -1,0 +1,325 @@
+/* ============================================================
+   TikTok LIVE Tap Tap Arena — Estilos 
+   ============================================================ */
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body,
+html {
+    width: 100%;
+    height: 100%;
+    background-color: #050510;
+    overflow: hidden;
+    font-family: 'Rajdhani', sans-serif;
+    color: white;
+}
+
+/* Canvas del juego a pantalla completa */
+#gameCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+/* Botón flotante para cambiar entre juegos */
+#switch-btn {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #a8b0c0;
+    padding: 8px 12px;
+    font-size: 13px;
+    border-radius: 8px;
+    text-decoration: none;
+    z-index: 100;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+    backdrop-filter: blur(4px);
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+#switch-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border-color: #fff;
+}
+
+#sound-btn {
+    position: absolute;
+    top: 15px;
+    left: 190px;
+    background: rgba(255, 60, 60, 0.2);
+    color: #fff;
+    padding: 8px 12px;
+    font-size: 13px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 60, 60, 0.5);
+    cursor: pointer;
+    z-index: 100;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(4px);
+    font-family: 'Rajdhani', sans-serif;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+#sound-btn.active {
+    background: rgba(46, 213, 115, 0.2);
+    border-color: rgba(46, 213, 115, 0.5);
+}
+
+#sound-btn:hover {
+    filter: brightness(1.2);
+}
+
+/* =========================================
+   UI SUPERPUESTA: Guía y Ranking
+   ========================================= */
+
+/* Guía Lateral Izquierda */
+#powers-guide {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: linear-gradient(135deg, rgba(15, 15, 35, 0.8) 0%, rgba(5, 5, 15, 0.9) 100%);
+    border: 1px solid rgba(0, 240, 255, 0.3);
+    padding: 15px;
+    border-radius: 12px;
+    z-index: 10;
+    pointer-events: none;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(5px);
+}
+
+#powers-guide h3 {
+    font-family: 'Bungee', cursive;
+    font-size: 16px;
+    color: #fff;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+}
+
+#powers-guide ul {
+    list-style: none;
+}
+
+#powers-guide li {
+    font-size: 16px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    text-shadow: 1px 1px 2px #000;
+}
+
+#powers-guide img {
+    width: 24px;
+    height: 24px;
+}
+
+.emoji {
+    font-size: 20px;
+    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.3));
+}
+
+#powers-guide li:nth-child(1) {
+    color: #ff4757;
+}
+
+#powers-guide li:nth-child(2) {
+    color: #feca57;
+}
+
+#powers-guide li:nth-child(3) {
+    color: #ff9ff3;
+}
+
+#powers-guide li:nth-child(4) {
+    color: #0abde3;
+}
+
+/* Ranking Lateral Derecho */
+#arena-ranking {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 280px;
+    background: linear-gradient(180deg, rgba(20, 20, 40, 0.85) 0%, rgba(10, 10, 20, 0.9) 100%);
+    border: 1px solid rgba(251, 191, 36, 0.4);
+    border-radius: 12px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+}
+
+.ranking-header {
+    background: linear-gradient(90deg, #d4af37, #f3e5ab, #d4af37);
+    color: #000;
+    font-family: 'Bungee', cursive;
+    text-align: center;
+    padding: 8px 0;
+    font-size: 16px;
+    letter-spacing: 1.5px;
+}
+
+#arena-leaderboard {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 400px;
+    overflow-y: hidden;
+}
+
+.arena-board-row {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    padding: 6px 8px;
+    transition: transform 0.3s;
+    border-left: 3px solid transparent;
+}
+
+.arena-board-row.p1 {
+    background: linear-gradient(90deg, rgba(251, 191, 36, 0.2), rgba(0, 0, 0, 0));
+    border-left-color: #fbbf24;
+}
+
+.board-pos {
+    width: 24px;
+    font-weight: bold;
+    font-size: 16px;
+    color: #888;
+}
+
+.arena-board-row.p1 .board-pos {
+    color: #fbbf24;
+}
+
+.arena-board-row.p2 .board-pos {
+    color: #c0c0c0;
+}
+
+.arena-board-row.p3 .board-pos {
+    color: #cd7f32;
+}
+
+.board-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    margin-right: 8px;
+}
+
+.board-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+}
+
+.board-name {
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+}
+
+.board-stats {
+    display: flex;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.stat-hp {
+    color: #ff4757;
+    font-weight: bold;
+}
+
+.stat-score {
+    color: #fbbf24;
+    font-weight: bold;
+}
+
+/* Capa de interfaces flotantes del canvas (+10, -50) */
+#floating-ui-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.floating-text {
+    position: absolute;
+    font-family: 'Bungee', cursive;
+    font-size: 24px;
+    pointer-events: none;
+    animation: floatUpFade 1.2s ease-out forwards;
+    text-shadow: 0 0 4px #000, 2px 2px 0px #000;
+    transform: translate(-50%, -50%);
+    /* Centrado sobre el origen de spawn */
+}
+
+@keyframes floatUpFade {
+    0% {
+        transform: translate(-50%, -50%) scale(0.5);
+        opacity: 1;
+    }
+
+    20% {
+        transform: translate(-50%, -80%) scale(1.2);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(-50%, -150%) scale(1);
+        opacity: 0;
+    }
+}
+
+.btn-switch-overlay {
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    background: rgba(0, 0, 0, 0.4);
+    color: #a8b0c0;
+    padding: 8px 12px;
+    font-size: 13px;
+    border-radius: 8px;
+    text-decoration: none;
+    z-index: 1000;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+    backdrop-filter: blur(4px);
+    font-family: 'Rajdhani', sans-serif;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.btn-switch-overlay:hover {
+    background: rgba(251, 191, 36, 0.3);
+    color: #fff;
+    border-color: #fbbf24;
+}

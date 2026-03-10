@@ -22,9 +22,27 @@ let audioCtx = null;
 
 function getAudioCtx() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
     return audioCtx;
 }
+
+// Desbloqueo agresivo para iOS/Safari
+['click', 'touchstart', 'mousedown'].forEach(evt => {
+    document.addEventListener(evt, () => {
+        const ctx = getAudioCtx();
+        if (ctx.state === 'suspended') ctx.resume();
+
+        // Crear y detener un oscilador silencioso para "despertar" el audio
+        const osc = ctx.createOscillator();
+        const silent = ctx.createGain();
+        silent.gain.value = 0;
+        osc.connect(silent).connect(ctx.destination);
+        osc.start(0);
+        osc.stop(0.1);
+    }, { once: true });
+});
 
 // Sonido: regalo normal (cha-ching moneda)
 function playCoinSound() {
@@ -162,6 +180,17 @@ document.addEventListener("DOMContentLoaded", () => {
     createParticles();
     startReactionLoop();
     startElapsed();
+
+    // Lógica del botón de prueba
+    const testBtn = document.getElementById("test-audio-btn");
+    if (testBtn) {
+        testBtn.addEventListener("click", () => {
+            playCoinSound();
+            spawnReaction("🔔");
+            // Una vez probado, hacerlo casi invisible o quitarlo
+            testBtn.style.display = "none";
+        });
+    }
 });
 
 // ──────────────────────────────────────────────────────────────
@@ -371,16 +400,14 @@ function renderRanking(countries) {
             row.classList.remove("new-entry");
         }
 
-        // Construir avatares HTML
+        // Construir avatares HTML - ahora irán dentro de la barra
         let avatarsHTML = "";
         if (avatars.length > 0) {
             avatars.slice(0, 3).forEach((url, i) => {
-                avatarsHTML += `<div class="rank-avatar" style="left:${i * 18}px; z-index:${5 - i}">
-          <img src="${url}" alt="" onerror="this.parentElement.classList.add('placeholder');this.remove();" />
+                avatarsHTML += `<div class="rank-avatar in-bar" style="right:${i * 18 + 5}px; z-index:${5 - i}">
+          <img src="${url}" alt="" onerror="this.remove();" />
         </div>`;
             });
-        } else {
-            avatarsHTML = `<div class="rank-avatar placeholder" style="left:0">${data.flag}</div>`;
         }
 
         // Posición class
@@ -391,13 +418,15 @@ function renderRanking(countries) {
 
         row.innerHTML = `
       <div class="${posClass}">${pos}.</div>
-      <div class="rank-avatars" style="width:${Math.min(avatars.length, 3) * 18 + 20}px">
-        ${avatarsHTML}
+      <div class="rank-avatars" style="width:34px">
+        <div class="rank-avatar placeholder" style="left:0">${data.flag}</div>
       </div>
       <div class="rank-code">${code}</div>
       <div class="rank-bar-wrap">
         <div class="rank-bar-outer">
-          <div class="rank-bar-fill ${colorClass}" style="width:${barPct}%"></div>
+          <div class="rank-bar-fill ${colorClass}" style="width:${barPct}%">
+             <div class="bar-avatars-container">${avatarsHTML}</div>
+          </div>
         </div>
       </div>
       <div class="rank-flag">${data.flag}</div>
@@ -512,15 +541,25 @@ socket.on("bigGift", (data) => {
 // ──────────────────────────────────────────────────────────────
 socket.on("roundReset", (data) => {
     const overlay = document.getElementById("round-reset-overlay");
+    const avatarEl = document.getElementById("winner-avatar");
 
     if (data.winner) {
         document.getElementById("winner-flag").textContent = data.winner.flag;
         document.getElementById("winner-name").textContent = (data.winner.name || data.winner.code);
         document.getElementById("winner-score").textContent = formatScore(data.winner.score) + " 💎";
+
+        // Mostrar avatar ganador si tiene
+        if (data.winner.avatars && data.winner.avatars.length > 0) {
+            avatarEl.innerHTML = `<img src="${data.winner.avatars[0]}" alt="MVP">`;
+            avatarEl.classList.remove("hidden");
+        } else {
+            avatarEl.classList.add("hidden");
+        }
     } else {
         document.getElementById("winner-flag").textContent = "🏁";
         document.getElementById("winner-name").textContent = "Sin ganador";
         document.getElementById("winner-score").textContent = "";
+        avatarEl.classList.add("hidden");
     }
 
     overlay.classList.remove("hidden");
@@ -528,6 +567,7 @@ socket.on("roundReset", (data) => {
     setTimeout(() => {
         overlay.classList.remove("visible");
         overlay.classList.add("hidden");
+        avatarEl.classList.add("hidden");
     }, 4000);
 
     previousScores = {};
@@ -551,16 +591,36 @@ socket.on("status", (data) => {
     } else if (data.streamEnded) {
         dot.className = "disconnected";
         text.textContent = "Stream finalizado";
-    } else {
-        dot.className = "disconnected";
-        text.textContent = "Reconectando...";
     }
 });
 
-socket.on("connect", () => console.log("✅ Overlay conectado"));
-socket.on("disconnect", () => {
+socket.on("connect", () => {
+    console.log("✅ Conectado al servidor");
     const dot = document.getElementById("status-dot");
     const text = document.getElementById("status-text");
-    dot.className = "disconnected";
-    text.textContent = "Sin conexión al servidor";
+    if (dot) dot.className = "dot offline";
+    if (text) text.innerText = "Sincronizando TikTok...";
+});
+
+socket.on("disconnect", () => {
+    console.log("❌ Desconectado del servidor");
+    const dot = document.getElementById("status-dot");
+    const text = document.getElementById("status-text");
+    if (dot) dot.className = "dot offline";
+    if (text) text.innerText = "Servidor Desconectado";
+});
+
+socket.on("tiktokConnected", (data) => {
+    const dot = document.getElementById("status-dot");
+    const text = document.getElementById("status-text");
+    if (dot) dot.className = "dot online";
+    if (text) text.innerText = `EN VIVO - @${data.username}`;
+    elapsedSeconds = data.elapsed || 0;
+});
+
+socket.on("tiktokDisconnected", () => {
+    const dot = document.getElementById("status-dot");
+    const text = document.getElementById("status-text");
+    if (dot) dot.className = "dot offline";
+    if (text) text.innerText = "Reconectando TikTok...";
 });

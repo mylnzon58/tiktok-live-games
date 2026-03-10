@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>⚔️ Tap Tap Arena — TikTok LIVE</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚔️</text></svg>" />
+    <link rel="stylesheet" href="/arena.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Rajdhani:wght@600;700&display=swap"
+        rel="stylesheet" />
+</head>
+
+<body>
+
+    <!-- Switch Button para regresar al Ranking -->
+    <a href="/overlay" id="switch-btn">🌎 Cambiar a Países</a>
+
+    <!-- Botón habilitar Sonido -->
+    <button id="sound-btn">🔇 Activar Sonido</button>
+
+    <!-- El Lienzo de Batalla -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Panel Lateral Izquierdo: Guía de Poderes -->
+    <div id="powers-guide">
+        <h3>TAP TAP ATAQUE</h3>
+        <ul>
+            <li><img
+                    src="https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/eba3a9bb85c33e017f3648eaf88d7189~tplv-obj.png" />
+                DAÑO</li>
+            <li><span class="emoji">🍩</span> SHOCK ELECTRICO</li>
+            <li><span class="emoji">💖</span> LIKES = CURA</li>
+            <li><span class="emoji">🎁</span> OTROS = RAYOS</li>
+        </ul>
+    </div>
+
+    <!-- Panel Lateral Derecho: Ranking de la Arena -->
+    <div id="arena-ranking">
+        <div class="ranking-header">🏆 TOP ARENA</div>
+        <div id="arena-leaderboard">
+            <!-- Los jugadores se inyectarán aquí -->
+        </div>
+    </div>
+
+    <!-- Efectos y UI Flotante HTMl (si los hay) -->
+    <div id="floating-ui-layer"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/arena.js"></script>
+</body>
+
+</html>

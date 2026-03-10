@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=1080, height=1920, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>🌎 Ranking de Países — TikTok LIVE</title>
   <meta name="description"
     content="Overlay de ranking de países en tiempo real para TikTok LIVE basado en regalos recibidos." />
@@ -16,6 +16,11 @@
 </head>
 
 <body>
+  <!-- Botón switch para ir a la Arena -->
+  <a href="/arena" class="btn-switch-overlay"
+    style="position:fixed; top:15px; left:15px; background:rgba(0,0,0,0.4); color:#a8b0c0; padding:8px 12px; font-size:13px; border-radius:8px; text-decoration:none; z-index:1000; border:1px solid rgba(255,255,255,0.2); font-family: 'Rajdhani', sans-serif; text-transform:uppercase; font-weight:bold;">⚔️
+    Cambiar a Arena</a>
+
   <!-- Fondo de estrellas -->
   <div id="stars-container"></div>
   <div id="particles-container"></div>
@@ -57,6 +62,14 @@
       <span id="status-text">Conectando...</span>
     </div>
 
+    <!-- Banner de Reglas -->
+    <div id="rules-banner">
+      <div class="marquee">
+        <span>⚠️ ¿No sale tu país? Ponte la bandera en tu nombre (Ej: @juan 🇦🇷) o pide a un moderador en el chat:
+          !pais @tu_usuario AR ⚠️</span>
+      </div>
+    </div>
+
     <!-- Ranking -->
     <div id="ranking-container">
       <div id="ranking-empty">
@@ -93,7 +106,11 @@
     <div id="round-reset-overlay" class="hidden">
       <div id="round-reset-content">
         <div class="trophy-icon">🏆</div>
-        <div id="winner-flag"></div>
+        <!-- Contenedor del ganador donde la bandera es enorme y el avatar va dentro/al lado -->
+        <div id="winner-display-container">
+          <div id="winner-flag"></div>
+          <div id="winner-avatar" class="hidden"></div>
+        </div>
         <div id="winner-name"></div>
         <div id="winner-score"></div>
         <div class="new-round-text">¡NUEVA RONDA!</div>
@@ -102,6 +119,12 @@
 
     <!-- Reacciones flotantes -->
     <div id="reactions-container"></div>
+
+    <!-- Botón secreto de prueba de sonido (se puede quitar luego) -->
+    <button id="test-audio-btn"
+      style="position:fixed; bottom:10px; right:10px; opacity:0.3; z-index:9999; padding:5px; font-size:10px; background:rgba(0,0,0,0.5); color:white; border:1px solid white; border-radius:5px; cursor:pointer;">
+      PROBAR SONIDO 🔊
+    </button>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
