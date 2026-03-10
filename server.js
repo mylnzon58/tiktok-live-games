@@ -461,8 +461,11 @@ function connectToTikTok() {
 
       // Mucho ojo: diamondCount a veces viene en data.gift.diamond_count o data.diamondCount
       let finalDiamonds = 1;
-      if (typeof data.diamondCount === "number") finalDiamonds = data.diamondCount;
-      else if (data.gift && typeof data.gift.diamond_count === "number") finalDiamonds = data.gift.diamond_count;
+      if (data.gift && typeof data.gift.diamond_count === "number") {
+        finalDiamonds = data.gift.diamond_count;
+      } else if (typeof data.diamondCount === "number") {
+        finalDiamonds = data.diamondCount;
+      }
 
       console.log(`⚔️ [ARENA GIFT] @${arenaUserObj.uniqueId} -> ${data.giftName} (Q:${finalCount} D:${finalDiamonds})`);
 

@@ -136,10 +136,24 @@ const sfx = {
         osc.frequency.setValueAtTime(400, audioCtx.currentTime);
         osc.frequency.linearRampToValueAtTime(800, audioCtx.currentTime + 0.2);
         gain.gain.setValueAtTime(0, audioCtx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.1);
+        gain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.1);
         gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
         osc.start(audioCtx.currentTime);
         osc.stop(audioCtx.currentTime + 0.3);
+    },
+    // Sonido de explosión pesada para regalos top
+    heavyExplosion: () => {
+        if (!soundEnabled) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(40, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1, audioCtx.currentTime + 1.2);
+        gain.gain.setValueAtTime(0.8, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.2);
+        osc.start(audioCtx.currentTime);
+        osc.stop(audioCtx.currentTime + 1.2);
     }
 };
 
@@ -710,10 +724,16 @@ socket.on("arena:leave", (data) => {
     }
 });
 
-// EVENTO DE CURACIÓN (LIKES)
+// EVENTO DE CURACIÓN / APOYO (LIKES / TAP TAP)
 socket.on("arena:like", (data) => {
     const p = players[data.userId];
-    if (p) p.heal(data.likeCount * 5); // 5 Vida por Like
+    if (p) {
+        p.heal(data.likeCount * 2); // 2 Vida por Like
+        p.flash = 1;
+        if (data.likeCount > 10) {
+            spawnFloatingText("TAP TAP! 🔥", p.x, p.y, "#2ed573");
+        }
+    }
 });
 
 // EVENTO DE ATAQUE (REGALOS)
@@ -742,30 +762,66 @@ socket.on("arena:gift", (data) => {
     let atkType = "projectile";
     let color = "#00f0ff";
 
-    // Efectos visuales según nombre del regalo
+    // Efectos visuales según nombre del regalo (Detección bilingüe avanzada)
     const gName = data.giftName.toLowerCase();
-    if (gName.includes("rose") || gName.includes("rosa")) {
-        atkType = "projectile"; color = "#ff4757"; // Rojo
-    } else if (gName.includes("donut") || gName.includes("ray")) {
-        atkType = "lightning"; color = "#fbbf24"; // Amarillo
-        damage = diamonds * 15;
-    } else if (gName.includes("lion") || gName.includes("universe") || diamonds > 900) {
-        // Regalo GIGANTE -> Invoca la SIERRA MORTAL
+
+    // 1. NIVEL DIOS (Universe, León, Interstellar)
+    if (gName.includes("universe") || gName.includes("universo") || gName.includes("lion") || gName.includes("león") || diamonds >= 20000) {
+        playSound("heavyExplosion"); // Sonido pesado
+        screenShake = 100; // Sacudida extrema
+        ctx.fillStyle = "rgba(255, 255, 255, 0.8)"; // DESTELO BLANCO
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        spawnFloatingText("🌌 UNIVERSO !", target.x, target.y, "#ff00ff");
+        createExplosion(target.x, target.y, "#fff"); // Explosión blanca cegadora
+
+        // Daño devastador inmediato
+        target.takeDamage(diamonds * 15, attacker.id);
+        atkType = "none";
+    }
+    // 2. NIVEL LEYENDA (Galaxia, Planeta, Interstellar, etc)
+    else if (gName.includes("galaxy") || gName.includes("galaxia") || gName.includes("planet") || gName.includes("planeta") || diamonds >= 5000) {
+        playSound("lightning");
+        screenShake = 30;
+        spawnFloatingText("✨ GALAXIA !", target.x, target.y, "#0abde3");
+
+        // Múltiples rayos secuenciales
+        for (let i = 0; i < 3; i++) {
+            setTimeout(() => {
+                lightningBolts.push({
+                    sx: attacker.x, sy: attacker.y,
+                    tx: target.x + (Math.random() - 0.5) * 100,
+                    ty: target.y + (Math.random() - 0.5) * 100,
+                    life: 1.0, color: "#0abde3"
+                });
+                target.takeDamage(diamonds * 5, attacker.id);
+            }, i * 150);
+        }
+        atkType = "none";
+    }
+    // 3. NIVEL ESPECIAL (Sierra)
+    else if (diamonds > 900) {
         atkType = "buzzsaw";
-    } else if (gName.includes("star") || gName.includes("estrella") || gName.includes("zapato") || gName.includes("hat")) {
-        // Regalo Mediano/Especial -> Laser
+    }
+    // 4. NIVEL ATAQUE (Star, Zapato, etc)
+    else if (gName.includes("star") || gName.includes("estrella") || gName.includes("zapato") || gName.includes("hat") || gName.includes("gorra")) {
         atkType = "laser";
-    } else if (gName.includes("perfume") || gName.includes("makeup")) {
-        atkType = "projectile"; color = "#a855f7"; // Morado
+    }
+    // 5. NIVEL BÁSICO (Rosita, Donut, etc)
+    else if (gName.includes("rose") || gName.includes("rosa")) {
+        atkType = "projectile"; color = "#ff4757";
+    } else if (gName.includes("donut") || gName.includes("dona") || gName.includes("ray") || gName.includes("relámpago")) {
+        atkType = "lightning"; color = "#fbbf24";
+    } else if (gName.includes("perfume") || gName.includes("makeup") || gName.includes("maquillaje")) {
+        atkType = "projectile"; color = "#a855f7";
     } else {
         // Regalo genérico o mediano
         atkType = diamonds > 50 ? "lightning" : "projectile";
-        color = "#fff";
+        color = "#00f0ff";
     }
 
-    // Ejecutar ataque
+    // Ejecutar efectos remanentes si no fue daño directo (none)
     if (atkType === "projectile") {
-        // Un misil por cada combo
         for (let i = 0; i < Math.min(data.count, 10); i++) {
             setTimeout(() => {
                 playSound("shoot");
@@ -773,20 +829,18 @@ socket.on("arena:gift", (data) => {
             }, i * 150);
         }
     } else if (atkType === "lightning") {
-        // Rayo instantaneo
         playSound("lightning");
         lightningBolts.push({ sx: attacker.x, sy: attacker.y, tx: target.x, ty: target.y, life: 1.0, color });
         target.takeDamage(damage, attacker.id);
         createExplosion(target.x, target.y, color);
     } else if (atkType === "buzzsaw") {
-        // Spawnear la sierra asesina cerca del centro y suena algo épico
         playSound("explosion");
         spawnFloatingText("⚠️ SIERRA !", canvas.width / 2, canvas.height / 2, "#ff0000");
-        hazards.push(new Buzzsaw(canvas.width / 2, canvas.height / 2, attacker.id, 600)); // ~10 segundos de vida a 60fps
+        hazards.push(new Buzzsaw(canvas.width / 2, canvas.height / 2, attacker.id, 600));
     } else if (atkType === "laser") {
         playSound("lightning");
         spawnFloatingText("⚡ LASER !", attacker.x, attacker.y, "#a855f7");
-        hazards.push(new LaserBeam(attacker.x, attacker.y, attacker.id, 400)); // ~7 segundos
+        hazards.push(new LaserBeam(attacker.x, attacker.y, attacker.id, 400));
     }
 });
 
@@ -795,9 +849,9 @@ socket.on("arena:gift", (data) => {
 // ==========================================
 
 function updateRankingDOM() {
-    // Convertir a array, filtrar vivos/activos y ordenar por score/hp
+    // Convertir a array, filtrar vivos/activos Y CON SCORE > 0 y ordenar por score/hp
     const sorted = Object.values(players)
-        .filter(p => p.hp > 0 && p.opacity > 0.1)
+        .filter(p => p.hp > 0 && p.opacity > 0.1 && p.score > 0)
         .sort((a, b) => b.score - a.score || b.hp - a.hp);
 
     // Solo mostramos el TOP 5 en el ranking horizontal
