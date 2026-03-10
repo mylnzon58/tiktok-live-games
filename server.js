@@ -644,7 +644,13 @@ function connectToTikTok() {
         }
       }
 
-      // NOTA: Se ha eliminado la lógica de Arena aquí. Ya no spawnean por solo hablar en el chat.
+      // ── LOGICA PARA MODO ARENA ──
+      const arenaUserObj = data.user || {
+        uniqueId: data.uniqueId,
+        nickname: data.nickname || data.uniqueId,
+        profilePictureUrl: data.profilePictureUrl || ""
+      };
+      initOrUpdateArenaPlayer(arenaUserObj);
     } catch (err) {
       console.error("❌ Crasheo evitado en evento chat:", err);
     }
@@ -669,8 +675,18 @@ function connectToTikTok() {
 
   // ── Member event (Entrada al LIVE) ──
   tiktokLive.on("member", (data) => {
-    // NOTA: Ya no spawnean por solo entrar. Solo spawnean cuando envían rosas o likes (Tap Tap)
-    // para evitar que la arena se llene de fantasmas que solo entran y salen.
+    try {
+      const userObj = data.user || {
+        uniqueId: data.uniqueId,
+        nickname: data.nickname || data.uniqueId,
+        profilePictureUrl: data.profilePictureUrl
+      };
+
+      if (userObj && (userObj.uniqueId || userObj.userId)) {
+        // Inicializamos al jugador para que aparezca en modo AFK/espectador
+        initOrUpdateArenaPlayer(userObj);
+      }
+    } catch (e) { }
   });
 
   // ── Receive death/score update from Arena Overlay (para consistencia simple) ──
