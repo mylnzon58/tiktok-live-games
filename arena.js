@@ -1250,7 +1250,7 @@ function updateTopShowcase() {
     // Rellenamos con placeholders si hay menos de 3 para que el podio no desaparezca
     while (top3.length < 3) {
         top3.push({
-            name: "ESPERANDO LÍDER",
+            name: "ESPERANDO...",
             avatar: "https://p16-webcast.tiktokcdn.com/webcast-va/new_gifter_badge_v3.png~tplv-obj.image", // Icono por defecto
             score: 0,
             isPlaceholder: true

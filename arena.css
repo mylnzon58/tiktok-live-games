@@ -90,12 +90,12 @@ html {
 #powers-guide {
     position: absolute;
     bottom: 70px;
-    left: 2%;
-    /* Más centrado */
-    width: 96%;
-    /* Casi todo el ancho para que quepa todo */
+    left: 1%;
+    /* Casi pegado para ganar espacio */
+    width: 98%;
+    /* Máximo ancho posible */
     background: linear-gradient(135deg, rgba(0, 0, 0, 0.94) 0%, rgba(10, 10, 10, 0.85) 100%);
-    padding: 12px 15px;
+    padding: 12px 10px;
     z-index: 100;
     pointer-events: none;
     backdrop-filter: blur(15px);
@@ -133,9 +133,10 @@ html {
     list-style: none;
     display: flex;
     flex-wrap: nowrap;
-    justify-content: flex-start;
-    gap: 8px;
-    /* Reducción extrema para asegurar encuadre */
+    justify-content: space-around;
+    /* Distribuir uniformemente */
+    gap: 5px;
+    /* Gap mínimo */
     padding: 0;
     margin: 0;
     align-items: center;
@@ -143,8 +144,8 @@ html {
 }
 
 #powers-guide li {
-    font-size: 14px;
-    /* Un poco más pequeño para total seguridad */
+    font-size: 13.5px;
+    /* Un poco más pequeño para que quepa todo */
     white-space: nowrap;
     font-weight: 800;
     display: flex;
@@ -453,18 +454,21 @@ html {
     top: 20px;
     left: 50%;
     transform: translateX(-50%);
-    width: 600px;
+    width: 750px;
+    /* Aumentado sustancialmente */
     height: 180px;
     display: flex;
     justify-content: center;
     align-items: flex-end;
-    gap: 10px;
+    gap: 15px;
     z-index: 1000;
     pointer-events: none;
     background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(20, 20, 40, 0.8) 50%, rgba(0, 240, 255, 0.1) 100%);
     backdrop-filter: blur(15px);
     border: 2px solid rgba(255, 215, 0, 0.4);
     border-radius: 25px;
+    overflow: visible;
+    /* Asegurar que las sombras y aumentos no se corten */
 }
 
 /* Title integrated into the card */
@@ -519,6 +523,8 @@ html {
     position: relative;
     width: 180px;
     /* Reducido de 190px para seguridad */
+    flex-shrink: 0;
+    /* PROHIBIDO ENCOGERSE */
     transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -592,21 +598,24 @@ html {
 
 .top-rank-badge {
     position: absolute;
-    top: -8px;
-    right: 25px;
+    top: 5px;
+    /* Bajado un poco */
+    right: 50px;
+    /* Centrado más sobre el avatar (180/2 - 40 = 50px para el borde lateral) */
     background: #fff;
     color: #000;
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    /* Un poco más grande para visibilidad */
+    height: 28px;
     border-radius: 50%;
     display: flex;
     justify-content: center;
     align-items: center;
     font-weight: 950;
-    font-size: 13px;
-    border: 2px solid #ffd700;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-    z-index: 10;
+    font-size: 14px;
+    border: 3px solid #ffd700;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+    z-index: 100;
 }
 
 .follow-arrow {
