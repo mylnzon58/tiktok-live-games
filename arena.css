@@ -150,114 +150,116 @@ html {
     color: #0abde3;
 }
 
-/* Ranking Lateral Derecho */
+/* Ranking Horizontal Superior (Optimizado para Móvil) */
 #arena-ranking {
     position: absolute;
-    top: 20px;
-    right: 20px;
-    width: 280px;
-    background: linear-gradient(180deg, rgba(20, 20, 40, 0.85) 0%, rgba(10, 10, 20, 0.9) 100%);
-    border: 1px solid rgba(251, 191, 36, 0.4);
-    border-radius: 12px;
-    z-index: 10;
+    top: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 95%;
+    max-width: 600px;
+    background: linear-gradient(180deg, rgba(20, 20, 40, 0.7) 0%, rgba(10, 10, 20, 0.8) 100%);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    border-radius: 20px;
+    z-index: 100;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
     overflow: hidden;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    height: 50px;
 }
 
 .ranking-header {
     background: linear-gradient(90deg, #d4af37, #f3e5ab, #d4af37);
     color: #000;
     font-family: 'Bungee', cursive;
-    text-align: center;
-    padding: 8px 0;
-    font-size: 16px;
-    letter-spacing: 1.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 15px;
+    font-size: 12px;
+    height: 100%;
+    white-space: nowrap;
+    border-right: 1px solid rgba(0, 0, 0, 0.2);
 }
 
 #arena-leaderboard {
-    padding: 10px;
+    flex: 1;
     display: flex;
-    flex-direction: column;
-    gap: 6px;
-    max-height: 400px;
-    overflow-y: hidden;
+    flex-direction: row;
+    align-items: center;
+    gap: 15px;
+    padding: 0 15px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    /* Firefox */
+}
+
+#arena-leaderboard::-webkit-scrollbar {
+    display: none;
+    /* Chrome/Safari */
 }
 
 .arena-board-row {
     display: flex;
     align-items: center;
+    gap: 8px;
     background: rgba(255, 255, 255, 0.05);
-    border-radius: 6px;
-    padding: 6px 8px;
-    transition: transform 0.3s;
-    border-left: 3px solid transparent;
+    border-radius: 25px;
+    padding: 4px 12px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .arena-board-row.p1 {
-    background: linear-gradient(90deg, rgba(251, 191, 36, 0.2), rgba(0, 0, 0, 0));
-    border-left-color: #fbbf24;
+    background: rgba(251, 191, 36, 0.15);
+    border-color: rgba(251, 191, 36, 0.5);
+    box-shadow: 0 0 10px rgba(251, 191, 36, 0.2);
 }
 
 .board-pos {
-    width: 24px;
-    font-weight: bold;
-    font-size: 16px;
-    color: #888;
-}
-
-.arena-board-row.p1 .board-pos {
+    font-weight: 800;
+    font-size: 14px;
     color: #fbbf24;
 }
 
-.arena-board-row.p2 .board-pos {
-    color: #c0c0c0;
-}
-
-.arena-board-row.p3 .board-pos {
-    color: #cd7f32;
-}
-
 .board-avatar {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    margin-right: 8px;
+    border: 1.5px solid #fbbf24;
 }
 
 .board-info {
-    flex: 1;
     display: flex;
-    flex-direction: column;
-    line-height: 1.2;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
 }
 
 .board-name {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
-    white-space: nowrap;
+    max-width: 80px;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 120px;
 }
 
 .board-stats {
     display: flex;
-    gap: 8px;
-    font-size: 13px;
+    gap: 5px;
+    font-size: 12px;
 }
 
 .stat-hp {
     color: #ff4757;
-    font-weight: bold;
 }
 
 .stat-score {
     color: #fbbf24;
-    font-weight: bold;
 }
 
 /* Capa de interfaces flotantes del canvas (+10, -50) */

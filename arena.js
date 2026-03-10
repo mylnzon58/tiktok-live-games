@@ -795,32 +795,35 @@ socket.on("arena:gift", (data) => {
 // ==========================================
 
 function updateRankingDOM() {
-    const sorted = Object.values(players).sort((a, b) => b.score - a.score).slice(0, 10); // Top 10
+    // Convertir a array, filtrar vivos/activos y ordenar por score/hp
+    const sorted = Object.values(players)
+        .filter(p => p.hp > 0 && p.opacity > 0.1)
+        .sort((a, b) => b.score - a.score || b.hp - a.hp);
+
+    // Solo mostramos el TOP 5 en el ranking horizontal
+    const top5 = sorted.slice(0, 5);
     leaderboardEl.innerHTML = "";
 
-    sorted.forEach((p, idx) => {
-        if (p.score <= 0 && p.hp <= 0) return; // Omitir no combatientes
-
-        let rankClass = "p" + (idx + 1);
-        if (idx > 2) rankClass = "p-rest";
+    top5.forEach((p, idx) => {
+        let rankClass = (idx === 0) ? "p1" : "p-rest";
 
         const row = document.createElement("div");
         row.className = `arena-board-row ${rankClass}`;
 
-        // Fallback Image
-        const imgUrl = p.avatar || "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23333'/></svg>";
+        // Fallback Image real de la API o genérica
+        const imgUrl = p.avatar || "https://www.tiktok.com/favicon.ico";
 
         row.innerHTML = `
-      <div class="board-pos">#${idx + 1}</div>
-      <img class="board-avatar" src="${imgUrl}" />
-      <div class="board-info">
-        <span class="board-name">${p.name}</span>
-        <div class="board-stats">
-           <span class="stat-hp">❤️ ${Math.floor(p.hp)}</span>
-           <span class="stat-score">⚔️ ${Math.floor(p.score)}</span>
-        </div>
-      </div>
-    `;
+            <span class="board-pos">#${idx + 1}</span>
+            <img class="board-avatar" src="${imgUrl}" onerror="this.src='https://www.tiktok.com/favicon.ico'" />
+            <div class="board-info">
+                <span class="board-name">${p.name}</span>
+                <div class="board-stats">
+                    <span class="stat-hp">❤️ ${Math.floor(p.hp)}</span>
+                    <span class="stat-score">⚔️ ${Math.floor(p.score)}</span>
+                </div>
+            </div>
+        `;
         leaderboardEl.appendChild(row);
     });
 }
