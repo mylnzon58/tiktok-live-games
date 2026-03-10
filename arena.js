@@ -380,12 +380,16 @@ class Player {
     update() {
         // AFK Shrinking & Fading (si pasaron más de 30 segundos)
         const idleTime = Date.now() - this.lastActive;
-        if (idleTime > 20000) { // Después de 20s empieza a achicarse
-            const decayFactor = Math.min((idleTime - 20000) / 40000, 1); // Tarda 40s en desaparecer (Total: 60s)
-            this.currentRadius = PLAYER_RADIUS * (1 - decayFactor * 0.8); // Se achica hasta el 20%
+        const scoreScale = Math.sqrt(this.score) / 3; // Crecer con puntos
+        const targetRadius = PLAYER_RADIUS + scoreScale;
+
+        if (idleTime > 20000) {
+            const decayFactor = Math.min((idleTime - 20000) / 40000, 1);
+            this.currentRadius = targetRadius * (1 - decayFactor * 0.8);
             this.opacity = 1 - decayFactor;
         } else {
-            this.currentRadius = PLAYER_RADIUS;
+            // Suavizar el crecimiento
+            this.currentRadius += (targetRadius - this.currentRadius) * 0.1;
             this.opacity = 1.0;
         }
 
@@ -541,9 +545,9 @@ class Projectile {
     }
     draw() {
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 6, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, 8, 0, Math.PI * 2); // Más grande (8 en vez de 6)
         ctx.fillStyle = this.color;
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = 15; // Más brillo
         ctx.shadowColor = this.color;
         ctx.fill();
         ctx.shadowBlur = 0;
@@ -766,14 +770,21 @@ socket.on("arena:gift", (data) => {
     const diamonds = data.diamondCount * data.count;
     console.log(`🎁 GIFT RECEIVED: ${data.giftName} x${data.count} (${diamonds} 💎) from ${data.userId}`);
 
-    // Buscar enemigo más cercano
-    let target = null;
-    let minDist = Infinity;
-    for (const id in players) {
-        if (id === attacker.id || players[id].hp <= 0) continue;
-        const enemy = players[id];
-        const dist = Math.sqrt((attacker.x - enemy.x) ** 2 + (attacker.y - enemy.y) ** 2);
-        if (dist < minDist) { minDist = dist; target = enemy; }
+    // Feedback visual inmediato para TODOS los regalos
+    spawnFloatingText(`${data.giftName} x${data.count} ✨`, attacker.x, attacker.y, "#fdcb6e");
+
+    // Usar el objetivo dictado por el servidor para consistencia
+    let target = players[data.targetId];
+
+    // Fallback por si el objetivo no existe localmente aún
+    if (!target) {
+        let minDist = Infinity;
+        for (const id in players) {
+            if (id === attacker.id || players[id].hp <= 0) continue;
+            const enemy = players[id];
+            const dist = Math.sqrt((attacker.x - enemy.x) ** 2 + (attacker.y - enemy.y) ** 2);
+            if (dist < minDist) { minDist = dist; target = enemy; }
+        }
     }
 
     if (!target) return; // No hay a quien atacar
