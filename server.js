@@ -316,12 +316,12 @@ function broadcastArenaSync(force = false) {
   }
 }
 
-// Limpiador automático de Jugadores AFK (sin actividad por 60 segundos)
+// Limpiador automático de Jugadores AFK (sin actividad por 40 segundos)
 setInterval(() => {
   const now = Date.now();
   let changed = false;
   for (const id in arenaPlayers) {
-    if (now - arenaPlayers[id].lastActive > 60 * 1000) { // 60 segundos = limpieza agresiva
+    if (now - arenaPlayers[id].lastActive > 40 * 1000) { // 40 segundos = limpieza agresiva
       delete arenaPlayers[id];
       changed = true;
       io.emit("arena:leave", { id });

@@ -467,15 +467,15 @@ class Player {
     }
 
     update() {
-        // AFK Shrinking & Fading (si pasaron más de 30 segundos)
+        // AFK Shrinking & Fading (si pasaron más de 15 segundos)
         const idleTime = Date.now() - this.lastActive;
         const scoreScale = Math.sqrt(this.score) / 1.5; // Crecimiento más agresivo y visible
         const targetRadius = PLAYER_RADIUS + scoreScale;
 
-        if (idleTime > 20000) {
-            const decayFactor = Math.min((idleTime - 20000) / 40000, 1);
+        if (idleTime > 15000) {
+            const decayFactor = Math.min((idleTime - 15000) / 10000, 1);
 
-            // SPECTATOR MODE: No desaparecen del todo
+            // SPECTATOR MODE: No desaparecen del todo hasta que el servidor los borre
             const minRadius = 15;
             const minOpacity = 0.35;
 
@@ -1089,8 +1089,11 @@ function updateRankingDOM() {
     });
 }
 
+let frameCount = 0;
+
 // Bucle principal a 60FPS
 function loop() {
+    frameCount++;
     ctx.save();
 
     // Aplicar Screen Shake si hay intensidad
