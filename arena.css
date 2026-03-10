@@ -90,16 +90,18 @@ html {
 #powers-guide {
     position: absolute;
     bottom: 70px;
-    left: 4%;
-    width: 92%;
+    left: 2%;
+    /* Más centrado */
+    width: 96%;
+    /* Casi todo el ancho para que quepa todo */
     background: linear-gradient(135deg, rgba(0, 0, 0, 0.94) 0%, rgba(10, 10, 10, 0.85) 100%);
-    padding: 15px 25px;
+    padding: 12px 15px;
     z-index: 100;
     pointer-events: none;
     backdrop-filter: blur(15px);
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
     border: 2px solid rgba(255, 215, 0, 0.5);
     border-radius: 12px;
     box-shadow: 0 10px 50px rgba(0, 0, 0, 0.9);
@@ -109,8 +111,8 @@ html {
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    gap: 15px;
-    /* Reducido para que quepan más horizontalmente */
+    gap: 10px;
+    /* Reducido para ahorrar espacio */
     width: 100%;
 }
 
@@ -119,8 +121,9 @@ html {
     font-size: 13px;
     /* Un poco más pequeño para dejar espacio */
     color: #ffd700;
-    min-width: 130px;
-    padding-right: 12px;
+    min-width: 110px;
+    /* Reducido de 130px */
+    padding-right: 10px;
     border-right: 2px solid rgba(255, 215, 0, 0.4);
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -130,8 +133,10 @@ html {
     list-style: none;
     display: flex;
     flex-wrap: nowrap;
-    gap: 20px;
-    /* Gap dinámico */
+    justify-content: space-between;
+    /* Distribución uniforme */
+    gap: 12px;
+    /* Gap mínimo */
     padding: 0;
     margin: 0;
     align-items: center;
@@ -139,18 +144,19 @@ html {
 }
 
 #powers-guide li {
-    font-size: 16px;
-    /* Reducido un poco para evitar desbordamiento horizontal */
+    font-size: 15px;
+    /* Optimizado */
     white-space: nowrap;
     font-weight: 800;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     text-shadow: 1px 1px 4px #000;
 }
 
 #powers-guide .emoji {
-    font-size: 26px;
+    font-size: 24px;
+    /* Un poco más pequeño */
     filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.4));
     animation: giftPulse 1.5s infinite ease-in-out;
 }
