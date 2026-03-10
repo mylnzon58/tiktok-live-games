@@ -779,8 +779,6 @@ socket.on("arena:you", (data) => {
     myArenaId = data.uniqueId;
     console.log("👤 Identidad en Arena:", myArenaId);
 });
-});
-
 // Forzar actualización del Ranking DOM cada vez que hay sync
 socket.on("arena:sync", () => {
     updateRankingDOM();
