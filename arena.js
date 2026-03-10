@@ -704,11 +704,22 @@ class Player {
             ctx.strokeStyle = "white";
         } else {
             const hpPercent = (this.hp || 500) / MAX_HP; // Fallback para HP
-            if (hpPercent > 0.6) ctx.strokeStyle = "#2ed573";
-            else if (hpPercent > 0.3) ctx.strokeStyle = "#ffa502";
-            else ctx.strokeStyle = "#ff4757";
+            if (hpPercent > 0.6) {
+                ctx.strokeStyle = "#2ed573";
+            } else if (hpPercent > 0.3) {
+                ctx.strokeStyle = "#ffa502";
+            } else {
+                ctx.strokeStyle = "#ff4757";
+                // Heartbeat adictivo de "Near Miss"
+                if (Date.now() % 600 < 300) {
+                    ctx.lineWidth += 4;
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = "#ff4757";
+                }
+            }
         }
         ctx.stroke();
+        ctx.shadowBlur = 0; // reset
 
         // NOMBRE SIEMPRE VISIBLE
         ctx.fillStyle = "white";
@@ -774,10 +785,20 @@ class Player {
 
     heal(amount) {
         if (this.hp <= 0) return;
+
+        const wasCritical = this.hp < MAX_HP * 0.15; // Menos del 15%
         this.hp = Math.min(this.hp + amount, MAX_HP);
         this.score += amount; // Hacemos que los Tap Taps (curación) también sumen para crecer
         this.flash = 1;
-        spawnFloatingText(`+${amount}`, this.x, this.y, "#2ed573");
+
+        // Efecto visual "Salvada Épica" (Near Miss neuromarketing)
+        if (wasCritical && this.hp >= MAX_HP * 0.15) {
+            spawnFloatingText("¡SALVADA ÉPICA! 🛡️", this.x, this.y - 40, "#2ed573");
+            screenShake = Math.max(screenShake, 15);
+        } else {
+            spawnFloatingText(`+${amount}`, this.x, this.y, "#2ed573");
+        }
+
         playSound("heal");
         syncStateToServer(this);
     }
@@ -1087,9 +1108,14 @@ socket.on("arena:like", (data) => {
 
         playSound("heal", pitchMod);
 
-        // Mostrar texto de apoyo más seguido (desde 5 likes en combo)
-        if (data.likeCount >= 5 || recentHeals[data.userId].strikes >= 5) {
-            spawnFloatingText("TAP TAP! ✨", p.x, p.y, "#2ed573");
+        // Mostrar texto de apoyo adictivo (Combos épicos)
+        const strikes = recentHeals[data.userId].strikes;
+        if (strikes > 0 && strikes % 50 === 0) {
+            spawnFloatingText(`🔥 COMBO x${strikes}! 🔥`, p.x, p.y - 40, "#ff4757");
+            screenShake = Math.max(screenShake, 15);
+            playSound("heavyExplosion"); // Boom para celebrar el combo
+        } else if (data.likeCount >= 5 || strikes % 10 === 0) {
+            spawnFloatingText(`TAP TAP x${strikes}! ✨`, p.x, p.y, "#2ed573");
         }
     }
 });
@@ -1278,6 +1304,7 @@ function updateRankingDOM() {
 }
 
 let frameCount = 0;
+let currentArenaKingId = null;
 
 // Bucle principal a 60FPS
 function loop() {
@@ -1362,7 +1389,22 @@ function loop() {
 
     // Actualizar y dibujar Jugadores
     let positionBatch = {};
+    let currentClosestToCenter = null;
+    let minCenterDist = 120; // coreRadius
+
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+
     pList.forEach(p => {
+        // Check King of the Hill location
+        if (p.opacity > 0.5) {
+            const dist = Math.sqrt((p.x - cx) ** 2 + (p.y - cy) ** 2);
+            if (dist < minCenterDist) {
+                minCenterDist = dist;
+                currentClosestToCenter = p;
+            }
+        }
+
         // Dibujamos si HP > 0, si falta HP (undefined) forzamos 500 para debug
         const effectiveHP = (p.hp === undefined) ? 500 : p.hp;
 
@@ -1376,6 +1418,21 @@ function loop() {
             }
         }
     });
+
+    // Lógica del Nuevo Rey
+    if (currentClosestToCenter && currentClosestToCenter.id !== currentArenaKingId) {
+        currentArenaKingId = currentClosestToCenter.id;
+        // Coronación Pública
+        spawnFloatingText(`👑 ¡${currentClosestToCenter.name.toUpperCase()} ES EL NUEVO REY! 👑`, cx, cy - 150, "#ffd700");
+        screenShake = Math.max(screenShake, 25);
+        playSound("heal", 0.5); // Sonido triunfal pitch grave
+
+        // Destello visual de coronación
+        ctx.fillStyle = "rgba(255, 215, 0, 0.3)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    } else if (!currentClosestToCenter) {
+        currentArenaKingId = null; // Nadie en el centro
+    }
 
     // Enviar lote de posiciones cada 30 frames (~500ms)
     if (frameCount % 30 === 0 && Object.keys(positionBatch).length > 0) {
