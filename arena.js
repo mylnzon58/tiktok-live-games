@@ -269,7 +269,7 @@ let screenShake = 0; // Intensidad de vibración de pantalla
 // ==========================================
 // CONFIGURACIONES FÍSICAS
 // ==========================================
-const MAX_HP = 1000;
+const MAX_HP = 500; // Sincronizado con el servidor
 let PLAYER_RADIUS = 30;
 const BASE_SPEED = 2; // Velocidad de rebote
 const NUM_STARS = 100;
@@ -370,6 +370,11 @@ class Player {
 
         // Estado Flash visual por daño
         this.flash = 0;
+
+        // Intervalo de reporte de posición al servidor
+        if (this.id === socket.id || this.id.startsWith("bot_")) { // Opcional para bots locales
+            // No hacemos nada especial aquí, se maneja en el loop principal
+        }
     }
 
     update() {
@@ -693,8 +698,15 @@ class LaserBeam {
 // MÉTODOS DE RED (SOCKETS)
 // ==========================================
 function syncStateToServer(p) {
-    socket.emit("arena:updatePlayer", { id: p.id, hp: p.hp, score: p.score });
-    updateRankingDOM();
+    // Solo reportamos si somos nosotros mismos (el dueño del socket)
+    // O si queremos que el servidor sepa dónde está este jugador para calcular distancias
+    socket.emit("arena:updatePlayer", {
+        id: p.id,
+        x: Math.round(p.x),
+        y: Math.round(p.y),
+        hp: p.hp,
+        score: p.score
+    });
 }
 
 socket.on("arena:sync", (serverPlayers) => {
@@ -949,6 +961,12 @@ function loop() {
         if (p.hp > 0) {
             p.update();
             p.draw();
+
+            // Reportar posición periódicamente (cada ~30 frames = 0.5s)
+            // Solo si somos nosotros o un bot bajo nuestro control
+            if (frameCount % 30 === 0) {
+                syncStateToServer(p);
+            }
         }
     });
 

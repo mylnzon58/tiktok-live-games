@@ -287,9 +287,11 @@ function initOrUpdateArenaPlayer(user) {
       id: id,
       name: user.nickname || id,
       avatar: user.profilePictureUrl || "",
-      hp: 1000,
+      hp: 500, // Vida máxima optimizada
       score: 0,
-      lastActive: Date.now() // Timestamp
+      x: Math.random() * 800 + 100, // Posición base inicial
+      y: Math.random() * 400 + 100,
+      lastActive: Date.now()
     };
     // Emitir que un nuevo gladiador entró
     io.emit("arena:join", arenaPlayers[id]);
@@ -455,25 +457,53 @@ function connectToTikTok() {
         });
       }
 
-      // ── LOGICA PARA MODO ARENA ──
+      // ── LOGICA PARA MODO ARENA (AUTORIDAD DE HP) ──
       const arenaUserObj = data.user || {
         uniqueId: data.uniqueId,
         nickname: data.nickname || data.uniqueId,
         profilePictureUrl: data.profilePictureUrl || ""
       };
 
-      // IMPORTANTE: Spawn/Update antes de emitir el ataque
-      initOrUpdateArenaPlayer(arenaUserObj);
+      const attacker = initOrUpdateArenaPlayer(arenaUserObj);
 
-      console.log(`⚔️ [ARENA GIFT] @${arenaUserObj.uniqueId} -> ${data.giftName} (Q:${repeatCount} D:${diamondCount})`);
+      // El servidor busca al objetivo más cercano para daño directo
+      let targetId = null;
+      let minDist = Infinity;
+      if (attacker) {
+        for (const id in arenaPlayers) {
+          if (id === attacker.id || arenaPlayers[id].hp <= 0) continue;
+          const dist = Math.sqrt((attacker.x - arenaPlayers[id].x) ** 2 + (attacker.y - arenaPlayers[id].y) ** 2);
+          if (dist < minDist) { minDist = dist; targetId = id; }
+        }
+      }
+
+      // Calcular daño (20x diamantes)
+      const damage = diamondCount * repeatCount * 20;
+
+      if (targetId && arenaPlayers[targetId]) {
+        arenaPlayers[targetId].hp -= damage;
+        if (arenaPlayers[targetId].hp < 0) arenaPlayers[targetId].hp = 0;
+        if (attacker) attacker.score += damage;
+
+        // Si el regalo es grande, daño inmediato masivo
+        if (diamondCount >= 500) {
+          arenaPlayers[targetId].hp -= (damage * 0.5);
+        }
+      }
+
+      console.log(`⚔️ [ARENA ATTACK] @${arenaUserObj.uniqueId} -> Target:${targetId || "NONE"} (Dmg:${damage})`);
 
       io.emit("arena:gift", {
         userId: arenaUserObj.uniqueId || arenaUserObj.userId || data.uniqueId,
+        targetId: targetId,
         giftName: data.giftName || "Rosa",
-        giftId: data.giftId || 1,
         count: repeatCount,
-        diamondCount: diamondCount
+        diamondCount: diamondCount,
+        damage: damage
       });
+
+      // Sincronizar HP inmediatamente después del golpe
+      io.emit("arena:sync", arenaPlayers);
 
     } catch (err) {
       console.error("❌ Crasheo evitado en evento gift:", err);
@@ -663,11 +693,18 @@ io.on("connection", (socket) => {
   socket.emit("arena:sync", arenaPlayers);
 
   // Escuchar si la arena reporta muerte o kill de un jugador
+  // Escuchar si la arena reporta posición o actualizaciones (Throttled)
   socket.on("arena:updatePlayer", (data) => {
     if (data && data.id && arenaPlayers[data.id]) {
-      arenaPlayers[data.id].hp = data.hp;
-      arenaPlayers[data.id].score = data.score;
-      arenaPlayers[data.id].lastActive = Date.now(); // Acción válida para evadir sweep
+      // Sincronizar x, y para que el servidor sepa dónde están para los ataques
+      if (data.x !== undefined) arenaPlayers[data.id].x = data.x;
+      if (data.y !== undefined) arenaPlayers[data.id].y = data.y;
+
+      // HP y Score ya son manejados mayormente por el servidor, pero aceptamos correcciones
+      if (data.hp !== undefined) arenaPlayers[data.id].hp = data.hp;
+      if (data.score !== undefined) arenaPlayers[data.id].score = data.score;
+
+      arenaPlayers[data.id].lastActive = Date.now();
     }
   });
 
