@@ -461,12 +461,30 @@ class Player {
 
         if (idleTime > 20000) {
             const decayFactor = Math.min((idleTime - 20000) / 40000, 1);
-            this.currentRadius = targetRadius * (1 - decayFactor * 0.8);
-            this.opacity = 1 - decayFactor;
+
+            // SPECTATOR MODE: No desaparecen del todo
+            const minRadius = 15;
+            const minOpacity = 0.35;
+
+            // Limitar encogimiento y transparencia
+            this.currentRadius = Math.max(targetRadius * (1 - decayFactor * 0.8), minRadius);
+            this.opacity = Math.max(1 - decayFactor, minOpacity);
+
+            // Flotar suavemente en el fondo
+            this.vx *= 0.98;
+            this.vy *= 0.98;
         } else {
             // Suavizar el crecimiento
             this.currentRadius += (targetRadius - this.currentRadius) * 0.1;
             this.opacity = 1.0;
+
+            // Restaurar velocidad si estaban lentos
+            const currentSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+            if (currentSpeed < (BASE_SPEED * 0.5)) {
+                const angle = Math.atan2(this.vy, this.vx) || (Math.random() * Math.PI * 2);
+                this.vx = Math.cos(angle) * BASE_SPEED;
+                this.vy = Math.sin(angle) * BASE_SPEED;
+            }
         }
 
         // Físicas
