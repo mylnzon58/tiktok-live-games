@@ -1165,7 +1165,29 @@ function syncStateToServer(p) {
 let myArenaId = null;
 
 socket.on("arena:sync", (serverPlayers) => {
-    // ... logic de sicronización existente ...
+    for (const id in serverPlayers) {
+        const sp = serverPlayers[id];
+        if (!players[id]) {
+            players[id] = new Player(sp);
+        } else {
+            // Sincronizar stats vitales desde el servidor (Autoridad)
+            players[id].hp = sp.hp;
+            players[id].score = sp.score;
+            players[id].name = sp.name;
+            if (sp.avatar) players[id].avatar = sp.avatar;
+
+            // Solo sincronizamos X/Y si NO es nuestro propio jugador (para evitar jitter)
+            if (id !== myArenaId && !id.startsWith("bot_")) {
+                players[id].x = sp.x;
+                players[id].y = sp.y;
+            }
+        }
+    }
+    // Remover juagadores que ya no están en el servidor
+    for (const id in players) {
+        if (!serverPlayers[id]) delete players[id];
+    }
+    updateRankingDOM();
 });
 
 // --- CAPA TOP SHOWCASE (Podio Superior) ---
@@ -1185,8 +1207,9 @@ function updatePowersGuide() {
         { name: "PESAS", effect: "GOLPE X3", icon: "🏋️" },
         { name: "DORMIR", effect: "CONGELAR", icon: "😴" },
         { name: "GALAXIA", effect: "⚡ RAYO", icon: "🌌" },
+        { name: "CORAZÓN", effect: "REGEN", icon: "💖" },
         { name: "UNIVERSO", effect: "💥 K.O.", icon: "🪐" },
-        { name: "REGALO > 1000", effect: "⚙️ SIERRA", icon: "🧨" }
+        { name: "FUEGO", effect: "INCENDIO", icon: "🔥" }
     ];
 
     guideEl.innerHTML = `<ul>${giftList.map(g => `
@@ -1206,40 +1229,41 @@ updatePowersGuide();
 
 function updateTopShowcase() {
     // Tomamos los 3 primeros del Hall of Fame PERSISTENTE (Sincronizado del servidor)
-    const top3 = persistentHOF.slice(0, 3);
+    const top3 = [...persistentHOF]; // Copiar lista
 
-    // Si no hay jugadores, ocultamos la card
-    if (top3.length === 0) {
-        topShowcaseEl.style.display = "none";
-        return;
+    // Rellenamos con placeholders si hay menos de 3 para que el podio no desaparezca
+    while (top3.length < 3) {
+        top3.push({
+            name: "ESPERANDO LÍDER",
+            avatar: "https://p16-webcast.tiktokcdn.com/webcast-va/new_gifter_badge_v3.png~tplv-obj.image", // Icono por defecto
+            score: 0,
+            isPlaceholder: true
+        });
     }
+
     topShowcaseEl.style.display = "flex";
     topShowcaseEl.innerHTML = "";
 
     top3.forEach((p, idx) => {
         const rank = idx + 1;
         const item = document.createElement("div");
-        item.className = `top-player-item rank-${rank}`;
+        item.className = `top-player-item rank-${rank} ${p.isPlaceholder ? 'placeholder' : ''}`;
 
         item.innerHTML = `
             <div class="top-player-avatar" style="background-image: url('${p.avatar || ''}')"></div>
             <div class="top-rank-badge">${rank}</div>
             <div class="top-player-name">${p.name}</div>
-            <div class="follow-arrow">⬆️</div>
+            ${p.isPlaceholder ? '' : '<div class="follow-arrow">⬆️</div>'}
         `;
         topShowcaseEl.appendChild(item);
     });
 }
 
 
+// Sincronización de identidad
 socket.on("arena:you", (data) => {
     myArenaId = data.uniqueId;
     console.log("👤 Identidad en Arena:", myArenaId);
-});
-
-// Forzar actualización del Ranking DOM cada vez que hay sync
-socket.on("arena:sync", () => {
-    updateRankingDOM();
 });
 
 // --- CAPA CUENTA REGRESIVA ---

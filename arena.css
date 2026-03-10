@@ -89,20 +89,22 @@ html {
 /* Guía Lateral Arriba o Abajo (Ajustado para no tapar) */
 #powers-guide {
     position: absolute;
-    bottom: 5px;
-    /* Pequeño margen desde el borde inferior */
-    left: 10%;
-    width: 80%;
-    /* No ocupa todo el ancho para dejar espacio a los botones laterales */
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.4) 100%);
-    padding: 15px 20px;
-    z-index: 10;
+    bottom: 70px;
+    /* Elevado para evitar colisión con botones */
+    left: 5%;
+    width: 90%;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(20, 20, 20, 0.7) 100%);
+    padding: 10px 15px;
+    z-index: 100;
+    /* Asegurar que esté por encima de todo */
     pointer-events: none;
-    backdrop-filter: blur(8px);
+    backdrop-filter: blur(12px);
     display: flex;
     justify-content: center;
-    border: 1px solid rgba(255, 215, 0, 0.3);
-    border-radius: 20px;
+    border: 1px solid rgba(255, 215, 0, 0.5);
+    border-radius: 8px;
+    /* Diseño más rectangular (Card) */
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
 }
 
 #powers-guide h3 {
@@ -121,22 +123,21 @@ html {
 }
 
 #powers-guide li {
-    font-size: 24px;
-    /* Aumentado sustancialmente de 18px */
+    font-size: 20px;
+    /* Reducido un poco para que quepan más */
     white-space: nowrap;
-    font-weight: 900;
-    /* Extra bold */
+    font-weight: 800;
     display: flex;
     align-items: center;
-    gap: 12px;
-    text-shadow: 0 0 10px rgba(0, 0, 0, 1), 2px 2px 2px #000;
+    gap: 8px;
+    text-shadow: 1px 1px 2px #000;
 }
 
 #powers-guide img {
-    width: 64px;
-    /* Aumentado sustancialmente de 48px */
-    height: 64px;
-    filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.9));
+    width: 50px;
+    /* Tamaño optimizado */
+    height: 50px;
+    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.6));
     animation: giftPulse 1.2s infinite ease-in-out;
 }
 

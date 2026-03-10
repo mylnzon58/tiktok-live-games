@@ -326,8 +326,9 @@ const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
 const chatPowerCooldowns = {}; // { userId: timestamp }
 
 function updateHallOfFame(p) {
-  if (!p || p.score <= 0) return;
+  if (!p || p.score < 10) return; // UMBRAL REDUCIDO: 10 pts (mínimo 1 rosa/diamante) para entrar al top.
 
+  const now = Date.now();
   // REGLA: El Top 3 es sagrado por 12 horas. Solo se desplaza si el score (donaciones) es mayor.
   if (!arenaHallOfFame[p.id] || p.score > arenaHallOfFame[p.id].score) {
     arenaHallOfFame[p.id] = {
@@ -336,7 +337,7 @@ function updateHallOfFame(p) {
       avatar: p.avatar,
       score: p.score,
       hp: p.hp,
-      lastActive: Date.now() // Servirá para el TTL de 12h
+      lastActive: now
     };
     broadcastHallOfFame();
   } else {
@@ -344,15 +345,18 @@ function updateHallOfFame(p) {
     arenaHallOfFame[p.id].hp = p.hp;
     arenaHallOfFame[p.id].name = p.name;
     arenaHallOfFame[p.id].avatar = p.avatar;
-    arenaHallOfFame[p.id].lastActive = Date.now();
+    arenaHallOfFame[p.id].lastActive = now;
   }
 }
 
 function broadcastHallOfFame() {
-  // Enviar solo el Top 10 para ahorrar ancho de banda
+  const now = Date.now();
+  // Filtrar por TTL de 12 horas ANTES de enviar
   const topList = Object.values(arenaHallOfFame)
+    .filter(p => (now - p.lastActive) < TWELVE_HOURS_MS)
     .sort((a, b) => b.score - a.score)
     .slice(0, 10);
+
   io.emit("arena:hallOfFameUpdate", topList);
 }
 
@@ -385,7 +389,9 @@ function initOrUpdateArenaPlayer(user) {
 
 // Función para sincronizar con THROTTLE (Evita saturar el canal)
 let lastSyncTime = 0;
-const SYNC_THROTTLE_MS = 100; // Máximo 10 veces por segundo (Doble que antes)
+const SYNC_THROTTLE_MS = 50; // Reducido de 100ms para spawning ultra-rápido
+let lastArenaSync = 0;
+// Máximo 10 veces por segundo (Doble que antes)
 
 function broadcastArenaSync(force = false) {
   const now = Date.now();
@@ -736,8 +742,9 @@ function connectToTikTok() {
 
       const player = initOrUpdateArenaPlayer(arenaUserObj);
       if (player) {
-        player.score += likeCount * 0.1; // Nerf masivo al crecimiento por likes
-        updateHallOfFame(player);
+        // Los likes ya NO suman puntos al Ranking (Solo regalos y K.O.)
+        // player.score += likeCount * 0.1; 
+        // updateHallOfFame(player);
       }
 
       io.emit("arena:like", {
@@ -871,8 +878,8 @@ function connectToTikTok() {
       initOrUpdateArenaPlayer(arenaUserObj);
       console.log(`👤 AUTO-JOIN: @${arenaUserObj.uniqueId} entró a la arena.`);
 
-      // Sincronizar suavemente
-      broadcastArenaSync();
+      // Sincronizar instantáneamente (Force sync)
+      broadcastArenaSync(true);
     } catch (err) {
       console.error("❌ Error en auto-join member:", err.message);
     }
@@ -917,12 +924,12 @@ io.on("connection", (socket) => {
 
   socket.on("arena:updatePlayer", (data) => {
     if (data && data.id && arenaPlayers[data.id]) {
-      // HP y Score ya son manejados mayormente por el servidor, pero aceptamos correcciones
+      // HP y Score ya son manejados mayormente por el servidor. 
+      // Ignoramos score del cliente para mantener autoridad de regalos.
       if (data.hp !== undefined) arenaPlayers[data.id].hp = data.hp;
-      if (data.score !== undefined) {
-        arenaPlayers[data.id].score = data.score;
-        updateHallOfFame(arenaPlayers[data.id]);
-      }
+      // Actualizamos posición si viene del dueño
+      if (data.x !== undefined) arenaPlayers[data.id].x = data.x;
+      if (data.y !== undefined) arenaPlayers[data.id].y = data.y;
     }
   });
 
