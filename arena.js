@@ -246,12 +246,13 @@ const players = {};
 const projectiles = [];
 const particles = [];
 const lightningBolts = [];
+const hazards = []; // Elementos peligrosos en el mapa como sierras
 
 // ==========================================
 // CONFIGURACIONES FÍSICAS
 // ==========================================
 const MAX_HP = 1000;
-const PLAYER_RADIUS = 30; // Tamaño de cada circulito guerreando
+let PLAYER_RADIUS = 30;
 const BASE_SPEED = 2; // Velocidad de rebote
 const NUM_STARS = 100;
 
@@ -330,10 +331,15 @@ class Player {
         this.avatar = data.avatar || "";
         this.hp = data.hp || MAX_HP;
         this.score = data.score || 0;
+        this.lastActive = data.lastActive || Date.now();
 
         // Spawn Random
         this.x = Math.random() * (canvas.width - 200) + 100;
         this.y = Math.random() * (canvas.height - 200) + 100;
+
+        // Propiedades dinámicas
+        this.currentRadius = PLAYER_RADIUS;
+        this.opacity = 1.0;
 
         // Vector de Movimiento Bouncingueno
         const angle = Math.random() * Math.PI * 2;
@@ -345,21 +351,35 @@ class Player {
     }
 
     update() {
+        // AFK Shrinking & Fading (si pasaron más de 60 segundos)
+        const idleTime = Date.now() - this.lastActive;
+        if (idleTime > 60000) { // Después de 1 min empieza a achicarse y desvanecerse
+            const decayFactor = Math.min((idleTime - 60000) / 120000, 1); // Tarda 2 mins en desaparecer al 100%
+            this.currentRadius = PLAYER_RADIUS * (1 - decayFactor * 0.8); // Se achica hasta el 20%
+            this.opacity = 1 - decayFactor;
+        } else {
+            this.currentRadius = PLAYER_RADIUS;
+            this.opacity = 1.0;
+        }
+
         // Físicas
         this.x += this.vx;
         this.y += this.vy;
 
         // Rebote colisión de bordes
-        if (this.x < PLAYER_RADIUS) { this.x = PLAYER_RADIUS; this.vx *= -1; }
-        if (this.x > canvas.width - PLAYER_RADIUS) { this.x = canvas.width - PLAYER_RADIUS; this.vx *= -1; }
-        if (this.y < PLAYER_RADIUS) { this.y = PLAYER_RADIUS; this.vy *= -1; }
-        if (this.y > canvas.height - PLAYER_RADIUS) { this.y = canvas.height - PLAYER_RADIUS; this.vy *= -1; }
+        if (this.x < this.currentRadius) { this.x = this.currentRadius; this.vx *= -1; }
+        if (this.x > canvas.width - this.currentRadius) { this.x = canvas.width - this.currentRadius; this.vx *= -1; }
+        if (this.y < this.currentRadius) { this.y = this.currentRadius; this.vy *= -1; }
+        if (this.y > canvas.height - this.currentRadius) { this.y = canvas.height - this.currentRadius; this.vy *= -1; }
 
         if (this.flash > 0) this.flash -= 0.05;
     }
 
     draw() {
+        if (this.opacity <= 0.05) return; // Ya casi invisible, no gastar GPU
+
         ctx.save();
+        ctx.globalAlpha = this.opacity;
 
         // Si flash es mayor a 0, añadir sombra blanca brillante (recibió daño o cura)
         if (this.flash > 0) {
@@ -369,13 +389,13 @@ class Player {
 
         // Dibujar clip circular (avatar)
         ctx.beginPath();
-        ctx.arc(this.x, this.y, PLAYER_RADIUS, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, this.currentRadius, 0, Math.PI * 2);
         ctx.closePath();
         ctx.clip(); // Cortar a círculo
 
         const img = getAvatarImage(this.avatar);
         if (img && img.complete) {
-            ctx.drawImage(img, this.x - PLAYER_RADIUS, this.y - PLAYER_RADIUS, PLAYER_RADIUS * 2, PLAYER_RADIUS * 2);
+            ctx.drawImage(img, this.x - this.currentRadius, this.y - this.currentRadius, this.currentRadius * 2, this.currentRadius * 2);
         } else {
             ctx.fillStyle = "#333";
             ctx.fill();
@@ -385,8 +405,8 @@ class Player {
 
         // Dibujar Borde (Color depende de Vida)
         ctx.beginPath();
-        ctx.arc(this.x, this.y, PLAYER_RADIUS, 0, Math.PI * 2);
-        ctx.lineWidth = 4;
+        ctx.arc(this.x, this.y, this.currentRadius, 0, Math.PI * 2);
+        ctx.lineWidth = 4 * (this.currentRadius / PLAYER_RADIUS); // Escalar borde también
 
         if (this.flash > 0) {
             ctx.strokeStyle = "white"; // Impacto full blaco
@@ -398,17 +418,22 @@ class Player {
         }
         ctx.stroke();
 
+        ctx.globalAlpha = 1.0; // Restablecer opacidad para texto
+
+        // Si está muy chico, no mostramos texto para evitar choclazo visual
+        if (this.currentRadius < 15) return;
+
         // Dibujar nombre y HP
         ctx.fillStyle = "white";
         ctx.font = "bold 12px Rajdhani";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(`${Math.floor(this.hp)} HP`, this.x, this.y + PLAYER_RADIUS + 12);
+        ctx.fillText(`${Math.floor(this.hp)} HP`, this.x, this.y + this.currentRadius + 12);
 
         // Nombre
         ctx.fillStyle = "rgba(255,255,255,0.7)";
         ctx.font = "10px sans-serif";
-        ctx.fillText(this.name.substring(0, 10), this.x, this.y + PLAYER_RADIUS + 24);
+        ctx.fillText(this.name.substring(0, 10), this.x, this.y + this.currentRadius + 24);
     }
 
     takeDamage(amount, attackerId) {
@@ -497,6 +522,85 @@ class Projectile {
     }
 }
 
+// Clase para Peligros (Buzzsaw / Sierra)
+class Buzzsaw {
+    constructor(x, y, attackerId, duration) {
+        this.x = x; this.y = y;
+        this.radius = 40;
+        this.attackerId = attackerId; // Quien lo tiró (para puntos)
+        this.angle = 0;
+        const moveAngle = Math.random() * Math.PI * 2;
+        this.vx = Math.cos(moveAngle) * 5; // Más rápida
+        this.vy = Math.sin(moveAngle) * 5;
+        this.life = duration; // frames de vida (~600 = 10 segundos)
+        this.active = true;
+    }
+
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.angle += 0.3; // Rota muy rápido
+        this.life--;
+
+        if (this.life <= 0) this.active = false;
+
+        // Rebota furiosamente
+        if (this.x < this.radius) { this.x = this.radius; this.vx *= -1; playSound("hit"); }
+        if (this.x > canvas.width - this.radius) { this.x = canvas.width - this.radius; this.vx *= -1; playSound("hit"); }
+        if (this.y < this.radius) { this.y = this.radius; this.vy *= -1; playSound("hit"); }
+        if (this.y > canvas.height - this.radius) { this.y = canvas.height - this.radius; this.vy *= -1; playSound("hit"); }
+
+        // Colisión con jugadores (Daño en área constante)
+        if (this.life % 5 === 0) { // Check collision every 5 frames to prevent instakill
+            for (const id in players) {
+                const p = players[id];
+                if (p.hp > 0 && p.opacity > 0.5) { // Solo hace daño a activos
+                    const dist = Math.sqrt((this.x - p.x) ** 2 + (this.y - p.y) ** 2);
+                    if (dist < this.radius + p.currentRadius) {
+                        p.takeDamage(20, this.attackerId); // 20 daño contínuo
+                        createExplosion(p.x, p.y, "#999");
+                    }
+                }
+            }
+        }
+    }
+
+    draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.angle);
+
+        // Dibujar cuerpo de la sierra
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius - 5, 0, Math.PI * 2);
+        ctx.fillStyle = "#7f8fa6"; // Metal base
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "#353b48";
+        ctx.stroke();
+
+        // Dibujar dientes de la sierra
+        ctx.beginPath();
+        const teeth = 12;
+        for (let i = 0; i < teeth; i++) {
+            const rot = (i * Math.PI * 2) / teeth;
+            ctx.moveTo(Math.cos(rot) * (this.radius - 8), Math.sin(rot) * (this.radius - 8));
+            ctx.lineTo(Math.cos(rot + 0.1) * this.radius, Math.sin(rot + 0.1) * this.radius);
+            ctx.lineTo(Math.cos(rot + 0.2) * (this.radius - 8), Math.sin(rot + 0.2) * (this.radius - 8));
+        }
+        ctx.fillStyle = "#e84118"; // Sangre o rojo furioso
+        ctx.fill();
+
+        // Agujero centro
+        ctx.beginPath();
+        ctx.arc(0, 0, 8, 0, Math.PI * 2);
+        ctx.fillStyle = "#2f3640";
+        ctx.fill();
+
+        ctx.restore();
+    }
+}
+
 // ==========================================
 // MÉTODOS DE RED (SOCKETS)
 // ==========================================
@@ -542,6 +646,8 @@ socket.on("arena:gift", (data) => {
     const attacker = players[data.userId];
     if (!attacker) return;
 
+    attacker.lastActive = Date.now(); // Reset AFK timer on attack
+
     const diamonds = data.diamondCount * data.count;
 
     // Buscar enemigo más cercano
@@ -568,10 +674,13 @@ socket.on("arena:gift", (data) => {
     } else if (gName.includes("donut") || gName.includes("ray")) {
         atkType = "lightning"; color = "#fbbf24"; // Amarillo
         damage = diamonds * 15;
+    } else if (gName.includes("lion") || gName.includes("universe") || diamonds > 900) {
+        // Regalo GIGANTE -> Invoca la SIERRA MORTAL
+        atkType = "buzzsaw";
     } else if (gName.includes("perfume")) {
         atkType = "projectile"; color = "#a855f7"; // Morado
     } else {
-        // Regalo genérico o muy caro
+        // Regalo genérico o mediano
         atkType = diamonds > 50 ? "lightning" : "projectile";
         color = "#fff";
     }
@@ -591,6 +700,11 @@ socket.on("arena:gift", (data) => {
         lightningBolts.push({ sx: attacker.x, sy: attacker.y, tx: target.x, ty: target.y, life: 1.0, color });
         target.takeDamage(damage, attacker.id);
         createExplosion(target.x, target.y, color);
+    } else if (atkType === "buzzsaw") {
+        // Spawnear la sierra asesina cerca del centro y suena algo épico
+        playSound("explosion");
+        spawnFloatingText("⚠️ SIERRA !", canvas.width / 2, canvas.height / 2, "#ff0000");
+        hazards.push(new Buzzsaw(canvas.width / 2, canvas.height / 2, attacker.id, 600)); // ~10 segundos de vida a 60fps
     }
 });
 
@@ -633,7 +747,7 @@ function updateRankingDOM() {
 function loop() {
     drawBackground();
 
-    // Físicas entre jugadores (Opcional Colisiones Simples de rebote)
+    // Físicas entre jugadores
     const pList = Object.values(players);
     for (let i = 0; i < pList.length; i++) {
         for (let j = i + 1; j < pList.length; j++) {
@@ -642,10 +756,13 @@ function loop() {
 
             let dx = p2.x - p1.x; let dy = p2.y - p1.y;
             let dist = Math.sqrt(dx * dx + dy * dy);
+            // Distancia combinada de los radios modificados
+            const minDist = p1.currentRadius + p2.currentRadius;
+
             // Chocan
-            if (dist < PLAYER_RADIUS * 2) {
+            if (dist < minDist) {
                 // Evitar superposición excesiva 
-                let overlap = PLAYER_RADIUS * 2 - dist;
+                let overlap = minDist - dist;
                 if (dist === 0) { dx = 1; dy = 0; dist = 1; }
 
                 // Normalizar
@@ -656,7 +773,7 @@ function loop() {
                 p2.vx = tx; p2.vy = ty;
 
                 // Separar basándonos en overlap
-                let sep = (overlap / 2) + 1;
+                let sep = (overlap / 2) + 0.5;
                 p1.x -= nx * sep; p1.y -= ny * sep;
                 p2.x += nx * sep; p2.y += ny * sep;
             }
@@ -670,6 +787,14 @@ function loop() {
             p.draw();
         }
     });
+
+    // Hazars (Sierras, etc)
+    for (let i = hazards.length - 1; i >= 0; i--) {
+        let h = hazards[i];
+        h.update();
+        h.draw();
+        if (!h.active) hazards.splice(i, 1);
+    }
 
     // Proyectiles
     for (let i = projectiles.length - 1; i >= 0; i--) {
