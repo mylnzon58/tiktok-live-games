@@ -632,6 +632,7 @@ class Player {
     heal(amount) {
         if (this.hp <= 0) return;
         this.hp = Math.min(this.hp + amount, MAX_HP);
+        this.score += amount; // Hacemos que los Tap Taps (curación) también sumen para crecer
         this.flash = 1;
         spawnFloatingText(`+${amount}`, this.x, this.y, "#2ed573");
         playSound("heal");
