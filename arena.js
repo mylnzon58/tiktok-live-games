@@ -367,6 +367,25 @@ function drawBackground() {
     ctx.lineWidth = 15;
     ctx.stroke();
 
+    // --- NÚCLEO: ZONA REY ---
+    const coreRadius = 120;
+    ctx.beginPath();
+    ctx.arc(cx, cy, coreRadius, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255, 215, 0, 0.08)";
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(255, 215, 0, 0.4)";
+    ctx.setLineDash([10, 10]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = "rgba(255, 215, 0, 0.5)";
+    ctx.font = "bold 24px Rajdhani";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("👑 ZONA REY", cx, cy);
+    // ------------------------
+
     ctx.beginPath();
     ctx.arc(cx, cy, arenaRadius, 0, Math.PI * 2);
     ctx.strokeStyle = "rgba(0, 240, 255, 0.8)";
@@ -521,6 +540,14 @@ class Player {
             }
         }
 
+        // --- LÍMITE DE VELOCIDAD MÁXIMA ---
+        const computedSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        const maxSpeed = 15;
+        if (computedSpeed > maxSpeed) {
+            this.vx = (this.vx / computedSpeed) * maxSpeed;
+            this.vy = (this.vy / computedSpeed) * maxSpeed;
+        }
+
         // Físicas
         this.x += this.vx;
         this.y += this.vy;
@@ -532,6 +559,21 @@ class Player {
         const dx = this.x - cx;
         const dy = this.y - cy;
         const distToCenter = Math.sqrt(dx * dx + dy * dy);
+
+        // --- MOTIVACIÓN: ZONA REY ---
+        const coreRadius = 120;
+        if (this.opacity > 0.5 && distToCenter < coreRadius) {
+            this.score += 0.3; // Crece rápido en el centro
+            if (Math.random() < 0.02) {
+                spawnFloatingText("👑 +Poder", this.x, this.y - this.currentRadius, "#ffd700");
+                this.flash = Math.max(this.flash, 0.5);
+            }
+            // Sincronizar periódicamente el score pasivo
+            if (Math.random() < 0.02) {
+                syncStateToServer(this);
+            }
+        }
+        // ----------------------------
 
         if (distToCenter + this.currentRadius > arenaRadius) {
             const overlap = (distToCenter + this.currentRadius) - arenaRadius;
@@ -559,23 +601,50 @@ class Player {
             const minDistance = this.currentRadius + other.currentRadius;
 
             if (pdistance > 0 && pdistance < minDistance) {
-                // Separación para evitar quedarse pegados
                 const overlap = minDistance - pdistance;
                 const pnx = pdx / pdistance;
                 const pny = pdy / pdistance;
 
-                this.x += pnx * (overlap / 2);
-                this.y += pny * (overlap / 2);
-                other.x -= pnx * (overlap / 2);
-                other.y -= pny * (overlap / 2);
+                // Empujar a los jugadores fuera de la colisión ponderado por masa/tamaño
+                const massThis = this.currentRadius;
+                const massOther = other.currentRadius;
+                const totalMass = massThis + massOther;
+                const ratioThis = massOther / totalMass;
+                const ratioOther = massThis / totalMass;
 
-                // Intercambio elástico de velocidad (Bouncy!)
-                const tempVx = this.vx;
-                const tempVy = this.vy;
-                this.vx = (other.vx * 0.8) + (Math.random() - 0.5);
-                this.vy = (other.vy * 0.8) + (Math.random() - 0.5);
-                other.vx = (tempVx * 0.8) + (Math.random() - 0.5);
-                other.vy = (tempVy * 0.8) + (Math.random() - 0.5);
+                this.x += pnx * overlap * ratioThis;
+                this.y += pny * overlap * ratioThis;
+                other.x -= pnx * overlap * ratioOther;
+                other.y -= pny * overlap * ratioOther;
+
+                // Velocidad relativa
+                const rvx = this.vx - other.vx;
+                const rvy = this.vy - other.vy;
+
+                // Velocidad a lo largo de la normal
+                const velAlongNormal = rvx * pnx + rvy * pny;
+
+                // Si se están alejando, no resolver velocidad
+                if (velAlongNormal < 0) {
+                    // Restitución (elasticidad)
+                    const e = 0.8; // Bouncy
+                    const j = -(1 + e) * velAlongNormal / (1 / massThis + 1 / massOther);
+
+                    // Aplicar impulso
+                    const impulseX = j * pnx;
+                    const impulseY = j * pny;
+
+                    this.vx += impulseX / massThis;
+                    this.vy += impulseY / massThis;
+                    other.vx -= impulseX / massOther;
+                    other.vy -= impulseY / massOther;
+
+                    // Añadir un micro-caos dopamínico
+                    this.vx += (Math.random() - 0.5) * 0.5;
+                    this.vy += (Math.random() - 0.5) * 0.5;
+                    other.vx += (Math.random() - 0.5) * 0.5;
+                    other.vy += (Math.random() - 0.5) * 0.5;
+                }
 
                 const impactSpeed = Math.abs(this.vx) + Math.abs(this.vy) + Math.abs(other.vx) + Math.abs(other.vy);
                 if (impactSpeed > 4 && Math.random() > 0.8) {
