@@ -404,12 +404,33 @@ class Player {
 
         if (idleTime > 20000) {
             const decayFactor = Math.min((idleTime - 20000) / 40000, 1);
-            this.currentRadius = targetRadius * (1 - decayFactor * 0.8);
-            this.opacity = 1 - decayFactor;
+
+            // SPECTATOR MODE: No desaparecen del todo
+            const minRadius = 15;
+            const minOpacity = 0.35;
+
+            let calcRadius = targetRadius * (1 - decayFactor * 0.8);
+            this.currentRadius = Math.max(calcRadius, minRadius);
+
+            let calcOpacity = 1 - decayFactor;
+            this.opacity = Math.max(calcOpacity, minOpacity);
+
+            // Reducir la velocidad si están AFK para que floten suavemente en el fondo
+            this.vx *= 0.98;
+            this.vy *= 0.98;
+
         } else {
             // Suavizar el crecimiento
             this.currentRadius += (targetRadius - this.currentRadius) * 0.1;
             this.opacity = 1.0;
+
+            // Restaurar velocidad si estaban lentos (recalculando un vector random suave si es necesario, pero por ahora solo dejamos que mantengan el momento)
+            const currentSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+            if (currentSpeed < (BASE_SPEED * 0.5)) {
+                const angle = Math.atan2(this.vy, this.vx) || (Math.random() * Math.PI * 2);
+                this.vx = Math.cos(angle) * BASE_SPEED;
+                this.vy = Math.sin(angle) * BASE_SPEED;
+            }
         }
 
         // Físicas
@@ -426,7 +447,7 @@ class Player {
     }
 
     draw() {
-        if (this.opacity <= 0.05) return; // Ya casi invisible, no gastar GPU
+        if (this.opacity <= 0.05) return; // Ya casi invisible, no gastar GPU (con Spectator Mode normalment no bajará de 0.35)
 
         ctx.save();
         ctx.globalAlpha = this.opacity;
@@ -475,31 +496,35 @@ class Player {
         }
         ctx.stroke();
 
-        // NOMBRE SIEMPRE VISIBLE
-        ctx.fillStyle = "white";
-        ctx.font = "bold 14px Rajdhani";
-        ctx.textAlign = "center";
-        ctx.shadowBlur = 4;
-        ctx.shadowColor = "black";
-        ctx.fillText(this.name, this.x, this.y + this.currentRadius + 15);
-        ctx.shadowBlur = 0;
+        // NOMBRE SIEMPRE VISIBLE - SALVO EN MODO ESPECTADOR AFK
+        if (this.opacity > 0.5) {
+            ctx.fillStyle = "white";
+            ctx.font = "bold 14px Rajdhani";
+            ctx.textAlign = "center";
+            ctx.shadowBlur = 4;
+            ctx.shadowColor = "black";
+            ctx.fillText(this.name, this.x, this.y + this.currentRadius + 15);
+            ctx.shadowBlur = 0;
+        }
 
         ctx.globalAlpha = 1.0;
 
         // Si está muy chico, no mostramos texto para evitar choclazo visual
         if (this.currentRadius < 15) return;
 
-        // Dibujar nombre y HP
-        ctx.fillStyle = "white";
-        ctx.font = "bold 12px Rajdhani";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(`${Math.floor(this.hp)} HP`, this.x, this.y + this.currentRadius + 12);
+        // Dibujar nombre y HP (Solo si están activos)
+        if (this.opacity > 0.5) {
+            ctx.fillStyle = "white";
+            ctx.font = "bold 12px Rajdhani";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(`${Math.floor(this.hp)} HP`, this.x, this.y + this.currentRadius + 12);
 
-        // Nombre
-        ctx.fillStyle = "rgba(255,255,255,0.7)";
-        ctx.font = "10px sans-serif";
-        ctx.fillText(this.name.substring(0, 10), this.x, this.y + this.currentRadius + 24);
+            // Nombre (secundario)
+            ctx.fillStyle = "rgba(255,255,255,0.7)";
+            ctx.font = "10px sans-serif";
+            ctx.fillText(this.name.substring(0, 10), this.x, this.y + this.currentRadius + 24);
+        }
     }
 
     takeDamage(amount, attackerId) {

@@ -316,22 +316,24 @@ function broadcastArenaSync(force = false) {
   }
 }
 
-// Limpiador automático de Jugadores AFK (sin actividad por 60 segundos)
+// Limpiador automático de Jugadores AFK (sin actividad por 20 minutos)
+// Ya no los borramos a los 60s, pasan a ser "Espectadores" en el cliente.
+// Los borramos solo si están ABSOLUTAMENTE inactivos por 20 minutos para no llenar la RAM.
 setInterval(() => {
   const now = Date.now();
   let changed = false;
   for (const id in arenaPlayers) {
-    if (now - arenaPlayers[id].lastActive > 60 * 1000) { // 60 segundos = limpieza agresiva
+    if (now - arenaPlayers[id].lastActive > 20 * 60 * 1000) {
       delete arenaPlayers[id];
       changed = true;
       io.emit("arena:leave", { id });
-      console.log(`🧹 ARENA SWEEP: Removido jugador inactivo ${id}`);
+      console.log(`🧹 ARENA SWEEP: Removido espectador permanentemente inactivo ${id}`);
     }
   }
   if (changed) {
-    broadcastArenaSync(true); // Forzar sincronización en sweep
+    broadcastArenaSync(true);
   }
-}, 5000);
+}, 30000);
 
 // ──────────────────────────────────────────────────────────────
 // Sistema de Overrides (Forzar país manualmente)
