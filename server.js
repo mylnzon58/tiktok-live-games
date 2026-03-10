@@ -675,18 +675,9 @@ function connectToTikTok() {
 
   // ── Member event (Entrada al LIVE) ──
   tiktokLive.on("member", (data) => {
-    try {
-      const userObj = data.user || {
-        uniqueId: data.uniqueId,
-        nickname: data.nickname || data.uniqueId,
-        profilePictureUrl: data.profilePictureUrl
-      };
-
-      if (userObj && (userObj.uniqueId || userObj.userId)) {
-        // Inicializamos al jugador para que aparezca en modo AFK/espectador
-        initOrUpdateArenaPlayer(userObj);
-      }
-    } catch (e) { }
+    // NOTA: Deshabilitado nuevamente. La API de TikTok envía a todos los "mejores espectadores"
+    // antiguos cuando te conectas recién, llenando la sala de fantasmas.
+    // Solo permitiremos interactuar por Chat, Regalo o Like para entrar a la arena.
   });
 
   // ── Receive death/score update from Arena Overlay (para consistencia simple) ──
