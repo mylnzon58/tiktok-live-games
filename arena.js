@@ -248,7 +248,9 @@ const players = {};
 const projectiles = [];
 const particles = [];
 const lightningBolts = [];
-const hazards = []; // Elementos peligrosos en el mapa como sierras
+const hazards = []; // Elementos peligrosos en el mapa como sierras y lasers
+
+let screenShake = 0; // Intensidad de vibración de pantalla
 
 // ==========================================
 // CONFIGURACIONES FÍSICAS
@@ -312,12 +314,16 @@ function spawnFloatingText(text, x, y, color) {
 }
 
 function createExplosion(x, y, color) {
-    for (let i = 0; i < 20; i++) {
+    // Screen shake en explosiones
+    screenShake = Math.max(screenShake, 10);
+
+    for (let i = 0; i < 30; i++) {
         particles.push({
             x, y,
-            vx: (Math.random() - 0.5) * 8,
-            vy: (Math.random() - 0.5) * 8,
+            vx: (Math.random() - 0.5) * 12,
+            vy: (Math.random() - 0.5) * 12,
             life: 1.0,
+            size: Math.random() * 4 + 2,
             color: color || "#fff"
         });
     }
@@ -353,10 +359,10 @@ class Player {
     }
 
     update() {
-        // AFK Shrinking & Fading (si pasaron más de 60 segundos)
+        // AFK Shrinking & Fading (si pasaron más de 30 segundos)
         const idleTime = Date.now() - this.lastActive;
-        if (idleTime > 60000) { // Después de 1 min empieza a achicarse y desvanecerse
-            const decayFactor = Math.min((idleTime - 60000) / 120000, 1); // Tarda 2 mins en desaparecer al 100%
+        if (idleTime > 30000) { // Después de 30s empieza a achicarse
+            const decayFactor = Math.min((idleTime - 30000) / 60000, 1); // Tarda 60s en desaparecer al 100% (Total: 90s)
             this.currentRadius = PLAYER_RADIUS * (1 - decayFactor * 0.8); // Se achica hasta el 20%
             this.opacity = 1 - decayFactor;
         } else {
@@ -452,8 +458,9 @@ class Player {
         }
 
         if (this.hp <= 0) {
-            // Muerte explosiva
+            // Muerte explosiva masiva
             createExplosion(this.x, this.y, "#ff4757");
+            screenShake = 20;
             spawnFloatingText(`💥 K.O.`, this.x, this.y, "#ffeb3b");
             playSound("explosion");
 
@@ -603,6 +610,71 @@ class Buzzsaw {
     }
 }
 
+// Clase para Rayos Giratorios (Laser Beam)
+class LaserBeam {
+    constructor(x, y, attackerId, duration) {
+        this.x = x; this.y = y;
+        this.attackerId = attackerId;
+        this.angle = Math.random() * Math.PI * 2;
+        this.rotationSpeed = (Math.random() > 0.5 ? 1 : -1) * 0.05;
+        this.length = 1500; // Suficiente para cruzar la pantalla
+        this.life = duration;
+        this.active = true;
+        this.color = "#a855f7"; // Morado NEON
+    }
+
+    update() {
+        this.angle += this.rotationSpeed;
+        this.life--;
+        if (this.life <= 0) this.active = false;
+
+        // Cada 10 frames checkeamos hit para no ser demasiado op
+        if (this.life % 4 === 0) {
+            for (const id in players) {
+                const p = players[id];
+                if (p.hp > 0 && p.opacity > 0.5 && p.id !== this.attackerId) {
+                    // Colision Linea-Circulo
+                    // Simplificado: punto p proyectado en la linea del laser
+                    const dx = p.x - this.x;
+                    const dy = p.y - this.y;
+                    const distToLine = Math.abs(dx * Math.sin(this.angle) - dy * Math.cos(this.angle));
+
+                    if (distToLine < p.currentRadius + 5) {
+                        p.takeDamage(15, this.attackerId);
+                        createExplosion(p.x, p.y, this.color);
+                    }
+                }
+            }
+        }
+    }
+
+    draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.angle);
+
+        // Brillo exterior
+        ctx.beginPath();
+        ctx.moveTo(-this.length, 0);
+        ctx.lineTo(this.length, 0);
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = 15;
+        ctx.globalAlpha = 0.3;
+        ctx.stroke();
+
+        // Nucleo blanco
+        ctx.beginPath();
+        ctx.moveTo(-this.length, 0);
+        ctx.lineTo(this.length, 0);
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 4;
+        ctx.globalAlpha = 1.0;
+        ctx.stroke();
+
+        ctx.restore();
+    }
+}
+
 // ==========================================
 // MÉTODOS DE RED (SOCKETS)
 // ==========================================
@@ -617,6 +689,7 @@ socket.on("arena:sync", (serverPlayers) => {
         else {
             players[id].hp = serverPlayers[id].hp;
             players[id].score = serverPlayers[id].score;
+            players[id].lastActive = serverPlayers[id].lastActive; // SINCRONIZA AFK CLOCK
         }
     }
     updateRankingDOM();
@@ -679,7 +752,10 @@ socket.on("arena:gift", (data) => {
     } else if (gName.includes("lion") || gName.includes("universe") || diamonds > 900) {
         // Regalo GIGANTE -> Invoca la SIERRA MORTAL
         atkType = "buzzsaw";
-    } else if (gName.includes("perfume")) {
+    } else if (gName.includes("star") || gName.includes("estrella") || gName.includes("zapato") || gName.includes("hat")) {
+        // Regalo Mediano/Especial -> Laser
+        atkType = "laser";
+    } else if (gName.includes("perfume") || gName.includes("makeup")) {
         atkType = "projectile"; color = "#a855f7"; // Morado
     } else {
         // Regalo genérico o mediano
@@ -707,6 +783,10 @@ socket.on("arena:gift", (data) => {
         playSound("explosion");
         spawnFloatingText("⚠️ SIERRA !", canvas.width / 2, canvas.height / 2, "#ff0000");
         hazards.push(new Buzzsaw(canvas.width / 2, canvas.height / 2, attacker.id, 600)); // ~10 segundos de vida a 60fps
+    } else if (atkType === "laser") {
+        playSound("lightning");
+        spawnFloatingText("⚡ LASER !", attacker.x, attacker.y, "#a855f7");
+        hazards.push(new LaserBeam(attacker.x, attacker.y, attacker.id, 400)); // ~7 segundos
     }
 });
 
@@ -747,6 +827,17 @@ function updateRankingDOM() {
 
 // Bucle principal a 60FPS
 function loop() {
+    ctx.save();
+
+    // Aplicar Screen Shake si hay intensidad
+    if (screenShake > 0) {
+        const sx = (Math.random() - 0.5) * screenShake;
+        const sy = (Math.random() - 0.5) * screenShake;
+        ctx.translate(sx, sy);
+        screenShake *= 0.9; // Atenuación rápida
+        if (screenShake < 0.5) screenShake = 0;
+    }
+
     drawBackground();
 
     // Físicas entre jugadores
@@ -851,6 +942,7 @@ function loop() {
         if (p.life <= 0) particles.splice(i, 1);
     }
 
+    ctx.restore(); // Limpiar Screen Shake
     requestAnimationFrame(loop);
 }
 

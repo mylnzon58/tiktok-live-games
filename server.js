@@ -302,12 +302,12 @@ function initOrUpdateArenaPlayer(user) {
   return arenaPlayers[id];
 }
 
-// Limpiador automático de Jugadores AFK (sin actividad por 4 minutos)
+// Limpiador automático de Jugadores AFK (sin actividad por 90 segundos)
 setInterval(() => {
   const now = Date.now();
   let changed = false;
   for (const id in arenaPlayers) {
-    if (now - arenaPlayers[id].lastActive > 4 * 60 * 1000) {
+    if (now - arenaPlayers[id].lastActive > 90 * 1000) { // 90 segundos = viejo / fantasma
       delete arenaPlayers[id];
       changed = true;
       io.emit("arena:leave", { id }); // Emite evento de salida 
@@ -317,7 +317,7 @@ setInterval(() => {
   if (changed) {
     io.emit("arena:sync", arenaPlayers); // Sincroniza estado fresco
   }
-}, 60000); // Check every minute
+}, 10000); // Check every 10 seconds
 
 // ──────────────────────────────────────────────────────────────
 // Sistema de Overrides (Forzar país manualmente)
