@@ -1264,14 +1264,18 @@ function updateTopShowcase() {
         console.warn("⚠️ Top Hall of Fame está vacío.");
     }
 
-    top3.forEach((p, idx) => {
-        const rank = idx + 1;
+    // Orden Visual: [Rank 2] [Rank 1] [Rank 3]
+    const visualOrder = [top3[1], top3[0], top3[2]]; // 2nd, 1st, 3rd
+
+    visualOrder.forEach((p, idx) => {
+        if (!p) return;
+        const realRank = (idx === 0) ? 2 : (idx === 1 ? 1 : 3);
         const item = document.createElement("div");
-        item.className = `top-player-item rank-${rank} ${p.isPlaceholder ? 'placeholder' : ''}`;
+        item.className = `top-player-item rank-${realRank} ${p.isPlaceholder ? 'placeholder' : ''}`;
 
         item.innerHTML = `
             <div class="top-player-avatar" style="background-image: url('${p.avatar || ''}')"></div>
-            <div class="top-rank-badge">${rank}</div>
+            <div class="top-rank-badge">${realRank}</div>
             <div class="top-player-name">${p.name}</div>
             ${p.isPlaceholder ? '' : '<div class="follow-arrow">⬆️</div>'}
         `;
