@@ -280,6 +280,34 @@ function spawnReaction(emoji) {
     setTimeout(() => el.remove(), 6000);
 }
 
+// 💎 LLUVIA DE DIAMANTES (NEUROMARKETING)
+function spawnDiamondRain() {
+    const container = document.body;
+    const count = 50;
+    const emojis = ["💎", "✨", "👑", "❤️"];
+
+    for (let i = 0; i < count; i++) {
+        setTimeout(() => {
+            const d = document.createElement("div");
+            d.className = "diamond-rain";
+            d.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+            d.style.left = Math.random() * 100 + "vw";
+            d.style.fontSize = (20 + Math.random() * 30) + "px";
+            d.style.setProperty("--dur", (1.5 + Math.random() * 2) + "s");
+            d.style.opacity = 0.8 + Math.random() * 0.2;
+            container.appendChild(d);
+            setTimeout(() => d.remove(), 4000);
+        }, i * 40);
+    }
+}
+
+function triggerScreenShake(intensity = 15) {
+    const overlay = document.getElementById("overlay");
+    overlay.style.animation = `none`;
+    overlay.offsetHeight; // trigger reflow
+    overlay.style.animation = `screenShakeOverlay 0.5s ease-out`;
+}
+
 // ──────────────────────────────────────────────────────────────
 // Formatear score — con decimales como la referencia
 // ──────────────────────────────────────────────────────────────
@@ -533,6 +561,8 @@ socket.on("bigGift", (data) => {
     for (let i = 0; i < 10; i++) {
         setTimeout(() => spawnReaction("💥"), i * 150);
     }
+    spawnDiamondRain();
+    triggerScreenShake();
     playBigGiftSound();
 });
 

@@ -227,6 +227,13 @@ function startTimer() {
 
   timerInterval = setInterval(() => {
     timeRemaining--;
+
+    // Alerta de Muerte Súbita (últimos 60s)
+    if (timeRemaining === 60) {
+      io.emit("arena:suddenDeath", true);
+      console.log("🔥 MUERTE SÚBITA INICIADA EN LA ARENA");
+    }
+
     if (timeRemaining <= 0) {
       resetRound();
     } else {
@@ -235,21 +242,59 @@ function startTimer() {
   }, 1000);
 }
 
+let lastArenaWinnerId = null;
+
 function resetRound() {
-  // Guardar ganador antes de reiniciar
-  const sorted = Object.entries(countries)
+  // 1. Ganador de Países
+  const sortedCountries = Object.entries(countries)
     .filter(([, v]) => v.score > 0)
     .sort((a, b) => b[1].score - a[1].score);
 
-  const winner = sorted.length > 0 ? { code: sorted[0][0], ...sorted[0][1] } : null;
+  const countryWinner = sortedCountries.length > 0 ? { code: sortedCountries[0][0], ...sortedCountries[0][1] } : null;
 
-  // Reiniciar scores
+  // 2. Ganador de la Arena (MVP Gladiador)
+  const sortedArena = Object.values(arenaPlayers)
+    .filter(p => p.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  const arenaWinner = sortedArena.length > 0 ? arenaArenaWinner(sortedArena[0]) : null;
+  lastArenaWinnerId = arenaWinner ? arenaWinner.id : null;
+
+  // Emitir fin de ronda para ambos juegos
+  io.emit("roundReset", { winner: countryWinner, countries });
+  io.emit("arena:roundEnd", { winner: arenaWinner });
+  io.emit("arena:suddenDeath", false); // Reset muerte súbita
+
+  // Reiniciar scores de países
   countries = initCountries();
   currentLeader = null;
-  io.emit("roundReset", { winner, countries });
+
+  // Reiniciar scores de Arena (pero mantener a los jugadores y sus HP)
+  for (const id in arenaPlayers) {
+    // IMPORTANTE: NO reiniciamos el score si es parte del Hall of Fame persistente
+    if (!arenaHallOfFame[id]) {
+      arenaPlayers[id].score = 0;
+    }
+  }
+
   io.emit("rankingUpdate", countries);
+  broadcastArenaSync(true); // Sincronizar reinicio arena
+
   startTimer();
-  console.log("🔄 Nueva ronda iniciada" + (winner ? ` — Ganador: ${winner.flag} ${winner.code}` : ""));
+
+  console.log("🔄 Nueva ronda iniciada");
+  if (countryWinner) console.log(`   🏳️ Ganador Países: ${countryWinner.flag} ${countryWinner.code}`);
+  if (arenaWinner) console.log(`   ⚔️ Ganador Arena: ${arenaWinner.name} (Score: ${arenaWinner.score})`);
+}
+
+// Helper para limpiar objeto de ganador y no enviar todo el estado
+function arenaArenaWinner(p) {
+  return {
+    id: p.id,
+    name: p.name,
+    avatar: p.avatar,
+    score: p.score
+  };
 }
 
 function checkLeaderChange() {
@@ -278,10 +323,12 @@ function checkLeaderChange() {
 const arenaPlayers = {};
 const arenaHallOfFame = {}; // { id: { name, avatar, score, lastActive, hp } }
 const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+const chatPowerCooldowns = {}; // { userId: timestamp }
 
 function updateHallOfFame(p) {
   if (!p || p.score <= 0) return;
 
+  // REGLA: El Top 3 es sagrado por 12 horas. Solo se desplaza si el score (donaciones) es mayor.
   if (!arenaHallOfFame[p.id] || p.score > arenaHallOfFame[p.id].score) {
     arenaHallOfFame[p.id] = {
       id: p.id,
@@ -293,8 +340,11 @@ function updateHallOfFame(p) {
     };
     broadcastHallOfFame();
   } else {
-    // Actualizar HP solo si ya existe
+    // Actualizar HP y nombre si ya existe, pero mantener el score más alto
     arenaHallOfFame[p.id].hp = p.hp;
+    arenaHallOfFame[p.id].name = p.name;
+    arenaHallOfFame[p.id].avatar = p.avatar;
+    arenaHallOfFame[p.id].lastActive = Date.now();
   }
 }
 
@@ -335,12 +385,19 @@ function initOrUpdateArenaPlayer(user) {
 
 // Función para sincronizar con THROTTLE (Evita saturar el canal)
 let lastSyncTime = 0;
-const SYNC_THROTTLE_MS = 200; // Máximo 5 veces por segundo
+const SYNC_THROTTLE_MS = 100; // Máximo 10 veces por segundo (Doble que antes)
 
 function broadcastArenaSync(force = false) {
   const now = Date.now();
   if (force || (now - lastSyncTime > SYNC_THROTTLE_MS)) {
+    // 1. Ranking de la Ronda Actual (Único que debe ver el usuario en el Top)
+    const currentRanking = Object.values(arenaPlayers)
+      .filter(p => p.score >= 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+
     io.emit("arena:sync", arenaPlayers);
+    io.emit("arena:currentRanking", currentRanking);
     lastSyncTime = now;
   }
 }
@@ -381,22 +438,18 @@ setInterval(() => {
 
     let shouldRemove = false;
 
-    if (totalPlayers > 30) {
-      // REGLA DE ORO: Si el cuarto está lleno, los que entran pero NO donan se van rápido (30s)
-      if (!isKing && score < 100 && idleTime > 30 * 1000) {
+    if (totalPlayers > 50) {
+      // REGLA DE ORO: Si está lleno, limpieza agresiva a los 60 segundos
+      if (!isKing && idleTime > 120 * 1000) {
         shouldRemove = true;
       }
-      // Si son donadores medios pero están AFK, se van a los 5 min para dar espacio
-      else if (!isKing && idleTime > 300 * 1000) {
-        shouldRemove = true;
-      }
-      // Si es un Rey (Top 5) pero lleva 1 hora AFK en sala llena, se retira (12h en HOF se mantiene)
-      else if (isKing && idleTime > 3600 * 1000) {
+      // Si es un Rey (Top 5) pero lleva 30 min AFK en sala llena, se retira (12h en HOF se mantiene)
+      else if (isKing && idleTime > 1800 * 1000) {
         shouldRemove = true;
       }
     } else {
-      // Si hay espacio, los Reyes son inmortales. Los normales se van a los 10 min.
-      if (!isKing && idleTime > 600 * 1000) {
+      // Si hay espacio, los Reyes son inmortales. Los normales se van al minuto (60s).
+      if (!isKing && idleTime > 120 * 1000) {
         shouldRemove = true;
       }
     }
@@ -569,20 +622,38 @@ function connectToTikTok() {
         }
       }
 
-      // Calcular daño (20x diamantes)
-      const damage = diamondCount * repeatCount * 20;
+      // Calcular daño base (20x diamantes)
+      let damage = diamondCount * repeatCount * 100; // Aumentado a 100x para incentivo máximo
+
+      // 🎰 LOGICA JACKPOT (NEUROMARKETING)
+      let multiplier = 1;
+      if (diamondCount >= 10 && Math.random() < 0.10) {
+        const roll = Math.random();
+        if (roll < 0.05) multiplier = 10; // 0.5% chance x10
+        else if (roll < 0.20) multiplier = 5; // 1.5% chance x5
+        else multiplier = 2; // 8% chance x2
+
+        damage *= multiplier;
+        io.emit("arena:jackpot", {
+          attackerId: attacker.id,
+          targetId: targetId,
+          multiplier: multiplier,
+          diamondCount: diamondCount
+        });
+        console.log(`🎰 JACKPOT! Multiplicador x${multiplier} activado para @${arenaUserObj.uniqueId}!`);
+      }
 
       if (targetId && arenaPlayers[targetId]) {
         arenaPlayers[targetId].hp -= damage;
         if (arenaPlayers[targetId].hp < 0) arenaPlayers[targetId].hp = 0;
         if (attacker) {
-          attacker.score += damage;
+          attacker.score += damage * 10; // Aumento extremo para alcanzar el nuevo tope de 200px
           updateHallOfFame(attacker);
         }
 
-        // Si el regalo es grande, daño inmediato masivo
+        // Si el regalo es grande (>500 diamantes), daño inmediato masivo extra
         if (diamondCount >= 500) {
-          arenaPlayers[targetId].hp -= (damage * 0.5);
+          arenaPlayers[targetId].hp -= (damage * 0.1); // Proporcional al daño total con jackpot
         }
 
         // Si murió el target, actualizamos al atacante en HOF
@@ -595,15 +666,23 @@ function connectToTikTok() {
         updateHallOfFame(arenaPlayers[targetId]);
       }
 
-      console.log(`⚔️ [ARENA ATTACK] @${arenaUserObj.uniqueId} -> Target:${targetId || "NONE"} (Dmg:${damage})`);
+      console.log(`⚔️ [ARENA ATTACK] @${arenaUserObj.uniqueId} -> Target:${targetId || "NONE"} (Dmg:${damage} x${multiplier})`);
 
       io.emit("arena:gift", {
-        userId: arenaUserObj.uniqueId || arenaUserObj.userId || data.uniqueId,
-        targetId: targetId,
-        giftName: data.giftName || "Rosa",
-        count: repeatCount,
+        attacker: {
+          id: attacker.id,
+          x: attacker.x,
+          y: attacker.y
+        },
+        target: targetId ? {
+          id: targetId,
+          x: arenaPlayers[targetId].x,
+          y: arenaPlayers[targetId].y
+        } : null,
         diamondCount: diamondCount,
-        damage: damage
+        repeatCount: repeatCount,
+        giftName: data.giftName,
+        multiplier: multiplier // Enviar multiplicador al cliente
       });
 
       // Sincronizar con throttle para evitar lag en combos
@@ -657,7 +736,7 @@ function connectToTikTok() {
 
       const player = initOrUpdateArenaPlayer(arenaUserObj);
       if (player) {
-        player.score += likeCount * 5;
+        player.score += likeCount * 0.1; // Nerf masivo al crecimiento por likes
         updateHallOfFame(player);
       }
 
@@ -733,13 +812,30 @@ function connectToTikTok() {
         }
       }
 
-      // ── LOGICA PARA MODO ARENA ──
       const arenaUserObj = data.user || {
         uniqueId: data.uniqueId,
         nickname: data.nickname || data.uniqueId,
         profilePictureUrl: data.profilePictureUrl || ""
       };
-      initOrUpdateArenaPlayer(arenaUserObj);
+      const player = initOrUpdateArenaPlayer(arenaUserObj);
+
+      // ── DETECCIÓN DE PODER POR CHAT ──
+      const powerKeywords = ["PODER", "FUERZA", "VAMOS", "ARENA", "GLADIADOR", "ATAQUE"];
+      const containsPower = powerKeywords.some(kw => text.includes(kw));
+
+      if (containsPower && player) {
+        const now = Date.now();
+        const lastPower = chatPowerCooldowns[player.id] || 0;
+
+        if (now - lastPower > 5000) { // Cooldown de 5 segundos
+          chatPowerCooldowns[player.id] = now;
+          io.emit("arena:chatPower", {
+            userId: player.id,
+            keyword: text.split(" ").find(w => powerKeywords.includes(w)) || "PODER"
+          });
+          console.log(`✨ CHAT POWER: @${player.id} activó efecto con "${text}"`);
+        }
+      }
     } catch (err) {
       console.error("❌ Crasheo evitado en evento chat:", err);
     }
@@ -804,6 +900,8 @@ io.on("connection", (socket) => {
   socket.emit("timerUpdate", timeRemaining);
   // Arena State
   socket.emit("arena:sync", arenaPlayers);
+  socket.emit("arena:champion", lastArenaWinnerId);
+  if (timeRemaining <= 60) socket.emit("arena:suddenDeath", true);
   broadcastHallOfFame();
 
   // Escuchar actualizaciones por lotes (Bote de posiciones)

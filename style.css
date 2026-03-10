@@ -1152,3 +1152,35 @@ body {
     transform: translateY(-800px) scale(0.5) rotate(-15deg);
   }
 }
+/* 💎 LLUVIA DE DIAMANTES (NEUROMARKETING) */
+.diamond-rain {
+  position: fixed;
+  top: -100px;
+  z-index: 9999;
+  pointer-events: none;
+  animation: fallDown var(--dur) linear forwards;
+}
+
+@keyframes fallDown {
+  0% {
+    transform: translateY(0) rotate(0deg);
+  }
+
+  100% {
+    transform: translateY(120vh) rotate(360deg);
+  }
+}
+
+@keyframes screenShakeOverlay {
+  0% { transform: translate(0, 0); }
+  10% { transform: translate(-10px, -10px); }
+  20% { transform: translate(10px, 10px); }
+  30% { transform: translate(-10px, 10px); }
+  40% { transform: translate(10px, -10px); }
+  50% { transform: translate(-10px, -10px); }
+  60% { transform: translate(10px, 10px); }
+  70% { transform: translate(-10px, 10px); }
+  80% { transform: translate(10px, -10px); }
+  90% { transform: translate(-10px, -10px); }
+  100% { transform: translate(0, 0); }
+}

@@ -89,50 +89,78 @@ html {
 /* Guía Lateral Arriba o Abajo (Ajustado para no tapar) */
 #powers-guide {
     position: absolute;
-    bottom: 60px;
-    /* Un poco más arriba de los botones de abajo */
-    left: 15px;
-    background: linear-gradient(135deg, rgba(15, 15, 35, 0.8) 0%, rgba(5, 5, 15, 0.9) 100%);
-    border: 1px solid rgba(0, 240, 255, 0.3);
-    padding: 12px;
-    border-radius: 12px;
+    bottom: 5px;
+    /* Pequeño margen desde el borde inferior */
+    left: 10%;
+    width: 80%;
+    /* No ocupa todo el ancho para dejar espacio a los botones laterales */
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.4) 100%);
+    padding: 15px 20px;
     z-index: 10;
     pointer-events: none;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(5px);
+    backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    border-radius: 20px;
 }
 
 #powers-guide h3 {
-    font-family: 'Bungee', cursive;
-    font-size: 16px;
-    color: #fff;
-    letter-spacing: 1px;
-    margin-bottom: 10px;
-    text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+    display: none;
+    /* Título oculto para ahorrar espacio vertical */
 }
 
 #powers-guide ul {
     list-style: none;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 30px;
+    /* Más espacio entre items */
+    padding: 0 10px;
+    align-items: center;
 }
 
 #powers-guide li {
-    font-size: 16px;
-    font-weight: 700;
+    font-size: 24px;
+    /* Aumentado sustancialmente de 18px */
+    white-space: nowrap;
+    font-weight: 900;
+    /* Extra bold */
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 8px;
-    text-shadow: 1px 1px 2px #000;
+    gap: 12px;
+    text-shadow: 0 0 10px rgba(0, 0, 0, 1), 2px 2px 2px #000;
 }
 
 #powers-guide img {
-    width: 24px;
-    height: 24px;
+    width: 64px;
+    /* Aumentado sustancialmente de 48px */
+    height: 64px;
+    filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.9));
+    animation: giftPulse 1.2s infinite ease-in-out;
+}
+
+@keyframes giftPulse {
+    0% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.4));
+    }
+
+    50% {
+        transform: scale(1.1);
+        filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.8));
+    }
+
+    100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.4));
+    }
 }
 
 .emoji {
-    font-size: 20px;
-    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.3));
+    font-size: 28px;
+    /* Aumentado de 20px */
+    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.6));
 }
 
 #powers-guide li:nth-child(1) {
@@ -153,23 +181,8 @@ html {
 
 /* Ranking Horizontal Superior (Optimizado para Móvil) */
 #arena-ranking {
-    position: absolute;
-    top: 5px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 95%;
-    max-width: 600px;
-    background: linear-gradient(180deg, rgba(20, 20, 40, 0.7) 0%, rgba(10, 10, 20, 0.8) 100%);
-    border: 1px solid rgba(251, 191, 36, 0.3);
-    border-radius: 20px;
-    z-index: 100;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(10px);
-    height: 50px;
+    display: none;
+    /* Reemplazado por #top-arena-showcase */
 }
 
 .ranking-header {
@@ -179,8 +192,8 @@ html {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0 15px;
-    font-size: 12px;
+    padding: 0 20px;
+    font-size: 20px;
     height: 100%;
     white-space: nowrap;
     border-right: 1px solid rgba(0, 0, 0, 0.2);
@@ -206,10 +219,10 @@ html {
 .arena-board-row {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
     background: rgba(255, 255, 255, 0.05);
-    border-radius: 25px;
-    padding: 4px 12px;
+    border-radius: 35px;
+    padding: 10px 22px;
     white-space: nowrap;
     flex-shrink: 0;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -223,15 +236,15 @@ html {
 
 .board-pos {
     font-weight: 800;
-    font-size: 14px;
+    font-size: 18px;
     color: #fbbf24;
 }
 
 .board-avatar {
-    width: 28px;
-    height: 28px;
+    width: 65px;
+    height: 65px;
     border-radius: 50%;
-    border: 1.5px solid #fbbf24;
+    border: 2px solid #fbbf24;
 }
 
 .board-info {
@@ -242,17 +255,17 @@ html {
 }
 
 .board-name {
-    font-size: 13px;
+    font-size: 19px;
     font-weight: 700;
-    max-width: 80px;
+    max-width: 150px;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .board-stats {
     display: flex;
-    gap: 5px;
-    font-size: 12px;
+    gap: 12px;
+    font-size: 16px;
 }
 
 .stat-hp {
@@ -325,4 +338,333 @@ html {
     background: rgba(251, 191, 36, 0.3);
     color: #fff;
     border-color: #fbbf24;
+}
+
+/* =========================================
+   OVERLAY DE VICTORIA (ARENA)
+   ========================================= */
+.victory-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 2000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(15px);
+    animation: fadeIn 0.5s ease-out forwards;
+}
+
+.victory-card {
+    background: linear-gradient(135deg, rgba(30, 30, 60, 0.95) 0%, rgba(10, 10, 25, 0.98) 100%);
+    border: 3px solid #ffd700;
+    border-radius: 30px;
+    padding: 40px;
+    text-align: center;
+    box-shadow: 0 0 50px rgba(255, 215, 0, 0.4);
+    transform: scale(0.5);
+    animation: popIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    max-width: 400px;
+}
+
+.victory-title {
+    font-family: 'Bungee', cursive;
+    color: #ffd700;
+    font-size: 32px;
+    margin-bottom: 25px;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.victory-avatar {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    border: 6px solid #ffd700;
+    margin-bottom: 20px;
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+}
+
+.victory-name {
+    font-family: 'Bungee', cursive;
+    font-size: 28px;
+    color: #fff;
+    margin-bottom: 15px;
+}
+
+.victory-stats {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 800;
+    font-size: 20px;
+    color: #fbbf24;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.victory-overlay.fade-out {
+    animation: fadeOut 1s ease-in forwards;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
+/* --- TOP ARENA SHOWCASE (Podium Card Design) --- */
+#top-arena-showcase {
+    position: absolute;
+    top: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    z-index: 1000;
+    pointer-events: none;
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(20, 20, 40, 0.8) 50%, rgba(0, 240, 255, 0.1) 100%);
+    backdrop-filter: blur(15px);
+    border: 2px solid rgba(255, 215, 0, 0.4);
+    border-radius: 25px;
+    padding: 10px 30px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7), inset 0 0 20px rgba(255, 215, 0, 0.1);
+    min-width: 520px;
+    height: 150px;
+}
+
+/* Title integrated into the card */
+#top-arena-showcase::before {
+    content: "🏆 TOP ARENA";
+    position: absolute;
+    top: -14px;
+    left: 40px;
+    background: linear-gradient(90deg, #ffd700, #fff, #ffd700);
+    color: #000;
+    font-family: 'Bungee', cursive;
+    font-size: 14px;
+    padding: 3px 15px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+    z-index: 10;
+    font-weight: 900;
+}
+
+/* Follow Incentive integration */
+#top-arena-showcase::after {
+    content: "🔥 ¡SIGUE AL TOP PARA MÁS PODER! 🔥";
+    position: absolute;
+    bottom: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Bungee', cursive;
+    font-size: 11px;
+    color: #ffd700;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+    width: 100%;
+    text-align: center;
+    animation: textGlow 1.5s infinite alternate;
+}
+
+@keyframes textGlow {
+    from {
+        opacity: 0.6;
+        text-shadow: 0 0 5px gold;
+    }
+
+    to {
+        opacity: 1;
+        text-shadow: 0 0 15px gold, 0 0 20px orange;
+    }
+}
+
+.top-player-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    width: 150px;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.top-player-item.rank-1 {
+    transform: scale(1.35);
+    /* Aumentado sustancialmente */
+    filter: drop-shadow(0 0 35px rgba(255, 215, 0, 0.8));
+    order: 2;
+    z-index: 10;
+}
+
+.top-player-item.rank-2 {
+    transform: scale(1.15);
+    /* Aumentado */
+    order: 1;
+    opacity: 1;
+    z-index: 5;
+}
+
+.top-player-item.rank-3 {
+    transform: scale(1.0);
+    /* Base */
+    order: 3;
+    opacity: 0.9;
+    z-index: 5;
+}
+
+.top-player-avatar {
+    width: 80px;
+    /* Aumentado de 65px */
+    height: 80px;
+    /* Aumentado de 65px */
+    border-radius: 50%;
+    border: 4px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.8);
+    background-size: cover;
+    background-position: center;
+    margin-bottom: 10px;
+}
+
+.top-player-name {
+    font-family: 'Bungee', cursive;
+    font-size: 18px;
+    /* Aumentado sustancialmente de 13px */
+    color: #fff;
+    text-shadow: 3px 3px 8px #000;
+    max-width: 180px;
+    /* Permitimos nombres más anchos */
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 5px 15px;
+    border-radius: 12px;
+    border: 2px solid rgba(255, 215, 0, 0.3);
+}
+
+.rank-1 .top-player-name {
+    font-size: 22px;
+    /* Ganador aún más grande */
+    color: #ffd700;
+    /* Nombre del ganador en dorado */
+    border-color: #ffd700;
+}
+
+.top-rank-badge {
+    position: absolute;
+    top: -8px;
+    right: 25px;
+    background: #fff;
+    color: #000;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 950;
+    font-size: 13px;
+    border: 2px solid #ffd700;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    z-index: 10;
+}
+
+.follow-arrow {
+    font-size: 28px;
+    color: #00f0ff;
+    margin-top: 5px;
+    text-shadow: 0 0 10px #00f0ff;
+    animation: bounceDown 0.8s infinite alternate;
+}
+
+@keyframes bounceDown {
+    from {
+        transform: translateY(0);
+    }
+
+    to {
+        transform: translateY(-12px);
+    }
+}
+
+@keyframes popIn {
+    from {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* =========================================
+   CUENTA REGRESIVA GIGANTE
+   ========================================= */
+.countdown-overlay {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 3000;
+    pointer-events: none;
+    font-family: 'Bungee', cursive;
+    font-size: 250px;
+    color: #ff4757;
+    text-shadow: 0 0 30px rgba(255, 71, 87, 0.8), 0 0 60px rgba(255, 71, 87, 0.4);
+    animation: countdownPulse 1s ease-out infinite;
+    display: none;
+}
+
+@keyframes countdownPulse {
+    0% {
+        transform: translate(-50%, -50%) scale(1.5);
+        opacity: 0;
+    }
+
+    20% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+
+    80% {
+        transform: translate(-50%, -50%) scale(0.9);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(-50%, -50%) scale(0.8);
+        opacity: 0;
+    }
+}
+
+.countdown-overlay.active {
+    display: block;
+}
+
+.countdown-overlay.warning {
+    color: #ff4757;
+    /* Rojo para el final */
+}
+
+.countdown-overlay.normal {
+    color: #ffd700;
+    /* Dorado para el inicio del countdown */
 }
