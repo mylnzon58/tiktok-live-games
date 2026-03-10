@@ -47,6 +47,21 @@ const soundBtn = document.getElementById('sound-btn');
 soundBtn.textContent = '🔊 Sonido ON';
 soundBtn.classList.add('active');
 
+// Observador continuo de interacción para OBS/TikTok Studio
+let ctxUnlocker = setInterval(() => {
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume().then(() => {
+            if (audioCtx.state === 'running') {
+                clearInterval(ctxUnlocker);
+                if (!isBgmPlaying && typeof startBgm === 'function') startBgm();
+            }
+        }).catch(e => { });
+    } else {
+        clearInterval(ctxUnlocker);
+        if (!isBgmPlaying && typeof startBgm === 'function') startBgm();
+    }
+}, 1000);
+
 soundBtn.addEventListener('click', (e) => {
     if (audioCtx.state === 'suspended') {
         audioCtx.resume();
@@ -504,6 +519,16 @@ socket.on("arena:sync", (serverPlayers) => {
 socket.on("arena:join", (p) => {
     if (!players[p.id]) players[p.id] = new Player(p);
     updateRankingDOM();
+});
+
+// EVENTO SALIDA / AFK (GC Sweep)
+socket.on("arena:leave", (data) => {
+    if (players[data.id]) {
+        // Efecto visual de salir
+        createExplosion(players[data.id].x, players[data.id].y, "#555");
+        delete players[data.id];
+        updateRankingDOM();
+    }
 });
 
 // EVENTO DE CURACIÓN (LIKES)

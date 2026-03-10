@@ -288,17 +288,36 @@ function initOrUpdateArenaPlayer(user) {
       name: user.nickname || id,
       avatar: user.profilePictureUrl || "",
       hp: 1000,
-      score: 0
+      score: 0,
+      lastActive: Date.now() // Timestamp
     };
     // Emitir que un nuevo gladiador entró
     io.emit("arena:join", arenaPlayers[id]);
   } else {
     // Actualizar nombre o avatar en caso cambien
     arenaPlayers[id].name = user.nickname || arenaPlayers[id].name;
+    arenaPlayers[id].lastActive = Date.now(); // Renew TTL
     if (user.profilePictureUrl) arenaPlayers[id].avatar = user.profilePictureUrl;
   }
   return arenaPlayers[id];
 }
+
+// Limpiador automático de Jugadores AFK (sin actividad por 4 minutos)
+setInterval(() => {
+  const now = Date.now();
+  let changed = false;
+  for (const id in arenaPlayers) {
+    if (now - arenaPlayers[id].lastActive > 4 * 60 * 1000) {
+      delete arenaPlayers[id];
+      changed = true;
+      io.emit("arena:leave", { id }); // Emite evento de salida 
+      console.log(`🧹 ARENA SWEEP: Removido jugador inactivo ${id}`);
+    }
+  }
+  if (changed) {
+    io.emit("arena:sync", arenaPlayers); // Sincroniza estado fresco
+  }
+}, 60000); // Check every minute
 
 // ──────────────────────────────────────────────────────────────
 // Sistema de Overrides (Forzar país manualmente)
@@ -628,6 +647,7 @@ io.on("connection", (socket) => {
     if (data && data.id && arenaPlayers[data.id]) {
       arenaPlayers[data.id].hp = data.hp;
       arenaPlayers[data.id].score = data.score;
+      arenaPlayers[data.id].lastActive = Date.now(); // Acción válida para evadir sweep
     }
   });
 
