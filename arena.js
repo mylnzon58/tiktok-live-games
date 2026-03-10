@@ -340,7 +340,8 @@ const bgStars = Array.from({ length: NUM_STARS }, () => ({
 }));
 
 function drawBackground() {
-    ctx.fillStyle = "rgba(5, 5, 16, 1)";
+    // Fondo más claro para mayor visibilidad
+    ctx.fillStyle = "rgba(15, 20, 35, 1)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
@@ -354,6 +355,26 @@ function drawBackground() {
             s.x = Math.random() * canvas.width;
         }
     });
+
+    // Dibujar Jaula Circular (Arena limit)
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    const arenaRadius = Math.min(canvas.width, canvas.height) / 2 - 10;
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, arenaRadius, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(0, 240, 255, 0.2)";
+    ctx.lineWidth = 15;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, arenaRadius, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(0, 240, 255, 0.8)";
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = "#00f0ff";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
 }
 
 // ==========================================
@@ -504,11 +525,27 @@ class Player {
         this.x += this.vx;
         this.y += this.vy;
 
-        // Rebote colisión de bordes
-        if (this.x < this.currentRadius) { this.x = this.currentRadius; this.vx *= -1; }
-        if (this.x > canvas.width - this.currentRadius) { this.x = canvas.width - this.currentRadius; this.vx *= -1; }
-        if (this.y < this.currentRadius) { this.y = this.currentRadius; this.vy *= -1; }
-        if (this.y > canvas.height - this.currentRadius) { this.y = canvas.height - this.currentRadius; this.vy *= -1; }
+        // Rebote Jaula Circular
+        const cx = canvas.width / 2;
+        const cy = canvas.height / 2;
+        const arenaRadius = Math.min(canvas.width, canvas.height) / 2 - 10;
+        const dx = this.x - cx;
+        const dy = this.y - cy;
+        const distToCenter = Math.sqrt(dx * dx + dy * dy);
+
+        if (distToCenter + this.currentRadius > arenaRadius) {
+            const overlap = (distToCenter + this.currentRadius) - arenaRadius;
+            const nx = dx / distToCenter;
+            const ny = dy / distToCenter;
+            this.x -= nx * overlap;
+            this.y -= ny * overlap;
+
+            const dotProd = this.vx * nx + this.vy * ny;
+            if (dotProd > 0) {
+                this.vx -= 2 * dotProd * nx;
+                this.vy -= 2 * dotProd * ny;
+            }
+        }
 
         if (this.flash > 0) this.flash -= 0.05;
     }
@@ -704,11 +741,28 @@ class Buzzsaw {
 
         if (this.life <= 0) this.active = false;
 
-        // Rebota furiosamente
-        if (this.x < this.radius) { this.x = this.radius; this.vx *= -1; playSound("hit"); }
-        if (this.x > canvas.width - this.radius) { this.x = canvas.width - this.radius; this.vx *= -1; playSound("hit"); }
-        if (this.y < this.radius) { this.y = this.radius; this.vy *= -1; playSound("hit"); }
-        if (this.y > canvas.height - this.radius) { this.y = canvas.height - this.radius; this.vy *= -1; playSound("hit"); }
+        // Rebote furioso en Jaula Circular
+        const cx = canvas.width / 2;
+        const cy = canvas.height / 2;
+        const arenaRadius = Math.min(canvas.width, canvas.height) / 2 - 10;
+        const dx = this.x - cx;
+        const dy = this.y - cy;
+        const distToCenter = Math.sqrt(dx * dx + dy * dy);
+
+        if (distToCenter + this.radius > arenaRadius) {
+            playSound("hit");
+            const overlap = (distToCenter + this.radius) - arenaRadius;
+            const nx = dx / distToCenter;
+            const ny = dy / distToCenter;
+            this.x -= nx * overlap;
+            this.y -= ny * overlap;
+
+            const dotProd = this.vx * nx + this.vy * ny;
+            if (dotProd > 0) {
+                this.vx -= 2 * dotProd * nx;
+                this.vy -= 2 * dotProd * ny;
+            }
+        }
 
         // Colisión con jugadores (Daño en área constante)
         if (this.life % 5 === 0) { // Check collision every 5 frames to prevent instakill
