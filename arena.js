@@ -270,7 +270,7 @@ let screenShake = 0; // Intensidad de vibración de pantalla
 // CONFIGURACIONES FÍSICAS
 // ==========================================
 const MAX_HP = 500; // Sincronizado con el servidor
-let PLAYER_RADIUS = 30;
+let PLAYER_RADIUS = 45; // Incrementado de 30 a 45 para mejor visibilidad inicial
 const BASE_SPEED = 2; // Velocidad de rebote
 const NUM_STARS = 100;
 
@@ -380,7 +380,7 @@ class Player {
     update() {
         // AFK Shrinking & Fading (si pasaron más de 30 segundos)
         const idleTime = Date.now() - this.lastActive;
-        const scoreScale = Math.sqrt(this.score) / 3; // Crecer con puntos
+        const scoreScale = Math.sqrt(this.score) / 1.5; // Crecimiento más agresivo y visible
         const targetRadius = PLAYER_RADIUS + scoreScale;
 
         if (idleTime > 20000) {
