@@ -1236,6 +1236,7 @@ function updatePowersGuide() {
 }
 // Escuchamos el Hall of Fame persistente del servidor (Top 10 real de 12 horas)
 socket.on("arena:hallOfFameUpdate", (list) => {
+    console.log("🏆 Recibido Hall of Fame:", list);
     persistentHOF = list;
     updateTopShowcase(); // Actualizar el podio de gala superior
 });
@@ -1257,7 +1258,11 @@ function updateTopShowcase() {
     }
 
     topShowcaseEl.style.display = "flex";
-    topShowcaseEl.innerHTML = "";
+    topShowcaseEl.innerHTML = ""; // Limpiar antes de rellenar
+
+    if (top3.length === 0) {
+        console.warn("⚠️ Top Hall of Fame está vacío.");
+    }
 
     top3.forEach((p, idx) => {
         const rank = idx + 1;

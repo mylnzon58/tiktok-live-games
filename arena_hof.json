@@ -6,5 +6,13 @@
     "score": 220,
     "hp": 500,
     "lastActive": 1773166267472
+  },
+  "el.prototype": {
+    "id": "el.prototype",
+    "name": "el prototype",
+    "avatar": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-avt-0068/b7e2110c3f8a8ab8133c2b3fd482b252~tplv-tiktokx-cropcenter:100:100.webp?dr=14579&refresh_token=258df9f1&x-expires=1773338400&x-signature=2gRp0%2BhqGd7H9IcuiQAutr6WoZk%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=fdd36af4&idc=sg1",
+    "score": 220,
+    "hp": 500,
+    "lastActive": 1773166637574
   }
 }

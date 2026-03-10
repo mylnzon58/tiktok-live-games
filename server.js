@@ -379,12 +379,14 @@ function updateHallOfFame(p) {
 
 function broadcastHallOfFame() {
   const now = Date.now();
-  // Filtrar por TTL de 12 horas ANTES de enviar
   const topList = Object.values(arenaHallOfFame)
-    .filter(p => (now - p.lastActive) < TWELVE_HOURS_MS)
+    .filter(p => (now - p.lastActive) < TWELVE_HOURS_MS && p.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, 10);
 
+  if (topList.length > 0) {
+    console.log(`📢 HOF Broadcast: Enviando ${topList.length} líderes al overlay.`);
+  }
   io.emit("arena:hallOfFameUpdate", topList);
 }
 
@@ -688,6 +690,7 @@ function connectToTikTok() {
         // 1 Diamante = 100 puntos (Multiplicador 100x consistente)
         attacker.score += coins * 100;
         updateHallOfFame(attacker);
+        broadcastHallOfFame(); // Sincronización instantánea para el podio
       }
 
       if (targetId && arenaPlayers[targetId]) {

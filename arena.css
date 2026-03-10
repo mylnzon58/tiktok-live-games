@@ -458,7 +458,7 @@ html {
     display: flex;
     justify-content: center;
     align-items: flex-end;
-    gap: 15px;
+    gap: 10px;
     z-index: 1000;
     pointer-events: none;
     background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(20, 20, 40, 0.8) 50%, rgba(0, 240, 255, 0.1) 100%);
@@ -517,7 +517,8 @@ html {
     flex-direction: column;
     align-items: center;
     position: relative;
-    width: 190px;
+    width: 180px;
+    /* Reducido de 190px para seguridad */
     transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -543,6 +544,11 @@ html {
     order: 3;
     opacity: 0.9;
     z-index: 5;
+}
+
+.top-player-item.placeholder {
+    opacity: 0.5;
+    filter: grayscale(0.8);
 }
 
 .top-player-avatar {
