@@ -64,15 +64,34 @@ soundBtn.textContent = '🔊 Sonido ON';
 soundBtn.classList.add('active');
 
 soundBtn.addEventListener('click', (e) => {
-    e.stopPropagation(); // Evitar doble ejecución accidental
+    e.stopPropagation();
     if (audioCtx.state === 'suspended') {
         audioCtx.resume().then(() => checkAudioState());
     }
     soundEnabled = !soundEnabled;
     e.target.textContent = soundEnabled ? '🔊 Sonido ON' : '🔇 Sonido OFF';
     e.target.classList.toggle('active', soundEnabled);
-    if (soundEnabled) playSound("heal"); // sonido de test 
+    if (soundEnabled) {
+        startBgm();
+        playSound("heal");
+    } else {
+        stopBgm();
+    }
 });
+
+const debugBtn = document.getElementById("debug-spawn-btn");
+if (debugBtn) {
+    debugBtn.onclick = () => {
+        const testId = "bot_tester_" + Math.floor(Math.random() * 1000);
+        players[testId] = new Player({
+            id: testId,
+            name: "TESTER 🤖",
+            hp: 500,
+            score: 100
+        });
+        console.log("🧪 Debug: Spawning local tester player", testId);
+    };
+}
 
 const sfx = {
     shoot: () => {
@@ -425,11 +444,18 @@ class Player {
         ctx.clip(); // Cortar a círculo
 
         const img = getAvatarImage(this.avatar);
-        if (img && img.complete) {
+        if (img && img.complete && img.naturalWidth > 0) {
             ctx.drawImage(img, this.x - this.currentRadius, this.y - this.currentRadius, this.currentRadius * 2, this.currentRadius * 2);
         } else {
-            ctx.fillStyle = "#333";
+            // Fallback de alto contraste
+            ctx.fillStyle = "#666"; // Gris más claro
             ctx.fill();
+            // Dibujar inicial o icono
+            ctx.fillStyle = "white";
+            ctx.font = `bold ${this.currentRadius}px Arial`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(this.name[0].toUpperCase(), this.x, this.y);
         }
 
         ctx.restore(); // limpiar clip
@@ -437,19 +463,28 @@ class Player {
         // Dibujar Borde (Color depende de Vida)
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.currentRadius, 0, Math.PI * 2);
-        ctx.lineWidth = 4 * (this.currentRadius / PLAYER_RADIUS); // Escalar borde también
+        ctx.lineWidth = 5 * (this.currentRadius / PLAYER_RADIUS); // Border un poco más grueso
 
         if (this.flash > 0) {
-            ctx.strokeStyle = "white"; // Impacto full blaco
+            ctx.strokeStyle = "white";
         } else {
-            const hpPercent = this.hp / MAX_HP;
-            if (hpPercent > 0.6) ctx.strokeStyle = "#2ed573"; // Verde
-            else if (hpPercent > 0.3) ctx.strokeStyle = "#ffa502"; // Naranja
-            else ctx.strokeStyle = "#ff4757"; // Rojo
+            const hpPercent = (this.hp || 500) / MAX_HP; // Fallback para HP
+            if (hpPercent > 0.6) ctx.strokeStyle = "#2ed573";
+            else if (hpPercent > 0.3) ctx.strokeStyle = "#ffa502";
+            else ctx.strokeStyle = "#ff4757";
         }
         ctx.stroke();
 
-        ctx.globalAlpha = 1.0; // Restablecer opacidad para texto
+        // NOMBRE SIEMPRE VISIBLE
+        ctx.fillStyle = "white";
+        ctx.font = "bold 14px Rajdhani";
+        ctx.textAlign = "center";
+        ctx.shadowBlur = 4;
+        ctx.shadowColor = "black";
+        ctx.fillText(this.name, this.x, this.y + this.currentRadius + 15);
+        ctx.shadowBlur = 0;
+
+        ctx.globalAlpha = 1.0;
 
         // Si está muy chico, no mostramos texto para evitar choclazo visual
         if (this.currentRadius < 15) return;
@@ -713,24 +748,49 @@ function syncStateToServer(p) {
     });
 }
 
+let myArenaId = null;
+
 socket.on("arena:sync", (serverPlayers) => {
-    // 1. Actualizar o crear
+    const ids = Object.keys(serverPlayers);
+    if (ids.length > 0) {
+        console.log(`📡 ARENA SYNC: ${ids.length} jugadores.`);
+    }
+
     for (const id in serverPlayers) {
-        if (!players[id]) players[id] = new Player(serverPlayers[id]);
-        else {
-            players[id].hp = serverPlayers[id].hp;
-            players[id].score = serverPlayers[id].score;
-            players[id].lastActive = serverPlayers[id].lastActive;
+        const sPlayer = serverPlayers[id];
+        if (!players[id]) {
+            console.log("🆕 Jugador nuevo:", sPlayer.name);
+            players[id] = new Player(sPlayer);
+        } else {
+            players[id].hp = sPlayer.hp;
+            players[id].score = sPlayer.score;
+            players[id].lastActive = sPlayer.lastActive;
         }
     }
-    // 2. LIMPIEZA DE FANTASMAS (Si no está en el servidor, borrar local)
+    // No borrar bots de prueba locales
     for (const id in players) {
-        if (!serverPlayers[id]) {
+        if (!serverPlayers[id] && !id.startsWith("bot_tester_")) {
             delete players[id];
         }
     }
+});
+
+socket.on("arena:you", (data) => {
+    myArenaId = data.uniqueId;
+    console.log("👤 Identidad en Arena:", myArenaId);
+});
+});
+
+// Forzar actualización del Ranking DOM cada vez que hay sync
+socket.on("arena:sync", () => {
     updateRankingDOM();
 });
+
+// Log diagnóstico cada 5 segundos
+setInterval(() => {
+    const count = Object.keys(players).length;
+    console.log(`📊 ARENA DEBUG: ${count} jugadores en memoria.`);
+}, 5000);
 
 socket.on("arena:join", (p) => {
     if (!players[p.id]) players[p.id] = new Player(p);
@@ -970,12 +1030,15 @@ function loop() {
     // Actualizar y dibujar Jugadores
     let positionBatch = {};
     pList.forEach(p => {
-        if (p.hp > 0) {
+        // Dibujamos si HP > 0, si falta HP (undefined) forzamos 500 para debug
+        const effectiveHP = (p.hp === undefined) ? 500 : p.hp;
+
+        if (effectiveHP > 0) {
             p.update();
             p.draw();
 
-            // Recolectar posición (Solo si es dueño o bot)
-            if (p.id === socket.id || (p.id && p.id.startsWith("bot_"))) {
+            // Recolectar posición (Solo si es nuestro uniqueId o bot)
+            if (p.id === myArenaId || (p.id && p.id.startsWith("bot_"))) {
                 positionBatch[p.id] = { x: Math.round(p.x), y: Math.round(p.y) };
             }
         }
