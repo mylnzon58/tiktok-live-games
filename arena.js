@@ -18,7 +18,7 @@ window.addEventListener("resize", () => {
 // MOTOR DE AUDIO (SYNTH)
 // ==========================================
 let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-let soundEnabled = true; // Por defecto lo activamos
+let soundEnabled = false; // Por defecto apagado para requerir on-click explícito debido al Autoplay Policy
 
 // Attempt auto-unlock de AudioContext silencioso
 function tryUnlockAudio() {
@@ -33,7 +33,7 @@ function tryUnlockAudio() {
 
 function checkAudioState() {
     if (audioCtx.state === 'running' || audioCtx.state === 'closed') {
-        if (!isBgmPlaying && typeof startBgm === 'function') {
+        if (!isBgmPlaying && typeof startBgm === 'function' && soundEnabled) {
             startBgm();
         }
         // Limpiar hooks globales si ya arrancó
@@ -60,21 +60,26 @@ let ctxUnlocker = setInterval(() => {
 }, 500);
 
 const soundBtn = document.getElementById('sound-btn');
-soundBtn.textContent = '🔊 Sonido ON';
-soundBtn.classList.add('active');
+soundBtn.textContent = '🔇 Activar Sonido';
+soundBtn.classList.remove('active');
 
 soundBtn.addEventListener('click', (e) => {
     e.stopPropagation();
+
+    // Si estaba pausado el contexto, asegúrate de levantarlo primero
     if (audioCtx.state === 'suspended') {
         audioCtx.resume().then(() => checkAudioState());
     }
+
     soundEnabled = !soundEnabled;
     e.target.textContent = soundEnabled ? '🔊 Sonido ON' : '🔇 Sonido OFF';
     e.target.classList.toggle('active', soundEnabled);
+
     if (soundEnabled) {
         startBgm();
-        playSound("heal");
+        playSound("heal"); // Sonido de feedback
     } else {
+        // Detener TODO el audio
         stopBgm();
     }
 });
