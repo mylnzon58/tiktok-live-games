@@ -321,9 +321,34 @@ function checkLeaderChange() {
 // Estado del Modo Arena (Segundo Juego)
 // ──────────────────────────────────────────────────────────────
 const arenaPlayers = {};
-const arenaHallOfFame = {}; // { id: { name, avatar, score, lastActive, hp } }
+let arenaHallOfFame = {}; // { id: { name, avatar, score, lastActive, hp } }
 const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
 const chatPowerCooldowns = {}; // { userId: timestamp }
+const HOF_FILE = path.join(__dirname, "arena_hof.json");
+
+// Cargar HOF desde disco al iniciar
+function loadHOF() {
+  try {
+    if (fs.existsSync(HOF_FILE)) {
+      const data = fs.readFileSync(HOF_FILE, "utf8");
+      arenaHallOfFame = JSON.parse(data);
+      console.log("📜 HOF cargado desde disco:", Object.keys(arenaHallOfFame).length, "jugadores");
+    }
+  } catch (err) {
+    console.error("❌ Error cargando HOF:", err.message);
+  }
+}
+
+// Guardar HOF a disco
+function saveHOF() {
+  try {
+    fs.writeFileSync(HOF_FILE, JSON.stringify(arenaHallOfFame, null, 2));
+  } catch (err) {
+    console.error("❌ Error guardando HOF:", err.message);
+  }
+}
+
+loadHOF();
 
 function updateHallOfFame(p) {
   if (!p || p.score < 10) return; // UMBRAL REDUCIDO: 10 pts (mínimo 1 rosa/diamante) para entrar al top.
@@ -339,6 +364,7 @@ function updateHallOfFame(p) {
       hp: p.hp,
       lastActive: now
     };
+    saveHOF(); // Guardar al disco al entrar/subir score
     broadcastHallOfFame();
   } else {
     // Actualizar HP y nombre si ya existe, pero mantener el score más alto
@@ -346,6 +372,7 @@ function updateHallOfFame(p) {
     arenaHallOfFame[p.id].name = p.name;
     arenaHallOfFame[p.id].avatar = p.avatar;
     arenaHallOfFame[p.id].lastActive = now;
+    saveHOF(); // Guardar cambios de actividad/HP
   }
 }
 
@@ -420,6 +447,7 @@ setInterval(() => {
     if (now - arenaHallOfFame[id].lastActive > TWELVE_HOURS_MS) {
       delete arenaHallOfFame[id];
       console.log(`📜 HOF CLEANUP: Removido ${id} por antigüedad (>12h)`);
+      saveHOF(); // Persistir la limpieza
       broadcastHallOfFame();
     }
   }
