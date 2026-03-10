@@ -302,22 +302,22 @@ function initOrUpdateArenaPlayer(user) {
   return arenaPlayers[id];
 }
 
-// Limpiador automático de Jugadores AFK (sin actividad por 90 segundos)
+// Limpiador automático de Jugadores AFK (sin actividad por 60 segundos)
 setInterval(() => {
   const now = Date.now();
   let changed = false;
   for (const id in arenaPlayers) {
-    if (now - arenaPlayers[id].lastActive > 90 * 1000) { // 90 segundos = viejo / fantasma
+    if (now - arenaPlayers[id].lastActive > 60 * 1000) { // 60 segundos = limpieza agresiva
       delete arenaPlayers[id];
       changed = true;
-      io.emit("arena:leave", { id }); // Emite evento de salida 
+      io.emit("arena:leave", { id });
       console.log(`🧹 ARENA SWEEP: Removido jugador inactivo ${id}`);
     }
   }
   if (changed) {
-    io.emit("arena:sync", arenaPlayers); // Sincroniza estado fresco
+    io.emit("arena:sync", arenaPlayers);
   }
-}, 10000); // Check every 10 seconds
+}, 5000); // Check every 5 seconds for immediate cleanup
 
 // ──────────────────────────────────────────────────────────────
 // Sistema de Overrides (Forzar país manualmente)
@@ -594,6 +594,15 @@ function connectToTikTok() {
           }
         }
       }
+
+      // ── LOGICA PARA MODO ARENA ──
+      const arenaUserObj = data.user || {
+        uniqueId: data.uniqueId,
+        nickname: data.nickname || data.uniqueId,
+        profilePictureUrl: data.profilePictureUrl || ""
+      };
+      initOrUpdateArenaPlayer(arenaUserObj);
+
     } catch (err) {
       console.error("❌ Crasheo evitado en evento chat:", err);
     }

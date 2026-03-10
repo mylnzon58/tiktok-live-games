@@ -375,8 +375,8 @@ class Player {
     update() {
         // AFK Shrinking & Fading (si pasaron más de 30 segundos)
         const idleTime = Date.now() - this.lastActive;
-        if (idleTime > 30000) { // Después de 30s empieza a achicarse
-            const decayFactor = Math.min((idleTime - 30000) / 60000, 1); // Tarda 60s en desaparecer al 100% (Total: 90s)
+        if (idleTime > 20000) { // Después de 20s empieza a achicarse
+            const decayFactor = Math.min((idleTime - 20000) / 40000, 1); // Tarda 40s en desaparecer (Total: 60s)
             this.currentRadius = PLAYER_RADIUS * (1 - decayFactor * 0.8); // Se achica hasta el 20%
             this.opacity = 1 - decayFactor;
         } else {
@@ -698,12 +698,19 @@ function syncStateToServer(p) {
 }
 
 socket.on("arena:sync", (serverPlayers) => {
+    // 1. Actualizar o crear
     for (const id in serverPlayers) {
         if (!players[id]) players[id] = new Player(serverPlayers[id]);
         else {
             players[id].hp = serverPlayers[id].hp;
             players[id].score = serverPlayers[id].score;
-            players[id].lastActive = serverPlayers[id].lastActive; // SINCRONIZA AFK CLOCK
+            players[id].lastActive = serverPlayers[id].lastActive;
+        }
+    }
+    // 2. LIMPIEZA DE FANTASMAS (Si no está en el servidor, borrar local)
+    for (const id in players) {
+        if (!serverPlayers[id]) {
+            delete players[id];
         }
     }
     updateRankingDOM();
