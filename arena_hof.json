@@ -19,9 +19,9 @@
     "id": "peraltaa_17",
     "name": "Peralta🦋",
     "avatar": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/ed6cabe493814f6fa6b30e387b99d54a~tplv-tiktokx-cropcenter:100:100.webp?dr=14579&refresh_token=c15f5140&x-expires=1773342000&x-signature=qps1t56v8ZTEevZwpwY%2BKpFBuLE%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=fdd36af4&idc=my2",
-    "score": 24210,
+    "score": 34690,
     "hp": 500,
-    "lastActive": 1773169492853
+    "lastActive": 1773170058244
   },
   "eunic3.2": {
     "id": "eunic3.2",
@@ -38,5 +38,21 @@
     "score": 4960,
     "hp": 500,
     "lastActive": 1773169156008
+  },
+  "chaeyote02": {
+    "id": "chaeyote02",
+    "name": "🐰💗",
+    "avatar": "https://p16-common-sign.tiktokcdn-eu.com/tos-no1a-avt-0068c001-no/f635bcc9467f5e2fafca47d3f2f69009~tplv-tiktokx-cropcenter:100:100.webp?dr=10399&refresh_token=81b1f792&x-expires=1773342000&x-signature=MdJNqG9ktzaELYPJTJWr9WbNn9I%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=fdd36af4&idc=no1a",
+    "score": 440,
+    "hp": 500,
+    "lastActive": 1773169843991
+  },
+  "valentinamorales7859": {
+    "id": "valentinamorales7859",
+    "name": "Valentina 👸🏻💜",
+    "avatar": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-avt-0068/2a4bb824e1721282ba67b8c12c4044d8~tplv-tiktokx-cropcenter:100:100.webp?dr=14579&refresh_token=377b038f&x-expires=1773342000&x-signature=fe5qo9VnYxq4pueaHM3T2tBMQQg%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=fdd36af4&idc=my2",
+    "score": 220,
+    "hp": 500,
+    "lastActive": 1773170096535
   }
 }

@@ -1277,6 +1277,7 @@ function updateTopShowcase() {
             <div class="top-player-avatar" style="background-image: url('${p.avatar || ''}')"></div>
             <div class="top-rank-badge">${p.rank}</div>
             <div class="top-player-name">${p.name}</div>
+            ${p.victories > 0 ? `<div class="top-player-victories">🏆 ${p.victories}</div>` : ''}
             ${p.isPlaceholder ? '' : '<div class="follow-arrow">⬆️</div>'}
         `;
         topShowcaseEl.appendChild(item);
@@ -1668,7 +1669,10 @@ function updateRankingDOM() {
             <span class="board-pos">#${idx + 1}</span>
             <img class="board-avatar" src="${imgUrl}" onerror="this.src='https://www.tiktok.com/favicon.ico'" />
             <div class="board-info">
-                <span class="board-name">${p.name}</span>
+                <div class="board-name-row">
+                    <span class="board-name">${p.name}</span>
+                    ${p.victories > 0 ? `<span class="board-victories">🏆 ${p.victories}</span>` : ''}
+                </div>
                 <div class="board-stats">
                     <span class="stat-hp">❤️ ${Math.floor(p.hp || 0)}</span>
                     <span class="stat-score">⚔️ ${Math.floor(p.score || 0)}</span>

@@ -260,6 +260,28 @@ function resetRound() {
   const arenaWinner = sortedArena.length > 0 ? arenaArenaWinner(sortedArena[0]) : null;
   lastArenaWinnerId = arenaWinner ? arenaWinner.id : null;
 
+  // NUEVO: PERSISTIR VICTORIAS EN EL HALL OF FAME
+  if (arenaWinner && arenaWinner.id) {
+    if (!arenaHallOfFame[arenaWinner.id]) {
+      // Si ganó pero no estaba en HOF (posible por K.O. sin muchos regalos), lo creamos
+      arenaHallOfFame[arenaWinner.id] = {
+        id: arenaWinner.id,
+        name: arenaWinner.name,
+        avatar: arenaWinner.avatar,
+        score: arenaWinner.score,
+        hp: 500,
+        lastActive: Date.now(),
+        victories: 0
+      };
+    }
+
+    // Incrementar victorias (inicializar si no existe)
+    arenaHallOfFame[arenaWinner.id].victories = (arenaHallOfFame[arenaWinner.id].victories || 0) + 1;
+    console.log(`🏆 VICTORIA REGISTRADA: @${arenaWinner.id} ahora tiene ${arenaHallOfFame[arenaWinner.id].victories} victorias.`);
+    saveHOF();
+    broadcastHallOfFame();
+  }
+
   // Emitir fin de ronda para ambos juegos
   io.emit("roundReset", { winner: countryWinner, countries });
   io.emit("arena:roundEnd", { winner: arenaWinner });
@@ -355,16 +377,25 @@ function updateHallOfFame(p) {
 
   const now = Date.now();
   // REGLA: El Top 3 es sagrado por 12 horas. Solo se desplaza si el score (donaciones) es mayor.
-  if (!arenaHallOfFame[p.id] || p.score > arenaHallOfFame[p.id].score) {
+  if (!arenaHallOfFame[p.id]) { // Si no existe en el HOF, lo creamos
     arenaHallOfFame[p.id] = {
       id: p.id,
       name: p.name,
       avatar: p.avatar,
       score: p.score,
-      hp: p.hp,
-      lastActive: now
+      hp: p.hp || 500,
+      lastActive: now,
+      victories: 0 // Inicializar victorias
     };
     saveHOF(); // Guardar al disco al entrar/subir score
+    broadcastHallOfFame();
+  } else if (p.score > arenaHallOfFame[p.id].score) { // Si ya existe y su score actual es mayor
+    arenaHallOfFame[p.id].score = p.score; // Actualizar score
+    arenaHallOfFame[p.id].hp = p.hp;
+    arenaHallOfFame[p.id].name = p.name;
+    arenaHallOfFame[p.id].avatar = p.avatar;
+    arenaHallOfFame[p.id].lastActive = now;
+    saveHOF(); // Guardar al disco al subir score
     broadcastHallOfFame();
   } else {
     // Actualizar HP y nombre si ya existe, pero mantener el score más alto
