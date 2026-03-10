@@ -1244,38 +1244,31 @@ socket.on("arena:hallOfFameUpdate", (list) => {
 updatePowersGuide();
 
 function updateTopShowcase() {
-    // TOMAR ESTRICTAMENTE LOS 3 PRIMEROS
-    const rawTop = (persistentHOF || []).slice(0, 3);
+    // Tomar estrictamente los 3 primeros para el podio
+    const podium3 = (persistentHOF || []).slice(0, 3);
 
-    // Rellenamos hasta tener 3 espacios (siempre 3 burbujas)
-    const podium3 = [...rawTop];
+    // Rellenamos hasta tener siempre 3 slots
     while (podium3.length < 3) {
         podium3.push({
             name: "ESPERANDO...",
             avatar: "https://p16-webcast.tiktokcdn.com/webcast-va/new_gifter_badge_v3.png~tplv-obj.image",
             score: 0,
-            isPlaceholder: true,
-            rank: podium3.length + 1
+            isPlaceholder: true
         });
     }
 
-    // Mapear el rango real antes de reordenar
-    podium3.forEach((p, i) => { if (!p.rank) p.rank = i + 1; });
-
-    // ORDEN VISUAL ESTRICTO: [Rank 2] [Rank 1] [Rank 3]
-    const visualOrder = [podium3[1], podium3[0], podium3[2]];
-
-    topShowcaseEl.innerHTML = ""; // Limpieza total
+    topShowcaseEl.innerHTML = "";
     topShowcaseEl.style.display = "flex";
 
-    visualOrder.forEach((p) => {
-        if (!p) return;
+    podium3.forEach((p, i) => {
+        const rank = i + 1;
         const item = document.createElement("div");
-        item.className = `top-player-item rank-${p.rank} ${p.isPlaceholder ? 'placeholder' : ''}`;
+        // Clasificamos por RANK real para que el CSS aplique 'order' y 'scale'
+        item.className = `top-player-item rank-${rank} ${p.isPlaceholder ? 'placeholder' : ''}`;
 
         item.innerHTML = `
             <div class="top-player-avatar" style="background-image: url('${p.avatar || ''}')"></div>
-            <div class="top-rank-badge">${p.rank}</div>
+            <div class="top-rank-badge">${rank}</div>
             <div class="top-player-name">${p.name}</div>
             ${p.victories > 0 ? `<div class="top-player-victories">🏆 ${p.victories}</div>` : ''}
             ${p.isPlaceholder ? '' : '<div class="follow-arrow">⬆️</div>'}

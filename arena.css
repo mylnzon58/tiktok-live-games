@@ -548,17 +548,23 @@ html {
 }
 
 .top-player-item.rank-1 {
+    order: 2;
+    /* Siempre al centro */
     transform: scale(1.35);
     filter: drop-shadow(0 0 35px rgba(255, 215, 0, 0.8));
     z-index: 10;
 }
 
 .top-player-item.rank-2 {
+    order: 1;
+    /* A la izquierda */
     transform: scale(1.15);
     z-index: 5;
 }
 
 .top-player-item.rank-3 {
+    order: 3;
+    /* A la derecha */
     transform: scale(1.0);
     z-index: 5;
 }
