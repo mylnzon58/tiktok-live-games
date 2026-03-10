@@ -7,11 +7,11 @@ const leaderboardEl = document.getElementById("arena-leaderboard");
 const floatingLayer = document.getElementById("floating-ui-layer");
 
 // Ajustar Canvas
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+canvas.width = window.innerWidth || 800;
+canvas.height = window.innerHeight || 1920;
 window.addEventListener("resize", () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.width = window.innerWidth || 800;
+    canvas.height = window.innerHeight || 1920;
 });
 
 // ==========================================
@@ -431,9 +431,17 @@ class Player {
         this.score = data.score || 0;
         this.lastActive = data.lastActive || Date.now();
 
-        // Spawn Random
-        this.x = Math.random() * (canvas.width - 200) + 100;
-        this.y = Math.random() * (canvas.height - 200) + 100;
+        // Spawn Random (Asegurando que no sea NaN)
+        const safeWidth = canvas.width || 800;
+        const safeHeight = canvas.height || 1920;
+        this.x = data.x || (Math.random() * (safeWidth - 200) + 100);
+        this.y = data.y || (Math.random() * (safeHeight - 200) + 100);
+
+        // Sanity Check por si acaso
+        if (isNaN(this.x) || isNaN(this.y)) {
+            this.x = 200;
+            this.y = 200;
+        }
 
         // Propiedades dinámicas
         this.currentRadius = PLAYER_RADIUS;
@@ -501,7 +509,11 @@ class Player {
     }
 
     draw() {
-        if (this.opacity <= 0.05) return; // Ya casi invisible, no gastar GPU
+        if (this.opacity <= 0.01) return; // Ya casi invisible, culling relajado
+
+        // Failsafe preventivo por si NaN se filtró
+        if (isNaN(this.currentRadius)) this.currentRadius = 15;
+        if (isNaN(this.x) || isNaN(this.y)) return;
 
         ctx.save();
         ctx.globalAlpha = this.opacity;
