@@ -1244,38 +1244,38 @@ socket.on("arena:hallOfFameUpdate", (list) => {
 updatePowersGuide();
 
 function updateTopShowcase() {
-    // Tomamos los 3 primeros del Hall of Fame PERSISTENTE (Sincronizado del servidor)
-    const top3 = [...persistentHOF]; // Copiar lista
+    // TOMAR ESTRICTAMENTE LOS 3 PRIMEROS
+    const rawTop = (persistentHOF || []).slice(0, 3);
 
-    // Rellenamos con placeholders si hay menos de 3 para que el podio no desaparezca
-    while (top3.length < 3) {
-        top3.push({
+    // Rellenamos hasta tener 3 espacios (siempre 3 burbujas)
+    const podium3 = [...rawTop];
+    while (podium3.length < 3) {
+        podium3.push({
             name: "ESPERANDO...",
-            avatar: "https://p16-webcast.tiktokcdn.com/webcast-va/new_gifter_badge_v3.png~tplv-obj.image", // Icono por defecto
+            avatar: "https://p16-webcast.tiktokcdn.com/webcast-va/new_gifter_badge_v3.png~tplv-obj.image",
             score: 0,
-            isPlaceholder: true
+            isPlaceholder: true,
+            rank: podium3.length + 1
         });
     }
 
+    // Mapear el rango real antes de reordenar
+    podium3.forEach((p, i) => { if (!p.rank) p.rank = i + 1; });
+
+    // ORDEN VISUAL ESTRICTO: [Rank 2] [Rank 1] [Rank 3]
+    const visualOrder = [podium3[1], podium3[0], podium3[2]];
+
+    topShowcaseEl.innerHTML = ""; // Limpieza total
     topShowcaseEl.style.display = "flex";
-    topShowcaseEl.innerHTML = ""; // Limpiar antes de rellenar
 
-    if (top3.length === 0) {
-        console.warn("⚠️ Top Hall of Fame está vacío.");
-    }
-
-    // Orden Visual: [Rank 2] [Rank 1] [Rank 3]
-    const visualOrder = [top3[1], top3[0], top3[2]]; // 2nd, 1st, 3rd
-
-    visualOrder.forEach((p, idx) => {
+    visualOrder.forEach((p) => {
         if (!p) return;
-        const realRank = (idx === 0) ? 2 : (idx === 1 ? 1 : 3);
         const item = document.createElement("div");
-        item.className = `top-player-item rank-${realRank} ${p.isPlaceholder ? 'placeholder' : ''}`;
+        item.className = `top-player-item rank-${p.rank} ${p.isPlaceholder ? 'placeholder' : ''}`;
 
         item.innerHTML = `
             <div class="top-player-avatar" style="background-image: url('${p.avatar || ''}')"></div>
-            <div class="top-rank-badge">${realRank}</div>
+            <div class="top-rank-badge">${p.rank}</div>
             <div class="top-player-name">${p.name}</div>
             ${p.isPlaceholder ? '' : '<div class="follow-arrow">⬆️</div>'}
         `;

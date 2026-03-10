@@ -4,8 +4,8 @@
     "name": "nico.v",
     "avatar": "https://p77-sign-sg.tiktokcdn.com/tos-alisg-avt-0068/8ef6c2f3163240e67313fa18744c0fe8~tplv-tiktokx-cropcenter:100:100.webp?dr=14579&refresh_token=f9fd501a&x-expires=1773338400&x-signature=l3uuZE3jJjc2%2FtdRC%2BbSfy1%2FCm4%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=fdd36af4&idc=my3",
     "score": 220,
-    "hp": 500,
-    "lastActive": 1773166267472
+    "hp": 0,
+    "lastActive": 1773169005130
   },
   "el.prototype": {
     "id": "el.prototype",
@@ -18,9 +18,25 @@
   "peraltaa_17": {
     "id": "peraltaa_17",
     "name": "Peralta🦋",
-    "avatar": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/ed6cabe493814f6fa6b30e387b99d54a~tplv-tiktokx-cropcenter:100:100.webp?dr=14579&refresh_token=53a84792&x-expires=1773338400&x-signature=YAqlSE1ZSzNixc7Le39aUP8mJq4%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=fdd36af4&idc=my2",
-    "score": 6940,
+    "avatar": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/ed6cabe493814f6fa6b30e387b99d54a~tplv-tiktokx-cropcenter:100:100.webp?dr=14579&refresh_token=c15f5140&x-expires=1773342000&x-signature=qps1t56v8ZTEevZwpwY%2BKpFBuLE%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=fdd36af4&idc=my2",
+    "score": 24210,
     "hp": 500,
-    "lastActive": 1773168350582
+    "lastActive": 1773169492853
+  },
+  "eunic3.2": {
+    "id": "eunic3.2",
+    "name": "~♡𝑬𝒖𝒏𝒊𝒄𝒆♡~",
+    "avatar": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-avt-0068/814bb49f1bad628eee0301ca40e1ed1e~tplv-tiktokx-cropcenter:100:100.webp?dr=14579&refresh_token=5c4737da&x-expires=1773338400&x-signature=BWuSFiLugvN5QmqTW04dj7LqZEw%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=fdd36af4&idc=my3",
+    "score": 220,
+    "hp": 500,
+    "lastActive": 1773168670038
+  },
+  "panditaenchilado": {
+    "id": "panditaenchilado",
+    "name": "La Jess",
+    "avatar": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/2ace5242cb337796a7d5934451775445~tplv-tiktokx-cropcenter:100:100.webp?dr=14579&refresh_token=201f45fd&x-expires=1773338400&x-signature=uvYucfNM2FHwZxwXIO1gT5zrSpg%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=fdd36af4&idc=my2",
+    "score": 4960,
+    "hp": 500,
+    "lastActive": 1773169156008
   }
 }
