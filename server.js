@@ -510,6 +510,10 @@ function connectToTikTok() {
         if (diamondCount >= 500) {
           arenaPlayers[targetId].hp -= (damage * 0.5);
         }
+
+        // --- PERSISTENCIA BAJO ATAQUE ---
+        // Si alguien es atacado, lo mantenemos activo para que no desaparezca (Neuromarketing)
+        arenaPlayers[targetId].lastActive = Date.now();
       }
 
       console.log(`⚔️ [ARENA ATTACK] @${arenaUserObj.uniqueId} -> Target:${targetId || "NONE"} (Dmg:${damage})`);
@@ -678,9 +682,22 @@ function connectToTikTok() {
 
   // ── Member event (Entrada al LIVE) ──
   tiktokLive.on("member", (data) => {
-    // NOTA: Deshabilitado nuevamente. La API de TikTok envía a todos los "mejores espectadores"
-    // antiguos cuando te conectas recién, llenando la sala de fantasmas.
-    // Solo permitiremos interactuar por Chat, Regalo o Like para entrar a la arena.
+    try {
+      const arenaUserObj = data.user || {
+        uniqueId: data.uniqueId,
+        nickname: data.nickname || data.uniqueId,
+        profilePictureUrl: data.profilePictureUrl || ""
+      };
+
+      // Entrada automática apenas se unen al stream
+      initOrUpdateArenaPlayer(arenaUserObj);
+      console.log(`👤 AUTO-JOIN: @${arenaUserObj.uniqueId} entró a la arena.`);
+
+      // Sincronizar suavemente
+      broadcastArenaSync();
+    } catch (err) {
+      console.error("❌ Error en auto-join member:", err.message);
+    }
   });
 
   // ── Receive death/score update from Arena Overlay (para consistencia simple) ──
