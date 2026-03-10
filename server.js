@@ -326,9 +326,9 @@ setInterval(() => {
   for (const id of playerIds) {
     const idleTime = now - arenaPlayers[id].lastActive;
 
-    // Si la pantalla está muy llena (> 30 jugadores), borramos a los AFK de 40 segs.
-    // Si hay pocos, los dejamos vivir en pantalla hasta 15 minutos (900 segs) para que no se vea vacía.
-    const shouldRemove = (totalPlayers > 30 && idleTime > 40 * 1000) || (idleTime > 900 * 1000);
+    // Si la pantalla está llena (> 30 jugadores), borramos a los AFK de 30 segundos.
+    // Si hay espacio, los dejamos vivir como "fantasmas" hasta 5 minutos (300 segs) para mantener bulto.
+    const shouldRemove = (totalPlayers > 30 && idleTime > 30 * 1000) || (idleTime > 300 * 1000);
 
     if (shouldRemove) {
       delete arenaPlayers[id];
