@@ -1202,22 +1202,37 @@ function updatePowersGuide() {
     const guideEl = document.getElementById("powers-guide");
     if (!guideEl) return;
 
-    const giftList = [
+    const basicGifts = [
         { name: "ROSA", effect: "BOMBA", icon: "🌹" },
         { name: "PESAS", effect: "GOLPE X3", icon: "🏋️" },
         { name: "DORMIR", effect: "CONGELAR", icon: "😴" },
-        { name: "GALAXIA", effect: "⚡ RAYO", icon: "🌌" },
-        { name: "CORAZÓN", effect: "REGEN", icon: "💖" },
-        { name: "UNIVERSO", effect: "💥 K.O.", icon: "🪐" },
-        { name: "FUEGO", effect: "INCENDIO", icon: "🔥" }
+        { name: "CORAZÓN", effect: "REGEN", icon: "💖" }
     ];
 
-    guideEl.innerHTML = `<ul>${giftList.map(g => `
+    const legendaryGifts = [
+        { name: "GALAXIA", effect: "⚡ RAYO", icon: "🌌" },
+        { name: "FUEGO", effect: "INCENDIO", icon: "�" },
+        { name: "UNIVERSO", effect: "💥 K.O.", icon: "🪐" },
+        { name: "LEÓN", effect: "⚙️ SIERRA", icon: "🦁" }
+    ];
+
+    const renderList = (list) => `<ul>${list.map(g => `
         <li>
             <span class="emoji">${g.icon}</span>
             <span class="gift-text">${g.name} = <span class="effect-text">${g.effect}</span></span>
         </li>
     `).join('')}</ul>`;
+
+    guideEl.innerHTML = `
+        <div class="powers-row">
+            <div class="powers-category">⚡ BÁSICOS</div>
+            ${renderList(basicGifts)}
+        </div>
+        <div class="powers-row">
+            <div class="powers-category">🔥 LEGENDARIOS</div>
+            ${renderList(legendaryGifts)}
+        </div>
+    `;
 }
 // Escuchamos el Hall of Fame persistente del servidor (Top 10 real de 12 horas)
 socket.on("arena:hallOfFameUpdate", (list) => {

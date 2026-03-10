@@ -90,55 +90,66 @@ html {
 #powers-guide {
     position: absolute;
     bottom: 70px;
-    /* Elevado para evitar colisión con botones */
     left: 5%;
     width: 90%;
-    background: linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(20, 20, 20, 0.7) 100%);
-    padding: 10px 15px;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.92) 0%, rgba(15, 15, 15, 0.8) 100%);
+    padding: 12px 20px;
     z-index: 100;
-    /* Asegurar que esté por encima de todo */
     pointer-events: none;
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(15px);
     display: flex;
-    justify-content: center;
-    border: 1px solid rgba(255, 215, 0, 0.5);
-    border-radius: 8px;
-    /* Diseño más rectangular (Card) */
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+    flex-direction: column;
+    /* Cambiado a columna para los dos cuadrantes */
+    gap: 15px;
+    border: 2px solid rgba(255, 215, 0, 0.4);
+    border-radius: 12px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.8);
 }
 
-#powers-guide h3 {
-    display: none;
-    /* Título oculto para ahorrar espacio vertical */
+.powers-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 20px;
+    width: 100%;
+}
+
+.powers-category {
+    font-family: 'Bungee', cursive;
+    font-size: 14px;
+    color: #ffd700;
+    min-width: 140px;
+    padding-right: 15px;
+    border-right: 1px solid rgba(255, 215, 0, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 #powers-guide ul {
     list-style: none;
     display: flex;
     flex-wrap: nowrap;
-    gap: 30px;
-    /* Más espacio entre items */
-    padding: 0 10px;
+    gap: 25px;
+    padding: 0;
+    margin: 0;
     align-items: center;
+    flex-grow: 1;
 }
 
 #powers-guide li {
-    font-size: 20px;
-    /* Reducido un poco para que quepan más */
+    font-size: 18px;
     white-space: nowrap;
     font-weight: 800;
     display: flex;
     align-items: center;
-    gap: 8px;
-    text-shadow: 1px 1px 2px #000;
+    gap: 10px;
+    text-shadow: 1px 1px 3px #000;
 }
 
-#powers-guide img {
-    width: 50px;
-    /* Tamaño optimizado */
-    height: 50px;
-    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.6));
-    animation: giftPulse 1.2s infinite ease-in-out;
+#powers-guide .emoji {
+    font-size: 28px;
+    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.5));
+    animation: giftPulse 1.5s infinite ease-in-out;
 }
 
 @keyframes giftPulse {
