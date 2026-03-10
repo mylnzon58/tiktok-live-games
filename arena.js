@@ -20,26 +20,49 @@ window.addEventListener("resize", () => {
 let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 let soundEnabled = true; // Por defecto lo activamos
 
-// Attempt auto-unlock de AudioContext
-function unlockAudio() {
-    if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-    }
-    if (!isBgmPlaying && typeof startBgm === 'function') {
-        startBgm();
-    }
-    document.removeEventListener('click', unlockAudio);
-    document.removeEventListener('touchstart', unlockAudio);
-    document.removeEventListener('keydown', unlockAudio);
-}
-document.addEventListener('click', unlockAudio);
-document.addEventListener('touchstart', unlockAudio);
-document.addEventListener('keydown', unlockAudio);
+const obsUnlocker = document.getElementById('obs-audio-unlocker');
 
-// Intentar arrancar BGM directamente para fuentes como OBS
-setTimeout(() => {
-    if (audioCtx.state !== 'suspended' && typeof startBgm === 'function') {
-        startBgm();
+// Attempt auto-unlock de AudioContext y ocultar overlay
+function tryUnlockAudio() {
+    if (audioCtx.state === 'suspended') {
+        // Al interactuar forzar resume
+        audioCtx.resume().then(() => {
+            checkAndHideUnlocker();
+        }).catch(e => { });
+    } else {
+        checkAndHideUnlocker();
+    }
+}
+
+function checkAndHideUnlocker() {
+    if (audioCtx.state === 'running' || audioCtx.state === 'closed') {
+        if (obsUnlocker) {
+            obsUnlocker.style.opacity = '0';
+            setTimeout(() => obsUnlocker.style.display = 'none', 500);
+        }
+        if (!isBgmPlaying && typeof startBgm === 'function') {
+            startBgm();
+        }
+        // Limpiar hooks globales si ya arrancó
+        document.removeEventListener('click', tryUnlockAudio);
+        document.removeEventListener('touchstart', tryUnlockAudio);
+        document.removeEventListener('keydown', tryUnlockAudio);
+    }
+}
+
+// Vincular interacción general en todo el documento
+document.addEventListener('click', tryUnlockAudio);
+document.addEventListener('touchstart', tryUnlockAudio);
+document.addEventListener('keydown', tryUnlockAudio);
+
+// Revisar contínuamente si ya está running (Navegadores comunes o si OBS permite autoplay)
+let ctxUnlocker = setInterval(() => {
+    if (audioCtx.state === 'running') {
+        clearInterval(ctxUnlocker);
+        checkAndHideUnlocker();
+    } else {
+        // Intento silencioso constante
+        audioCtx.resume().catch(e => { });
     }
 }, 500);
 
@@ -47,24 +70,10 @@ const soundBtn = document.getElementById('sound-btn');
 soundBtn.textContent = '🔊 Sonido ON';
 soundBtn.classList.add('active');
 
-// Observador continuo de interacción para OBS/TikTok Studio
-let ctxUnlocker = setInterval(() => {
-    if (audioCtx.state === 'suspended') {
-        audioCtx.resume().then(() => {
-            if (audioCtx.state === 'running') {
-                clearInterval(ctxUnlocker);
-                if (!isBgmPlaying && typeof startBgm === 'function') startBgm();
-            }
-        }).catch(e => { });
-    } else {
-        clearInterval(ctxUnlocker);
-        if (!isBgmPlaying && typeof startBgm === 'function') startBgm();
-    }
-}, 1000);
-
 soundBtn.addEventListener('click', (e) => {
+    e.stopPropagation(); // Evitar doble ejecución accidental
     if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
+        audioCtx.resume().then(() => checkAndHideUnlocker());
     }
     soundEnabled = !soundEnabled;
     e.target.textContent = soundEnabled ? '🔊 Sonido ON' : '🔇 Sonido OFF';
