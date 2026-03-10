@@ -592,7 +592,6 @@ function connectToTikTok() {
         }
 
         // --- PERSISTENCIA BAJO ATAQUE ---
-        arenaPlayers[targetId].lastActive = Date.now();
         updateHallOfFame(arenaPlayers[targetId]);
       }
 
@@ -814,7 +813,6 @@ io.on("connection", (socket) => {
       if (arenaPlayers[id]) {
         if (batch[id].x !== undefined) arenaPlayers[id].x = batch[id].x;
         if (batch[id].y !== undefined) arenaPlayers[id].y = batch[id].y;
-        arenaPlayers[id].lastActive = Date.now();
       }
     }
   });
@@ -827,7 +825,6 @@ io.on("connection", (socket) => {
         arenaPlayers[data.id].score = data.score;
         updateHallOfFame(arenaPlayers[data.id]);
       }
-      arenaPlayers[data.id].lastActive = Date.now();
     }
   });
 
