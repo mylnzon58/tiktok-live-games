@@ -18,7 +18,7 @@ window.addEventListener("resize", () => {
 // MOTOR DE AUDIO (SYNTH)
 // ==========================================
 let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-let soundEnabled = false; // Por defecto apagado para requerir on-click explícito debido al Autoplay Policy
+let soundEnabled = true; // REVERTIDO: Por defecto activado (OBS / TikTok Studio lo permiten)
 
 // Attempt auto-unlock de AudioContext silencioso
 function tryUnlockAudio() {
@@ -60,8 +60,8 @@ let ctxUnlocker = setInterval(() => {
 }, 500);
 
 const soundBtn = document.getElementById('sound-btn');
-soundBtn.textContent = '🔇 Activar Sonido';
-soundBtn.classList.remove('active');
+soundBtn.textContent = '🔊 Sonido ON';
+soundBtn.classList.add('active');
 
 soundBtn.addEventListener('click', (e) => {
     e.stopPropagation();
