@@ -1187,7 +1187,7 @@ socket.on("arena:sync", (serverPlayers) => {
     for (const id in players) {
         if (!serverPlayers[id]) delete players[id];
     }
-    updateRankingDOM();
+    // throttling: updateRankingDOM() ya no se llama aquí, se llama en loop o vía su evento específico
 });
 
 // --- CAPA TOP SHOWCASE (Podio Superior) ---
@@ -1643,7 +1643,14 @@ socket.on("arena:gift", (data) => {
 let arenaHallOfFame = []; // Ranking de la ronda actual
 let persistentHOF = [];   // Top 10 histórico de 12 horas
 
-function updateRankingDOM() {
+let lastUIUpdate = 0;
+const UI_THROTTLE_MS = 1000; // Máximo 1 actualización de DOM por segundo
+
+function updateRankingDOM(force = false) {
+    const now = Date.now();
+    if (!force && (now - lastUIUpdate < UI_THROTTLE_MS)) return;
+    lastUIUpdate = now;
+
     updateTopShowcase(); // Actualizar podio superior
     // Solo mostramos el TOP 5 en el ranking horizontal
     const top5 = arenaHallOfFame.slice(0, 5);
@@ -1678,7 +1685,7 @@ function updateRankingDOM() {
 
 socket.on("arena:currentRanking", (data) => {
     arenaHallOfFame = data; // Reutilizamos variable pero ahora contiene el ranking de la ronda
-    updateRankingDOM();
+    updateRankingDOM(true); // Forzar actualización cuando cambian los líderes
 });
 
 let frameCount = 0;

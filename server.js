@@ -457,9 +457,7 @@ function initOrUpdateArenaPlayer(user) {
 
 // Función para sincronizar con THROTTLE (Evita saturar el canal)
 let lastSyncTime = 0;
-const SYNC_THROTTLE_MS = 50; // Reducido de 100ms para spawning ultra-rápido
-let lastArenaSync = 0;
-// Máximo 10 veces por segundo (Doble que antes)
+const SYNC_THROTTLE_MS = 100; // 10 actualizaciones por segundo es ideal para fluidez y CPU
 
 function broadcastArenaSync(force = false) {
   const now = Date.now();
