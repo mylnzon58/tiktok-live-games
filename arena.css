@@ -29,10 +29,10 @@ html {
     z-index: 1;
 }
 
-/* Botón flotante para cambiar entre juegos */
+/* Botón flotante para cambiar entre juegos (Relocalizado al fondo) */
 #switch-btn {
     position: absolute;
-    top: 15px;
+    bottom: 15px;
     left: 15px;
     background: rgba(255, 255, 255, 0.1);
     color: #a8b0c0;
@@ -56,8 +56,8 @@ html {
 
 #sound-btn {
     position: absolute;
-    top: 15px;
-    left: 190px;
+    bottom: 15px;
+    right: 15px;
     background: rgba(255, 60, 60, 0.2);
     color: #fff;
     padding: 8px 12px;
@@ -86,14 +86,15 @@ html {
    UI SUPERPUESTA: Guía y Ranking
    ========================================= */
 
-/* Guía Lateral Izquierda */
+/* Guía Lateral Arriba o Abajo (Ajustado para no tapar) */
 #powers-guide {
     position: absolute;
-    bottom: 20px;
-    left: 20px;
+    bottom: 60px;
+    /* Un poco más arriba de los botones de abajo */
+    left: 15px;
     background: linear-gradient(135deg, rgba(15, 15, 35, 0.8) 0%, rgba(5, 5, 15, 0.9) 100%);
     border: 1px solid rgba(0, 240, 255, 0.3);
-    padding: 15px;
+    padding: 12px;
     border-radius: 12px;
     z-index: 10;
     pointer-events: none;
