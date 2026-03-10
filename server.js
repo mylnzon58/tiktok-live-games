@@ -571,7 +571,10 @@ function connectToTikTok() {
         profilePictureUrl: data.profilePictureUrl || ""
       };
 
-      initOrUpdateArenaPlayer(arenaUserObj);
+      const player = initOrUpdateArenaPlayer(arenaUserObj);
+      if (player) {
+        player.score += likeCount * 5; // Asegurarse de que el servidor mantenga el score correcto para el crecimiento
+      }
 
       io.emit("arena:like", {
         userId: arenaUserObj.uniqueId || arenaUserObj.userId || data.uniqueId,

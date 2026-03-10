@@ -960,6 +960,7 @@ const recentHeals = {};
 socket.on("arena:like", (data) => {
     const p = players[data.userId];
     if (p) {
+        p.lastActive = Date.now(); // Despierta de AFK inmediatamente
         p.heal(data.likeCount * 5); // Aumentado: 5 Vida por Like (antes 2)
         p.flash = 1;
 
@@ -987,6 +988,8 @@ socket.on("arena:like", (data) => {
 socket.on("arena:gift", (data) => {
     const attacker = players[data.userId];
     if (!attacker) return;
+
+    attacker.lastActive = Date.now(); // Despierta de AFK inmediatamente
 
     attacker.lastActive = Date.now(); // Reset AFK timer on attack
 
