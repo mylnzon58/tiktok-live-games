@@ -547,6 +547,43 @@ class Player {
             }
         }
 
+        // CHOCAR CONTRA OTROS JUGADORES (MOSH PIT DOPAMÍNICO)
+        for (const otherId in players) {
+            if (otherId === this.id) continue;
+            const other = players[otherId];
+            if (!other || this.opacity < 0.5 || other.opacity < 0.5) continue; // Solo chocan activos
+
+            const pdx = this.x - other.x;
+            const pdy = this.y - other.y;
+            const pdistance = Math.sqrt(pdx * pdx + pdy * pdy);
+            const minDistance = this.currentRadius + other.currentRadius;
+
+            if (pdistance > 0 && pdistance < minDistance) {
+                // Separación para evitar quedarse pegados
+                const overlap = minDistance - pdistance;
+                const pnx = pdx / pdistance;
+                const pny = pdy / pdistance;
+
+                this.x += pnx * (overlap / 2);
+                this.y += pny * (overlap / 2);
+                other.x -= pnx * (overlap / 2);
+                other.y -= pny * (overlap / 2);
+
+                // Intercambio elástico de velocidad (Bouncy!)
+                const tempVx = this.vx;
+                const tempVy = this.vy;
+                this.vx = (other.vx * 0.8) + (Math.random() - 0.5);
+                this.vy = (other.vy * 0.8) + (Math.random() - 0.5);
+                other.vx = (tempVx * 0.8) + (Math.random() - 0.5);
+                other.vy = (tempVy * 0.8) + (Math.random() - 0.5);
+
+                const impactSpeed = Math.abs(this.vx) + Math.abs(this.vy) + Math.abs(other.vx) + Math.abs(other.vy);
+                if (impactSpeed > 4 && Math.random() > 0.8) {
+                    playSound("hit"); // Ruidito de choque adictivo
+                }
+            }
+        }
+
         if (this.flash > 0) this.flash -= 0.05;
     }
 
@@ -963,6 +1000,10 @@ socket.on("arena:like", (data) => {
         p.lastActive = Date.now(); // Despierta de AFK inmediatamente
         p.heal(data.likeCount * 5); // Aumentado: 5 Vida por Like (antes 2)
         p.flash = 1;
+
+        // Dopamina física: El jugador "salta" o se empuja al recibir likes
+        p.vx += (Math.random() - 0.5) * 6;
+        p.vy += (Math.random() - 0.5) * 6;
 
         // Calcular combo de curación para Pitch Shifting
         const now = Date.now();
