@@ -1,7 +1,7 @@
 {
   "giftId": 5655,
   "repeatEnd": true,
-  "groupId": "1773102922366",
+  "groupId": "1773108353723",
   "monitorExtra": "",
   "fanTicketCount": "0",
   "groupCount": 1,
@@ -19,7 +19,7 @@
     "selfQueuePriority": "1",
     "priority": "3"
   },
-  "logId": "202603100835220C3B367B1AFBDDC90CBA",
+  "logId": "202603101005537E3854EEFD286CFAA603",
   "sendType": "0",
   "trayDisplayText": {
     "displayType": "",
@@ -60,12 +60,63 @@
     "anchorReleaseToScrollArea": false,
     "isAnchorMarked": false,
     "creatorSuccessInfo": {
-      "tags": [],
+      "tags": [
+        {
+          "tagType": 47,
+          "tagText": {
+            "displayType": "ttlive_interactionTips_improveEngage_tag_top3ContributeNotFan",
+            "defaultPattern": "No está en tu Club de fans, pero es uno de tus 3 mejores colaboradores",
+            "defaultFormat": {
+              "color": "",
+              "bold": false,
+              "italic": false,
+              "weight": 0,
+              "italicAngle": 0,
+              "fontSize": 0,
+              "useHeighLightColor": false,
+              "useRemoteClor": false
+            },
+            "piecesList": []
+          }
+        },
+        {
+          "tagType": 5,
+          "tagText": {
+            "displayType": "ttlive_teamManage_tag_titleGifter_tagOnly",
+            "defaultPattern": "Donador principal de Rose",
+            "defaultFormat": {
+              "color": "",
+              "bold": false,
+              "italic": false,
+              "weight": 0,
+              "italicAngle": 0,
+              "fontSize": 0,
+              "useHeighLightColor": false,
+              "useRemoteClor": false
+            },
+            "piecesList": [
+              {
+                "type": 12,
+                "stringValue": "",
+                "giftValue": {
+                  "giftId": 5655,
+                  "nameRef": {
+                    "key": "live_gift_copywriting_5655",
+                    "defaultPattern": "Rose"
+                  },
+                  "showType": 0,
+                  "colorId": "0"
+                }
+              }
+            ]
+          }
+        }
+      ],
       "topic": {
         "topicActionType": 0,
         "topicText": {
-          "displayType": "ttlive_interactionTips_tag_2512_consume_justNow1",
-          "defaultPattern": "Acaba de enviarte un Regalo",
+          "displayType": "ttlive_interactionTips_improveEngage_tag_top3ContributeNotFan",
+          "defaultPattern": "No está en tu Club de fans, pero es uno de tus 3 mejores colaboradores",
           "defaultFormat": {
             "color": "",
             "bold": false,
@@ -79,13 +130,13 @@
           "piecesList": []
         },
         "topicTips": {
-          "displayType": "ttlive_interactionTips_topic_2512_consume_justNow1",
-          "defaultPattern": "¡Genial! ¡Están aquí para apoyarte!",
+          "displayType": "ttlive_interactionTips_improveEngage_topic_top3ContributeNotFan",
+          "defaultPattern": "Puedes darle las gracias e invitar a esta persona a unirse a tu Club de fans enviando un Corazoncito a tu LIVE.",
           "defaultFormat": {
-            "color": "",
+            "color": "#ffffffff",
             "bold": false,
             "italic": false,
-            "weight": 0,
+            "weight": 400,
             "italicAngle": 0,
             "fontSize": 0,
             "useHeighLightColor": false,
@@ -96,8 +147,42 @@
       }
     },
     "portraitInfo": {
-      "userMetrics": [],
-      "portraitTag": []
+      "userMetrics": [
+        {
+          "type": 1,
+          "metricsValue": "2"
+        },
+        {
+          "type": 2,
+          "metricsValue": "0"
+        },
+        {
+          "type": 3,
+          "metricsValue": "2"
+        },
+        {
+          "type": 4,
+          "metricsValue": "0"
+        },
+        {
+          "type": 5,
+          "metricsValue": "1"
+        }
+      ],
+      "portraitTag": [
+        {
+          "tagId": "7399855526094293778",
+          "priority": "0",
+          "showValue": "ttlive_ls_msgGroups_viewerLabel_topGifter",
+          "showArgs": "{\"s_num\":\"1\"}"
+        },
+        {
+          "tagId": "7399855526094244626",
+          "priority": "4",
+          "showValue": "ttlive_ls_msgGroups_viewerLabel_notSub",
+          "showArgs": ""
+        }
+      ]
     },
     "userInteractionInfo": {
       "likeCnt": "0",
@@ -116,7 +201,7 @@
   "secUid": "MS4wLjABAAAAKHYdISraUnUhd4YWuQagyh2Lbwriu0VxVFessAlGuQqGBLIMJajSm57GlHvjHqNN",
   "uniqueId": "productos.digital18",
   "nickname": "Productos Digitales",
-  "profilePictureUrl": "https://p77-sign-va.tiktokcdn.com/tos-maliva-avt-0068/7343320984545394693~tplv-tiktokx-cropcenter:100:100.webp?dr=14579&refresh_token=3aa3004a&x-expires=1773273600&x-signature=lLjVO2LLbLiDZXXTsEWkkHxDrGI%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=fdd36af4&idc=my3",
+  "profilePictureUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/7343320984545394693~tplv-tiktokx-cropcenter:100:100.webp?dr=14579&refresh_token=b743eb24&x-expires=1773280800&x-signature=x%2BqbUxPZxEf1unlOlY2ieqBO9Sg%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=fdd36af4&idc=my3",
   "followRole": "0",
   "userBadges": [],
   "userSceneTypes": [
@@ -130,12 +215,12 @@
     "createTime": "0",
     "bioDescription": "",
     "profilePictureUrls": [
-      "https://p77-sign-va.tiktokcdn.com/tos-maliva-avt-0068/7343320984545394693~tplv-tiktokx-cropcenter:100:100.webp?dr=14579&refresh_token=3aa3004a&x-expires=1773273600&x-signature=lLjVO2LLbLiDZXXTsEWkkHxDrGI%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=fdd36af4&idc=my3",
-      "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/7343320984545394693~tplv-tiktokx-cropcenter:100:100.webp?dr=14579&refresh_token=30ac2156&x-expires=1773273600&x-signature=fRcnygqXEKdX4vIRXNRFU3QmvYs%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=fdd36af4&idc=my3",
-      "https://p77-sign-va.tiktokcdn.com/tos-maliva-avt-0068/7343320984545394693~tplv-tiktokx-cropcenter:100:100.jpeg?dr=14579&refresh_token=1ea18194&x-expires=1773273600&x-signature=S7fPvTVCP6Ua4UPi07vstjHHGLc%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=fdd36af4&idc=my3",
-      "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/7343320984545394693~tplv-tiktokx-cropcenter:100:100.webp?dr=18067&refresh_token=b7e3f78a&x-expires=1773273600&x-signature=eg9D12LWNCVp1Tq4lzL%2BkcixPLE%3D&t=4d5b0474&ps=ae600521&shp=a5d48078&shcp=fdd36af4&idc=my3",
-      "https://p19-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/7343320984545394693~tplv-tiktokx-cropcenter:100:100.webp?dr=18067&refresh_token=60116c28&x-expires=1773273600&x-signature=mPlD%2F4cFd0MNNVyuH%2BTShnut5pM%3D&t=4d5b0474&ps=ae600521&shp=a5d48078&shcp=fdd36af4&idc=my3",
-      "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/7343320984545394693~tplv-tiktokx-cropcenter:100:100.jpeg?dr=18067&refresh_token=7f2c5aee&x-expires=1773273600&x-signature=swsAfzxSVYmLYhBt8jZ589DA6UM%3D&t=4d5b0474&ps=ae600521&shp=a5d48078&shcp=fdd36af4&idc=my3"
+      "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/7343320984545394693~tplv-tiktokx-cropcenter:100:100.webp?dr=14579&refresh_token=b743eb24&x-expires=1773280800&x-signature=x%2BqbUxPZxEf1unlOlY2ieqBO9Sg%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=fdd36af4&idc=my3",
+      "https://p77-sign-va.tiktokcdn.com/tos-maliva-avt-0068/7343320984545394693~tplv-tiktokx-cropcenter:100:100.webp?dr=14579&refresh_token=89c6b685&x-expires=1773280800&x-signature=DoYWM5gm7HOQiwm5Yt3AbYD7rTo%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=fdd36af4&idc=my3",
+      "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/7343320984545394693~tplv-tiktokx-cropcenter:100:100.jpeg?dr=14579&refresh_token=dd63c9ea&x-expires=1773280800&x-signature=7gmuCZUNovq75vFf870qrcwxmMs%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=fdd36af4&idc=my3",
+      "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/7343320984545394693~tplv-tiktokx-cropcenter:100:100.webp?dr=18067&refresh_token=201fd0da&x-expires=1773280800&x-signature=trn9FPWyfTlTYICH5RCawD%2B%2Bb%2F0%3D&t=4d5b0474&ps=ae600521&shp=a5d48078&shcp=fdd36af4&idc=my3",
+      "https://p19-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/7343320984545394693~tplv-tiktokx-cropcenter:100:100.webp?dr=18067&refresh_token=28ac2344&x-expires=1773280800&x-signature=jOrOorNX9349hnmXu%2Ft3zBg7p4U%3D&t=4d5b0474&ps=ae600521&shp=a5d48078&shcp=fdd36af4&idc=my3",
+      "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/7343320984545394693~tplv-tiktokx-cropcenter:100:100.jpeg?dr=18067&refresh_token=de83b992&x-expires=1773280800&x-signature=NPvOinQHLYNxubuhHE16baw%2FQ2w%3D&t=4d5b0474&ps=ae600521&shp=a5d48078&shcp=fdd36af4&idc=my3"
     ]
   },
   "followInfo": {
@@ -183,12 +268,12 @@
           "bioDescription": "",
           "profilePicture": {
             "url": [
-              "https://p77-sign-va.tiktokcdn.com/tos-maliva-avt-0068/7343320984545394693~tplv-tiktokx-cropcenter:100:100.webp?dr=14579&refresh_token=3aa3004a&x-expires=1773273600&x-signature=lLjVO2LLbLiDZXXTsEWkkHxDrGI%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=fdd36af4&idc=my3",
-              "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/7343320984545394693~tplv-tiktokx-cropcenter:100:100.webp?dr=14579&refresh_token=30ac2156&x-expires=1773273600&x-signature=fRcnygqXEKdX4vIRXNRFU3QmvYs%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=fdd36af4&idc=my3",
-              "https://p77-sign-va.tiktokcdn.com/tos-maliva-avt-0068/7343320984545394693~tplv-tiktokx-cropcenter:100:100.jpeg?dr=14579&refresh_token=1ea18194&x-expires=1773273600&x-signature=S7fPvTVCP6Ua4UPi07vstjHHGLc%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=fdd36af4&idc=my3",
-              "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/7343320984545394693~tplv-tiktokx-cropcenter:100:100.webp?dr=18067&refresh_token=b7e3f78a&x-expires=1773273600&x-signature=eg9D12LWNCVp1Tq4lzL%2BkcixPLE%3D&t=4d5b0474&ps=ae600521&shp=a5d48078&shcp=fdd36af4&idc=my3",
-              "https://p19-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/7343320984545394693~tplv-tiktokx-cropcenter:100:100.webp?dr=18067&refresh_token=60116c28&x-expires=1773273600&x-signature=mPlD%2F4cFd0MNNVyuH%2BTShnut5pM%3D&t=4d5b0474&ps=ae600521&shp=a5d48078&shcp=fdd36af4&idc=my3",
-              "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/7343320984545394693~tplv-tiktokx-cropcenter:100:100.jpeg?dr=18067&refresh_token=7f2c5aee&x-expires=1773273600&x-signature=swsAfzxSVYmLYhBt8jZ589DA6UM%3D&t=4d5b0474&ps=ae600521&shp=a5d48078&shcp=fdd36af4&idc=my3"
+              "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/7343320984545394693~tplv-tiktokx-cropcenter:100:100.webp?dr=14579&refresh_token=b743eb24&x-expires=1773280800&x-signature=x%2BqbUxPZxEf1unlOlY2ieqBO9Sg%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=fdd36af4&idc=my3",
+              "https://p77-sign-va.tiktokcdn.com/tos-maliva-avt-0068/7343320984545394693~tplv-tiktokx-cropcenter:100:100.webp?dr=14579&refresh_token=89c6b685&x-expires=1773280800&x-signature=DoYWM5gm7HOQiwm5Yt3AbYD7rTo%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=fdd36af4&idc=my3",
+              "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/7343320984545394693~tplv-tiktokx-cropcenter:100:100.jpeg?dr=14579&refresh_token=dd63c9ea&x-expires=1773280800&x-signature=7gmuCZUNovq75vFf870qrcwxmMs%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=fdd36af4&idc=my3",
+              "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/7343320984545394693~tplv-tiktokx-cropcenter:100:100.webp?dr=18067&refresh_token=201fd0da&x-expires=1773280800&x-signature=trn9FPWyfTlTYICH5RCawD%2B%2Bb%2F0%3D&t=4d5b0474&ps=ae600521&shp=a5d48078&shcp=fdd36af4&idc=my3",
+              "https://p19-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/7343320984545394693~tplv-tiktokx-cropcenter:100:100.webp?dr=18067&refresh_token=28ac2344&x-expires=1773280800&x-signature=jOrOorNX9349hnmXu%2Ft3zBg7p4U%3D&t=4d5b0474&ps=ae600521&shp=a5d48078&shcp=fdd36af4&idc=my3",
+              "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/7343320984545394693~tplv-tiktokx-cropcenter:100:100.jpeg?dr=18067&refresh_token=de83b992&x-expires=1773280800&x-signature=NPvOinQHLYNxubuhHE16baw%2FQ2w%3D&t=4d5b0474&ps=ae600521&shp=a5d48078&shcp=fdd36af4&idc=my3"
             ],
             "mUri": "100x100/tos-maliva-avt-0068/7343320984545394693",
             "height": 0,
@@ -657,9 +742,9 @@
     }
   ],
   "method": "WebcastGiftMessage",
-  "msgId": "7615418758274108168",
-  "roomId": "7615414758359714576",
-  "createTime": "1773102926278",
+  "msgId": "7615442095411186439",
+  "roomId": "7615441287306627858",
+  "createTime": "1773108357780",
   "monitor": 0,
   "isShowMsg": true,
   "describe": "Sent Rose",
@@ -692,7 +777,7 @@
     "mUri": "webcast-va/eba3a9bb85c33e017f3648eaf88d7189",
     "height": 0,
     "width": 0,
-    "avgColor": "#524037",
+    "avgColor": "#A37C96",
     "imageType": 0,
     "schema": "",
     "isAnimated": false
@@ -714,7 +799,7 @@
     "mUri": "webcast-va/eba3a9bb85c33e017f3648eaf88d7189",
     "height": 0,
     "width": 0,
-    "avgColor": "#53537A",
+    "avgColor": "#EBE1CE",
     "imageType": 0,
     "schema": "",
     "isAnimated": false
@@ -726,7 +811,7 @@
   "isBoxGift": false,
   "canPutInGiftBox": false,
   "receiverUserId": "252385521786802176",
-  "timestamp": 1773102926278,
+  "timestamp": 1773108357780,
   "anchorId": "252385521786802176",
   "profitApiMessageDur": "0",
   "sendGiftProfitApiStartMs": "0",

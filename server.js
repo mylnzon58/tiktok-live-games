@@ -403,20 +403,9 @@ function connectToTikTok() {
   // ── Gift event ──
   tiktokLive.on("gift", (data) => {
     try {
-      // Registrar data temporal para análisis si se desea (opcional)
-      fs.writeFileSync(path.join(__dirname, "last_gift.json"), JSON.stringify(data, null, 2));
-
+      // ── LOGICA PARA RANKING DE PAISES ──
       // Resolver país de forma segura
       let country = resolveCountry(data);
-
-      const repeatCount = data.repeatCount || 1;
-      const diamondCount = data.diamondCount || 1;
-      const coins = diamondCount * repeatCount;
-
-      // Si es un regalo de racha y NO ha terminado, ignoramos el evento
-      if (data.giftType === 1 && !data.repeatEnd) {
-        return;
-      }
 
       // Si un nuevo código de país aparece, crearlo dinámicamente
       if (!countries[country]) {
@@ -446,7 +435,7 @@ function connectToTikTok() {
       io.emit("rankingUpdate", countries);
       checkLeaderChange();
 
-      // Efecto especial
+      // Efecto especial Ranking
       if (coins >= BIG_GIFT_THRESHOLD) {
         io.emit("bigGift", {
           country: country,
@@ -458,18 +447,25 @@ function connectToTikTok() {
         });
       }
 
-      // --- EMISIÓN PARA ARENA ---
-      if (data.user) {
-        initOrUpdateArenaPlayer(data.user);
-        // Enviamos el regalo a la Arena para que lo anime (Ej. rosa = ataque, donut = rayo)
-        io.emit("arena:gift", {
-          userId: data.uniqueId || data.userId,
-          giftName: data.giftName || "Rose",
-          giftId: data.giftId,
-          count: repeatCount,
-          diamondCount: diamondCount
-        });
-      }
+      // ── LOGICA PARA MODO ARENA ──
+      // Emisión incondicional para que la arena la capte independientemente
+      // El avatar pudo haber mandado un regalo por primera vez, asegurar su spawn
+      const arenaUserObj = data.user || {
+        uniqueId: data.uniqueId,
+        nickname: data.nickname || data.uniqueId,
+        profilePictureUrl: data.profilePictureUrl || ""
+      };
+
+      initOrUpdateArenaPlayer(arenaUserObj);
+
+      // Despachar a arena!
+      io.emit("arena:gift", {
+        userId: arenaUserObj.uniqueId || arenaUserObj.userId || data.uniqueId,
+        giftName: data.giftName || "Rose",
+        giftId: data.giftId,
+        count: Math.max(repeatCount, 1),
+        diamondCount: Math.max(diamondCount, 1)
+      });
 
     } catch (err) {
       console.error("❌ Crasheo evitado en evento gift:", err);
@@ -479,6 +475,7 @@ function connectToTikTok() {
   // ── Like event ──
   tiktokLive.on("like", (data) => {
     try {
+      // ── LOGICA PARA RANKING DE PAISES ──
       let country = resolveCountry(data);
 
       if (!countries[country]) {
@@ -496,7 +493,8 @@ function connectToTikTok() {
         countries[country].likesAccumulated = 0;
       }
 
-      countries[country].likesAccumulated += (data.likeCount || 1);
+      const likeCount = data.likeCount || 1;
+      countries[country].likesAccumulated += likeCount;
 
       if (countries[country].likesAccumulated >= LIKES_PER_POINT) {
         const pointsToAdd = Math.floor(countries[country].likesAccumulated / LIKES_PER_POINT);
@@ -507,15 +505,20 @@ function connectToTikTok() {
         checkLeaderChange();
       }
 
-      // --- EMISIÓN PARA ARENA (Likes curan) ---
-      if (data.user) {
-        initOrUpdateArenaPlayer(data.user);
-        io.emit("arena:like", {
-          userId: data.uniqueId || data.userId,
-          likeCount: data.likeCount || 1,
-          totalLikeCount: data.totalLikeCount
-        });
-      }
+      // ── LOGICA PARA MODO ARENA ──
+      const arenaUserObj = data.user || {
+        uniqueId: data.uniqueId,
+        nickname: data.nickname || data.uniqueId,
+        profilePictureUrl: data.profilePictureUrl || ""
+      };
+
+      initOrUpdateArenaPlayer(arenaUserObj);
+
+      io.emit("arena:like", {
+        userId: arenaUserObj.uniqueId || arenaUserObj.userId || data.uniqueId,
+        likeCount: likeCount,
+        totalLikeCount: data.totalLikeCount
+      });
 
     } catch (err) {
       console.error("❌ Crasheo evitado en evento like:", err);
