@@ -316,12 +316,21 @@ function broadcastArenaSync(force = false) {
   }
 }
 
-// Limpiador automático de Jugadores AFK (sin actividad por 40 segundos)
+// Limpiador automático de Jugadores AFK
 setInterval(() => {
   const now = Date.now();
   let changed = false;
-  for (const id in arenaPlayers) {
-    if (now - arenaPlayers[id].lastActive > 40 * 1000) { // 40 segundos = limpieza agresiva
+  const playerIds = Object.keys(arenaPlayers);
+  const totalPlayers = playerIds.length;
+
+  for (const id of playerIds) {
+    const idleTime = now - arenaPlayers[id].lastActive;
+
+    // Si la pantalla está muy llena (> 30 jugadores), borramos a los AFK de 40 segs.
+    // Si hay pocos, los dejamos vivir en pantalla hasta 15 minutos (900 segs) para que no se vea vacía.
+    const shouldRemove = (totalPlayers > 30 && idleTime > 40 * 1000) || (idleTime > 900 * 1000);
+
+    if (shouldRemove) {
       delete arenaPlayers[id];
       changed = true;
       io.emit("arena:leave", { id });
@@ -635,14 +644,7 @@ function connectToTikTok() {
         }
       }
 
-      // ── LOGICA PARA MODO ARENA ──
-      const arenaUserObj = data.user || {
-        uniqueId: data.uniqueId,
-        nickname: data.nickname || data.uniqueId,
-        profilePictureUrl: data.profilePictureUrl || ""
-      };
-      initOrUpdateArenaPlayer(arenaUserObj);
-
+      // NOTA: Se ha eliminado la lógica de Arena aquí. Ya no spawnean por solo hablar en el chat.
     } catch (err) {
       console.error("❌ Crasheo evitado en evento chat:", err);
     }
@@ -667,18 +669,7 @@ function connectToTikTok() {
 
   // ── Member event (Entrada al LIVE) ──
   tiktokLive.on("member", (data) => {
-    try {
-      // Intentar extraer el usuario de data.userId o data.uniqueId si no viene en data.user propiamente
-      const userObj = data.user || {
-        uniqueId: data.uniqueId,
-        nickname: data.nickname || data.uniqueId,
-        profilePictureUrl: data.profilePictureUrl
-      };
-
-      if (userObj && (userObj.uniqueId || userObj.userId)) {
-        initOrUpdateArenaPlayer(userObj);
-      }
-    } catch (e) { }
+    // NOTA: Ya no spawnean solo por entrar al LIVE. Solo cuando envían rosas o likes.
   });
 
   // ── Receive death/score update from Arena Overlay (para consistencia simple) ──
