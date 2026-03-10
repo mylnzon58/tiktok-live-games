@@ -146,19 +146,47 @@ const sfx = {
         osc.start(audioCtx.currentTime);
         osc.stop(audioCtx.currentTime + 0.2);
     },
-    heal: () => {
+    heal: (pitchMod = 1) => {
         if (!soundEnabled) return;
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.connect(gain); gain.connect(audioCtx.destination);
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(400, audioCtx.currentTime);
-        osc.frequency.linearRampToValueAtTime(800, audioCtx.currentTime + 0.2);
+        osc.frequency.setValueAtTime(400 * pitchMod, audioCtx.currentTime);
+        osc.frequency.linearRampToValueAtTime(800 * pitchMod, audioCtx.currentTime + 0.2);
         gain.gain.setValueAtTime(0, audioCtx.currentTime);
         gain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.1);
         gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
         osc.start(audioCtx.currentTime);
         osc.stop(audioCtx.currentTime + 0.3);
+    },
+    buzzsaw: () => {
+        if (!soundEnabled) return;
+        const osc = audioCtx.createOscillator();
+        const oscNoise = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.connect(gain);
+        oscNoise.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        // Motor grave
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(50, audioCtx.currentTime);
+
+        // Ruido metálico agudo
+        oscNoise.type = 'square';
+        oscNoise.frequency.setValueAtTime(800, audioCtx.currentTime);
+        oscNoise.frequency.linearRampToValueAtTime(1200, audioCtx.currentTime + 0.3);
+
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        // Fade out
+        gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+
+        osc.start(audioCtx.currentTime);
+        oscNoise.start(audioCtx.currentTime);
+        osc.stop(audioCtx.currentTime + 0.4);
+        oscNoise.stop(audioCtx.currentTime + 0.4);
     },
     // Sonido de explosión pesada para regalos top
     heavyExplosion: () => {
@@ -176,8 +204,8 @@ const sfx = {
     }
 };
 
-function playSound(type) {
-    if (sfx[type]) sfx[type]();
+function playSound(type, param) {
+    if (sfx[type]) sfx[type](param);
 }
 
 // ==========================================
@@ -278,12 +306,14 @@ function stopBgm() {
 // ESTRUCTURAS DE DATOS EN MEMORIA
 // ==========================================
 const players = {};
-const projectiles = [];
-const particles = [];
-const lightningBolts = [];
-const hazards = []; // Elementos peligrosos en el mapa como sierras y lasers
+let projectiles = [];
+let particles = [];
+let lightningBolts = [];
+let hazards = []; // Elementos peligrosos en el mapa como sierras y lasers
+let ambientParticles = []; // Partículas ambientales de fondo
 
 let screenShake = 0; // Intensidad de vibración de pantalla
+let hitStopFrames = 0; // Para el efecto visual congelado en grandes impactos
 
 // ==========================================
 // CONFIGURACIONES FÍSICAS
@@ -318,6 +348,33 @@ function drawBackground() {
             s.y = canvas.height;
             s.x = Math.random() * canvas.width;
         }
+    });
+}
+
+// ==========================================
+// MOUSE INTERACTION (Para lanzar bot local de prueba)
+// ==========================================
+canvas.addEventListener("mousedown", (e) => {
+    // Inicializar audio al hacer click (necesario por navegadores)
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+
+    // Test hit stop y sonido
+    // screenShake = 20;
+    // hitStopFrames = 10;
+    // playSound("heavyExplosion");
+});
+
+// Inicializar partículas ambientales
+for (let i = 0; i < 50; i++) {
+    ambientParticles.push({
+        x: Math.random() * ctx.canvas.width,
+        y: Math.random() * ctx.canvas.width, // Usar width por si no hay height aún
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: -Math.random() * 1.5 - 0.5,
+        size: Math.random() * 2 + 1,
+        opacity: Math.random() * 0.5 + 0.1
     });
 }
 
@@ -404,33 +461,12 @@ class Player {
 
         if (idleTime > 20000) {
             const decayFactor = Math.min((idleTime - 20000) / 40000, 1);
-
-            // SPECTATOR MODE: No desaparecen del todo
-            const minRadius = 15;
-            const minOpacity = 0.35;
-
-            let calcRadius = targetRadius * (1 - decayFactor * 0.8);
-            this.currentRadius = Math.max(calcRadius, minRadius);
-
-            let calcOpacity = 1 - decayFactor;
-            this.opacity = Math.max(calcOpacity, minOpacity);
-
-            // Reducir la velocidad si están AFK para que floten suavemente en el fondo
-            this.vx *= 0.98;
-            this.vy *= 0.98;
-
+            this.currentRadius = targetRadius * (1 - decayFactor * 0.8);
+            this.opacity = 1 - decayFactor;
         } else {
             // Suavizar el crecimiento
             this.currentRadius += (targetRadius - this.currentRadius) * 0.1;
             this.opacity = 1.0;
-
-            // Restaurar velocidad si estaban lentos (recalculando un vector random suave si es necesario, pero por ahora solo dejamos que mantengan el momento)
-            const currentSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
-            if (currentSpeed < (BASE_SPEED * 0.5)) {
-                const angle = Math.atan2(this.vy, this.vx) || (Math.random() * Math.PI * 2);
-                this.vx = Math.cos(angle) * BASE_SPEED;
-                this.vy = Math.sin(angle) * BASE_SPEED;
-            }
         }
 
         // Físicas
@@ -447,7 +483,7 @@ class Player {
     }
 
     draw() {
-        if (this.opacity <= 0.05) return; // Ya casi invisible, no gastar GPU (con Spectator Mode normalment no bajará de 0.35)
+        if (this.opacity <= 0.05) return; // Ya casi invisible, no gastar GPU
 
         ctx.save();
         ctx.globalAlpha = this.opacity;
@@ -496,35 +532,31 @@ class Player {
         }
         ctx.stroke();
 
-        // NOMBRE SIEMPRE VISIBLE - SALVO EN MODO ESPECTADOR AFK
-        if (this.opacity > 0.5) {
-            ctx.fillStyle = "white";
-            ctx.font = "bold 14px Rajdhani";
-            ctx.textAlign = "center";
-            ctx.shadowBlur = 4;
-            ctx.shadowColor = "black";
-            ctx.fillText(this.name, this.x, this.y + this.currentRadius + 15);
-            ctx.shadowBlur = 0;
-        }
+        // NOMBRE SIEMPRE VISIBLE
+        ctx.fillStyle = "white";
+        ctx.font = "bold 14px Rajdhani";
+        ctx.textAlign = "center";
+        ctx.shadowBlur = 4;
+        ctx.shadowColor = "black";
+        ctx.fillText(this.name, this.x, this.y + this.currentRadius + 15);
+        ctx.shadowBlur = 0;
 
         ctx.globalAlpha = 1.0;
 
         // Si está muy chico, no mostramos texto para evitar choclazo visual
         if (this.currentRadius < 15) return;
 
-        // Dibujar nombre y HP (Solo si están activos)
-        if (this.opacity > 0.5) {
-            ctx.fillStyle = "white";
-            ctx.font = "bold 12px Rajdhani";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText(`${Math.floor(this.hp)} HP`, this.x, this.y + this.currentRadius + 12);
+        // Dibujar nombre y HP
+        ctx.fillStyle = "white";
+        ctx.font = "bold 12px Rajdhani";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(`${Math.floor(this.hp)} HP`, this.x, this.y + this.currentRadius + 12);
 
-            // Nombre (secundario)
-            ctx.fillStyle = "rgba(255,255,255,0.7)";
-            ctx.font = "10px sans-serif";
-            ctx.fillText(this.name.substring(0, 10), this.x, this.y + this.currentRadius + 24);
-        }
+        // Nombre
+        ctx.fillStyle = "rgba(255,255,255,0.7)";
+        ctx.font = "10px sans-serif";
+        ctx.fillText(this.name.substring(0, 10), this.x, this.y + this.currentRadius + 24);
     }
 
     takeDamage(amount, attackerId) {
@@ -804,6 +836,7 @@ socket.on("arena:you", (data) => {
     myArenaId = data.uniqueId;
     console.log("👤 Identidad en Arena:", myArenaId);
 });
+
 // Forzar actualización del Ranking DOM cada vez que hay sync
 socket.on("arena:sync", () => {
     updateRankingDOM();
@@ -830,14 +863,31 @@ socket.on("arena:leave", (data) => {
     }
 });
 
+// Variables para combo de Likes
+const recentHeals = {};
+
 // EVENTO DE CURACIÓN / APOYO (LIKES / TAP TAP)
 socket.on("arena:like", (data) => {
     const p = players[data.userId];
     if (p) {
         p.heal(data.likeCount * 5); // Aumentado: 5 Vida por Like (antes 2)
         p.flash = 1;
+
+        // Calcular combo de curación para Pitch Shifting
+        const now = Date.now();
+        if (!recentHeals[data.userId] || (now - recentHeals[data.userId].time > 2000)) {
+            recentHeals[data.userId] = { strikes: 0, time: now };
+        }
+        recentHeals[data.userId].strikes += 1;
+        recentHeals[data.userId].time = now;
+
+        // Limitar pitch para no romper los tímpanos (máximo 2x pitch normal)
+        const pitchMod = Math.min(1 + (recentHeals[data.userId].strikes * 0.05), 2.0);
+
+        playSound("heal", pitchMod);
+
         // Mostrar texto de apoyo más seguido (desde 5 likes en combo)
-        if (data.likeCount >= 5) {
+        if (data.likeCount >= 5 || recentHeals[data.userId].strikes >= 5) {
             spawnFloatingText("TAP TAP! ✨", p.x, p.y, "#2ed573");
         }
     }
@@ -884,6 +934,7 @@ socket.on("arena:gift", (data) => {
     if (gName.includes("universe") || gName.includes("universo") || gName.includes("lion") || gName.includes("león") || diamonds >= 20000) {
         playSound("heavyExplosion"); // Sonido pesado
         screenShake = 100; // Sacudida extrema
+        hitStopFrames = 15; // Congela el juego durante 15 frames (cuarto de segundo) para impacto brutal
         ctx.fillStyle = "rgba(255, 255, 255, 0.8)"; // DESTELO BLANCO
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -954,7 +1005,8 @@ socket.on("arena:gift", (data) => {
         target.takeDamage(damage, attacker.id);
         createExplosion(target.x, target.y, color);
     } else if (atkType === "buzzsaw") {
-        playSound("explosion");
+        playSound("buzzsaw");
+        playSound("explosion"); // Sonido de Spawn inicial
         spawnFloatingText("⚠️ SIERRA !", canvas.width / 2, canvas.height / 2, "#ff0000");
         hazards.push(new Buzzsaw(canvas.width / 2, canvas.height / 2, attacker.id, 600));
     } else if (atkType === "laser") {
@@ -1016,6 +1068,38 @@ function loop() {
     }
 
     drawBackground();
+
+    // Dibujar Partículas Ambientales (Siempre se mueven y dibujan, independiente del Hit Stop)
+    ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+    ambientParticles.forEach(p => {
+        p.y += p.vy;
+        p.x += p.vx;
+        if (p.y < -10) { p.y = canvas.height + 10; p.x = Math.random() * canvas.width; }
+
+        ctx.globalAlpha = p.opacity;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    ctx.globalAlpha = 1.0;
+
+    // --- HIT STOP ---
+    // Si hay un impacto tremendo, congelamos la lógica pero seguimos dibujando el frame anterior
+    if (hitStopFrames > 0) {
+        hitStopFrames--;
+
+        // Solo dibujamos a los jugadores en su posición congelada sin update()
+        const pList = Object.values(players);
+        pList.forEach(p => {
+            if ((p.hp === undefined ? 500 : p.hp) > 0) {
+                p.draw();
+            }
+        });
+
+        requestAnimationFrame(loop);
+        ctx.restore();
+        return;
+    }
 
     // Físicas entre jugadores
     const pList = Object.values(players);
@@ -1121,7 +1205,7 @@ function loop() {
         if (l.life <= 0) lightningBolts.splice(i, 1);
     }
 
-    // Partículas
+    // Partículas (Efectos de golpes)
     for (let i = particles.length - 1; i >= 0; i--) {
         let p = particles[i];
         p.x += p.vx; p.y += p.vy;
