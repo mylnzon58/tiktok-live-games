@@ -133,10 +133,9 @@ html {
     list-style: none;
     display: flex;
     flex-wrap: nowrap;
-    justify-content: space-between;
-    /* Distribución uniforme */
-    gap: 12px;
-    /* Gap mínimo */
+    justify-content: flex-start;
+    gap: 8px;
+    /* Reducción extrema para asegurar encuadre */
     padding: 0;
     margin: 0;
     align-items: center;
@@ -144,19 +143,19 @@ html {
 }
 
 #powers-guide li {
-    font-size: 15px;
-    /* Optimizado */
+    font-size: 14px;
+    /* Un poco más pequeño para total seguridad */
     white-space: nowrap;
     font-weight: 800;
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
     text-shadow: 1px 1px 4px #000;
 }
 
 #powers-guide .emoji {
-    font-size: 24px;
-    /* Un poco más pequeño */
+    font-size: 22px;
+    /* Consistente con 14px de texto */
     filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.4));
     animation: giftPulse 1.5s infinite ease-in-out;
 }

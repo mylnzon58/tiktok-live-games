@@ -373,6 +373,7 @@ function updateHallOfFame(p) {
     arenaHallOfFame[p.id].avatar = p.avatar;
     arenaHallOfFame[p.id].lastActive = now;
     saveHOF(); // Guardar cambios de actividad/HP
+    broadcastHallOfFame(); // Asegurar sincronización en cada actualización de actividad
   }
 }
 
@@ -401,11 +402,12 @@ function initOrUpdateArenaPlayer(user) {
       name: user.nickname || id,
       avatar: user.profilePictureUrl || "",
       hp: persistentData.hp || 500, // Heredar HP si existe
-      score: persistentData.score || 0, // HEREDAR SCORE PERSISTENTE
+      score: (persistentData.score || 0), // HEREDAR SCORE PERSISTENTE
       x: Math.random() * 800 + 100, // Posición base inicial
       y: Math.random() * 400 + 100,
       lastActive: Date.now()
     };
+    console.log(`👤 ARENA JOIN: @${id} (Record: ${arenaPlayers[id].score} pts)`);
     // Emitir que un nuevo gladiador entró
     io.emit("arena:join", arenaPlayers[id]);
   } else {
@@ -414,6 +416,9 @@ function initOrUpdateArenaPlayer(user) {
     arenaPlayers[id].lastActive = Date.now(); // Renew TTL
     if (user.profilePictureUrl) arenaPlayers[id].avatar = user.profilePictureUrl;
   }
+
+  // Asegurar que el podio esté actualizado para todos
+  broadcastHallOfFame();
   return arenaPlayers[id];
 }
 
