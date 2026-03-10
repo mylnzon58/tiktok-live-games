@@ -684,13 +684,23 @@ function connectToTikTok() {
         console.log(`🎰 JACKPOT! Multiplicador x${multiplier} activado para @${arenaUserObj.uniqueId}!`);
       }
 
-      // ── LOGICA PARA PUNTOS Y LÍDERES (HALL OF FAME) ──
+      // ── LOGICA PARA PUNTOS Y LÍDERES (Ponderación por valor) ──
       if (attacker) {
-        // Corregir: Los puntos se dan por REGALAR, no solo por GOLPEAR.
-        // 1 Diamante = 100 puntos (Multiplicador 100x consistente)
-        attacker.score += coins * 100;
+        // Multiplicador base (1 diamante = 100 puntos)
+        let totalScoreGain = coins * 100;
+
+        // BONUS POR REGALO DE ALTO VALOR (MÁS CARO = MÁS PESO EN EL RANKING)
+        // Si el regalo cuesta más de 500 diamantes (Legendario), damos un 50% extra de puntos rank
+        if (diamondCount >= 500) {
+          totalScoreGain *= 1.5;
+          console.log(`💎 PREMIUM GIFT BONUS! @${attacker.id} recibió 1.5x puntos por su regalo caro (${data.giftName})`);
+        }
+
+        attacker.score += totalScoreGain;
         updateHallOfFame(attacker);
-        broadcastHallOfFame(); // Sincronización instantánea para el podio
+        broadcastHallOfFame();
+
+        console.log(`📈 SCORE UPDATE: @${attacker.id} +${totalScoreGain} pts (Total: ${attacker.score}) [Gift: ${data.giftName}]`);
       }
 
       if (targetId && arenaPlayers[targetId]) {
