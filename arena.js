@@ -957,18 +957,23 @@ function loop() {
     }
 
     // Actualizar y dibujar Jugadores
+    let positionBatch = {};
     pList.forEach(p => {
         if (p.hp > 0) {
             p.update();
             p.draw();
 
-            // Reportar posición periódicamente (cada ~30 frames = 0.5s)
-            // Solo si somos nosotros o un bot bajo nuestro control
-            if (frameCount % 30 === 0) {
-                syncStateToServer(p);
+            // Recolectar posición (Solo si es dueño o bot)
+            if (p.id === socket.id || (p.id && p.id.startsWith("bot_"))) {
+                positionBatch[p.id] = { x: Math.round(p.x), y: Math.round(p.y) };
             }
         }
     });
+
+    // Enviar lote de posiciones cada 30 frames (~500ms)
+    if (frameCount % 30 === 0 && Object.keys(positionBatch).length > 0) {
+        socket.emit("arena:batchUpdate", positionBatch);
+    }
 
     // Hazars (Sierras, etc)
     for (let i = hazards.length - 1; i >= 0; i--) {

@@ -304,6 +304,18 @@ function initOrUpdateArenaPlayer(user) {
   return arenaPlayers[id];
 }
 
+// Función para sincronizar con THROTTLE (Evita saturar el canal)
+let lastSyncTime = 0;
+const SYNC_THROTTLE_MS = 200; // Máximo 5 veces por segundo
+
+function broadcastArenaSync(force = false) {
+  const now = Date.now();
+  if (force || (now - lastSyncTime > SYNC_THROTTLE_MS)) {
+    io.emit("arena:sync", arenaPlayers);
+    lastSyncTime = now;
+  }
+}
+
 // Limpiador automático de Jugadores AFK (sin actividad por 60 segundos)
 setInterval(() => {
   const now = Date.now();
@@ -317,9 +329,9 @@ setInterval(() => {
     }
   }
   if (changed) {
-    io.emit("arena:sync", arenaPlayers);
+    broadcastArenaSync(true); // Forzar sincronización en sweep
   }
-}, 5000); // Check every 5 seconds for immediate cleanup
+}, 5000);
 
 // ──────────────────────────────────────────────────────────────
 // Sistema de Overrides (Forzar país manualmente)
@@ -502,8 +514,8 @@ function connectToTikTok() {
         damage: damage
       });
 
-      // Sincronizar HP inmediatamente después del golpe
-      io.emit("arena:sync", arenaPlayers);
+      // Sincronizar con throttle para evitar lag en combos
+      broadcastArenaSync();
 
     } catch (err) {
       console.error("❌ Crasheo evitado en evento gift:", err);
@@ -692,18 +704,23 @@ io.on("connection", (socket) => {
   // Arena State
   socket.emit("arena:sync", arenaPlayers);
 
-  // Escuchar si la arena reporta muerte o kill de un jugador
-  // Escuchar si la arena reporta posición o actualizaciones (Throttled)
+  // Escuchar actualizaciones por lotes (Bote de posiciones)
+  socket.on("arena:batchUpdate", (batch) => {
+    // batch = { id1: {x, y}, id2: {x, y}... }
+    for (const id in batch) {
+      if (arenaPlayers[id]) {
+        if (batch[id].x !== undefined) arenaPlayers[id].x = batch[id].x;
+        if (batch[id].y !== undefined) arenaPlayers[id].y = batch[id].y;
+        arenaPlayers[id].lastActive = Date.now();
+      }
+    }
+  });
+
   socket.on("arena:updatePlayer", (data) => {
     if (data && data.id && arenaPlayers[data.id]) {
-      // Sincronizar x, y para que el servidor sepa dónde están para los ataques
-      if (data.x !== undefined) arenaPlayers[data.id].x = data.x;
-      if (data.y !== undefined) arenaPlayers[data.id].y = data.y;
-
       // HP y Score ya son manejados mayormente por el servidor, pero aceptamos correcciones
       if (data.hp !== undefined) arenaPlayers[data.id].hp = data.hp;
       if (data.score !== undefined) arenaPlayers[data.id].score = data.score;
-
       arenaPlayers[data.id].lastActive = Date.now();
     }
   });
