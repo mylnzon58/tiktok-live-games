@@ -669,7 +669,8 @@ function connectToTikTok() {
 
   // ── Member event (Entrada al LIVE) ──
   tiktokLive.on("member", (data) => {
-    // NOTA: Ya no spawnean solo por entrar al LIVE. Solo cuando envían rosas o likes.
+    // NOTA: Ya no spawnean por solo entrar. Solo spawnean cuando envían rosas o likes (Tap Tap)
+    // para evitar que la arena se llene de fantasmas que solo entran y salen.
   });
 
   // ── Receive death/score update from Arena Overlay (para consistencia simple) ──
