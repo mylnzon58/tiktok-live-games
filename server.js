@@ -677,11 +677,21 @@ function connectToTikTok() {
         console.log(`🎰 JACKPOT! Multiplicador x${multiplier} activado para @${arenaUserObj.uniqueId}!`);
       }
 
+      // ── LOGICA PARA PUNTOS Y LÍDERES (HALL OF FAME) ──
+      if (attacker) {
+        // Corregir: Los puntos se dan por REGALAR, no solo por GOLPEAR.
+        // 1 Diamante = 100 puntos (Multiplicador 100x consistente)
+        attacker.score += coins * 100;
+        updateHallOfFame(attacker);
+      }
+
       if (targetId && arenaPlayers[targetId]) {
         arenaPlayers[targetId].hp -= damage;
         if (arenaPlayers[targetId].hp < 0) arenaPlayers[targetId].hp = 0;
+
         if (attacker) {
-          attacker.score += damage * 10; // Aumento extremo para alcanzar el nuevo tope de 200px
+          // Bonus ligero por impacto (10% extra del daño)
+          attacker.score += damage * 0.1;
           updateHallOfFame(attacker);
         }
 
