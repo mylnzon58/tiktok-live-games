@@ -1249,34 +1249,12 @@ socket.on("arena:gift", (data) => {
 // GAME LOOP Y DIBUJADO
 // ==========================================
 
-// Registro persistente de los mejores jugadores de la sesión (Hall of Fame)
-const arenaHallOfFame = {};
+// Registro persistente de los mejores jugadores de la sesión (Hall of Fame) - AHORA MANEJADO POR SERVIDOR
+let arenaHallOfFame = [];
 
 function updateRankingDOM() {
-    // 1. Actualizar el Hall of Fame con los datos actuales de los jugadores activos
-    for (const id in players) {
-        const p = players[id];
-        if (p.score > 0) {
-            if (!arenaHallOfFame[id]) {
-                arenaHallOfFame[id] = { id: p.id, name: p.name, avatar: p.avatar, score: p.score, hp: p.hp };
-            } else {
-                // Solo actualizar si el score sube, o si queremos mantener el HP sincronizado
-                if (p.score > arenaHallOfFame[id].score) {
-                    arenaHallOfFame[id].score = p.score;
-                }
-                arenaHallOfFame[id].hp = p.hp; // Mantener la vida actualizada
-                arenaHallOfFame[id].avatar = p.avatar; // Por si cambia su foto
-                arenaHallOfFame[id].name = p.name;
-            }
-        }
-    }
-
-    // 2. Convertir el Hall of Fame a array y ordenar
-    const sorted = Object.values(arenaHallOfFame)
-        .sort((a, b) => b.score - a.score || b.hp - a.hp);
-
     // Solo mostramos el TOP 5 en el ranking horizontal
-    const top5 = sorted.slice(0, 5);
+    const top5 = arenaHallOfFame.slice(0, 5);
     leaderboardEl.innerHTML = "";
 
     top5.forEach((p, idx) => {
@@ -1294,14 +1272,19 @@ function updateRankingDOM() {
             <div class="board-info">
                 <span class="board-name">${p.name}</span>
                 <div class="board-stats">
-                    <span class="stat-hp">❤️ ${Math.floor(p.hp)}</span>
-                    <span class="stat-score">⚔️ ${Math.floor(p.score)}</span>
+                    <span class="stat-hp">❤️ ${Math.floor(p.hp || 0)}</span>
+                    <span class="stat-score">⚔️ ${Math.floor(p.score || 0)}</span>
                 </div>
             </div>
         `;
         leaderboardEl.appendChild(row);
     });
 }
+
+socket.on("arena:hallOfFameUpdate", (data) => {
+    arenaHallOfFame = data;
+    updateRankingDOM();
+});
 
 let frameCount = 0;
 let currentArenaKingId = null;

@@ -276,6 +276,35 @@ function checkLeaderChange() {
 // Estado del Modo Arena (Segundo Juego)
 // ──────────────────────────────────────────────────────────────
 const arenaPlayers = {};
+const arenaHallOfFame = {}; // { id: { name, avatar, score, lastActive, hp } }
+const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+
+function updateHallOfFame(p) {
+  if (!p || p.score <= 0) return;
+
+  if (!arenaHallOfFame[p.id] || p.score > arenaHallOfFame[p.id].score) {
+    arenaHallOfFame[p.id] = {
+      id: p.id,
+      name: p.name,
+      avatar: p.avatar,
+      score: p.score,
+      hp: p.hp,
+      lastActive: Date.now() // Servirá para el TTL de 12h
+    };
+    broadcastHallOfFame();
+  } else {
+    // Actualizar HP solo si ya existe
+    arenaHallOfFame[p.id].hp = p.hp;
+  }
+}
+
+function broadcastHallOfFame() {
+  // Enviar solo el Top 10 para ahorrar ancho de banda
+  const topList = Object.values(arenaHallOfFame)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10);
+  io.emit("arena:hallOfFameUpdate", topList);
+}
 
 function initOrUpdateArenaPlayer(user) {
   if (!user || (!user.uniqueId && !user.userId)) return null;
@@ -316,44 +345,48 @@ function broadcastArenaSync(force = false) {
   }
 }
 
-// Limpiador automático de Jugadores AFK
+// Limpiador automático de Jugadores AFK y Hall of Fame
 setInterval(() => {
   const now = Date.now();
   let changed = false;
   const playerIds = Object.keys(arenaPlayers);
   const totalPlayers = playerIds.length;
 
-  // Obtener IDs ordenadas por puntaje (para saber quiénes son los Top y quiénes los más bajos)
-  const sortedByScore = playerIds.slice().sort((a, b) => arenaPlayers[b].score - arenaPlayers[a].score);
-  const topHighscoreIds = sortedByScore.slice(0, 5); // El Top 5 siempre está protegido
+  // 1. Limpiar Hall of Fame (12 horas de inactividad)
+  for (const id in arenaHallOfFame) {
+    if (now - arenaHallOfFame[id].lastActive > TWELVE_HOURS_MS) {
+      delete arenaHallOfFame[id];
+      console.log(`📜 HOF CLEANUP: Removido ${id} por antigüedad (>12h)`);
+      broadcastHallOfFame();
+    }
+  }
+
+  // 2. Limpiar Arena (Lucha activa)
+  // Hall of Fame Top 5 está protegido de borrado por AFK
+  const topHallOfFameIds = Object.values(arenaHallOfFame)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5)
+    .map(p => p.id);
 
   for (const id of playerIds) {
     const p = arenaPlayers[id];
     const idleTime = now - p.lastActive;
-
-    // --- PROTECCIÓN VIP (DONADORES) ---
-    // Si tienen buen score (Top 5 o > 1000 puntos), los consideramos "Legendarios"
-    // No se borran por el tiempo estándar de 5 minutos.
-    const isVIP = topHighscoreIds.includes(id) || p.score >= 1000;
+    const isVIP = topHallOfFameIds.includes(id) || p.score >= 1000;
 
     let shouldRemove = false;
 
     if (totalPlayers > 30) {
-      // Si está lleno, borramos a los inactivos de 30s que NO sean VIPs.
-      // Si todos son VIPs inactivos, se borrará al de menor puntaje de la lista total.
       if (!isVIP && idleTime > 30 * 1000) {
         shouldRemove = true;
-      } else if (idleTime > 60 * 1000) {
-        // Si incluso un VIP está AFK mucho tiempo en sala llena, 
-        // solo lo borramos si es uno de los 5 con MENOR puntaje de la sala.
-        const lowestScoreIds = sortedByScore.slice(-5);
-        if (lowestScoreIds.includes(id)) {
-          shouldRemove = true;
-        }
+      } else if (idleTime > 300 * 1000) {
+        // Incluso un VIP puede ser borrado si el cuarto está súper lleno y lleva 5 min AFK
+        // Pero solo si no es el Top 1 actual
+        if (id !== topHallOfFameIds[0]) shouldRemove = true;
       }
     } else {
-      // Si hay espacio, los VIPs son inmortales. Los normales mueren a los 5 min.
-      if (!isVIP && idleTime > 300 * 1000) {
+      // Si hay espacio, los VIPs (Top 5 o score alto) duran hasta 12h (por el HOF)
+      // Los normales se van a los 10 min
+      if (!isVIP && idleTime > 600 * 1000) {
         shouldRemove = true;
       }
     }
@@ -532,16 +565,25 @@ function connectToTikTok() {
       if (targetId && arenaPlayers[targetId]) {
         arenaPlayers[targetId].hp -= damage;
         if (arenaPlayers[targetId].hp < 0) arenaPlayers[targetId].hp = 0;
-        if (attacker) attacker.score += damage;
+        if (attacker) {
+          attacker.score += damage;
+          updateHallOfFame(attacker);
+        }
 
         // Si el regalo es grande, daño inmediato masivo
         if (diamondCount >= 500) {
           arenaPlayers[targetId].hp -= (damage * 0.5);
         }
 
+        // Si murió el target, actualizamos al atacante en HOF
+        if (arenaPlayers[targetId].hp <= 0 && attacker) {
+          attacker.score += 500; // Bonus por K.O.
+          updateHallOfFame(attacker);
+        }
+
         // --- PERSISTENCIA BAJO ATAQUE ---
-        // Si alguien es atacado, lo mantenemos activo para que no desaparezca (Neuromarketing)
         arenaPlayers[targetId].lastActive = Date.now();
+        updateHallOfFame(arenaPlayers[targetId]);
       }
 
       console.log(`⚔️ [ARENA ATTACK] @${arenaUserObj.uniqueId} -> Target:${targetId || "NONE"} (Dmg:${damage})`);
@@ -557,6 +599,7 @@ function connectToTikTok() {
 
       // Sincronizar con throttle para evitar lag en combos
       broadcastArenaSync();
+      broadcastHallOfFame();
 
     } catch (err) {
       console.error("❌ Crasheo evitado en evento gift:", err);
@@ -605,7 +648,8 @@ function connectToTikTok() {
 
       const player = initOrUpdateArenaPlayer(arenaUserObj);
       if (player) {
-        player.score += likeCount * 5; // Asegurarse de que el servidor mantenga el score correcto para el crecimiento
+        player.score += likeCount * 5;
+        updateHallOfFame(player);
       }
 
       io.emit("arena:like", {
@@ -613,6 +657,7 @@ function connectToTikTok() {
         likeCount: likeCount,
         totalLikeCount: data.totalLikeCount
       });
+      broadcastHallOfFame();
 
     } catch (err) {
       console.error("❌ Crasheo evitado en evento like:", err);
@@ -750,6 +795,7 @@ io.on("connection", (socket) => {
   socket.emit("timerUpdate", timeRemaining);
   // Arena State
   socket.emit("arena:sync", arenaPlayers);
+  broadcastHallOfFame();
 
   // Escuchar actualizaciones por lotes (Bote de posiciones)
   socket.on("arena:batchUpdate", (batch) => {
@@ -767,7 +813,10 @@ io.on("connection", (socket) => {
     if (data && data.id && arenaPlayers[data.id]) {
       // HP y Score ya son manejados mayormente por el servidor, pero aceptamos correcciones
       if (data.hp !== undefined) arenaPlayers[data.id].hp = data.hp;
-      if (data.score !== undefined) arenaPlayers[data.id].score = data.score;
+      if (data.score !== undefined) {
+        arenaPlayers[data.id].score = data.score;
+        updateHallOfFame(arenaPlayers[data.id]);
+      }
       arenaPlayers[data.id].lastActive = Date.now();
     }
   });
