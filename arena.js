@@ -752,6 +752,7 @@ socket.on("arena:gift", (data) => {
     attacker.lastActive = Date.now(); // Reset AFK timer on attack
 
     const diamonds = data.diamondCount * data.count;
+    console.log(`🎁 GIFT RECEIVED: ${data.giftName} x${data.count} (${diamonds} 💎) from ${data.userId}`);
 
     // Buscar enemigo más cercano
     let target = null;
@@ -830,11 +831,16 @@ socket.on("arena:gift", (data) => {
 
     // Ejecutar efectos remanentes si no fue daño directo (none)
     if (atkType === "projectile") {
-        for (let i = 0; i < Math.min(data.count, 10); i++) {
+        // Daño inicial inmediato para regalos grandes para que se sienta el golpe
+        if (diamonds >= 500) {
+            target.takeDamage(damage * 0.2, attacker.id);
+        }
+
+        for (let i = 0; i < Math.min(data.count, 15); i++) {
             setTimeout(() => {
                 playSound("shoot");
                 projectiles.push(new Projectile(attacker.x, attacker.y, target.id, (damage / data.count), attacker.id, color));
-            }, i * 150);
+            }, i * 120);
         }
     } else if (atkType === "lightning") {
         playSound("lightning");

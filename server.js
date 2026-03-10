@@ -403,11 +403,19 @@ function connectToTikTok() {
   // ── Gift event ──
   tiktokLive.on("gift", (data) => {
     try {
+      // 1. EXTRAER DIAMANTES Y CANTIDAD PRIMERO (Datos vitales)
+      const repeatCount = Math.max(data.repeatCount || data.count || 1, 1);
+      let diamondCount = 1;
+      if (data.gift && typeof data.gift.diamond_count === "number") {
+        diamondCount = data.gift.diamond_count;
+      } else if (typeof data.diamondCount === "number") {
+        diamondCount = data.diamondCount;
+      }
+      const coins = diamondCount * repeatCount;
+
       // ── LOGICA PARA RANKING DE PAISES ──
-      // Resolver país de forma segura
       let country = resolveCountry(data);
 
-      // Si un nuevo código de país aparece, crearlo dinámicamente
       if (!countries[country]) {
         countries[country] = {
           score: 0,
@@ -454,27 +462,17 @@ function connectToTikTok() {
         profilePictureUrl: data.profilePictureUrl || ""
       };
 
+      // IMPORTANTE: Spawn/Update antes de emitir el ataque
       initOrUpdateArenaPlayer(arenaUserObj);
 
-      // Limpieza de datos numéricos vitales para la formula del daño
-      const finalCount = Math.max(data.repeatCount || data.count || 1, 1);
-
-      // Mucho ojo: diamondCount a veces viene en data.gift.diamond_count o data.diamondCount
-      let finalDiamonds = 1;
-      if (data.gift && typeof data.gift.diamond_count === "number") {
-        finalDiamonds = data.gift.diamond_count;
-      } else if (typeof data.diamondCount === "number") {
-        finalDiamonds = data.diamondCount;
-      }
-
-      console.log(`⚔️ [ARENA GIFT] @${arenaUserObj.uniqueId} -> ${data.giftName} (Q:${finalCount} D:${finalDiamonds})`);
+      console.log(`⚔️ [ARENA GIFT] @${arenaUserObj.uniqueId} -> ${data.giftName} (Q:${repeatCount} D:${diamondCount})`);
 
       io.emit("arena:gift", {
         userId: arenaUserObj.uniqueId || arenaUserObj.userId || data.uniqueId,
         giftName: data.giftName || "Rosa",
         giftId: data.giftId || 1,
-        count: finalCount,
-        diamondCount: finalDiamonds
+        count: repeatCount,
+        diamondCount: diamondCount
       });
 
     } catch (err) {
