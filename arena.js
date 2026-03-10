@@ -1203,16 +1203,16 @@ function updatePowersGuide() {
     if (!guideEl) return;
 
     const basicGifts = [
-        { name: "ROSA", effect: "DISPARO", icon: "🌹" },
-        { name: "PESAS", effect: "GOLPE X3", icon: "🏋️" },
-        { name: "DORMIR", effect: "CONGELAR", icon: "😴" },
-        { name: "CORAZÓN", effect: "REGEN", icon: "💖" }
+        { name: "ROSA", effect: "DISPARO 🔫", icon: "🌹" },
+        { name: "CORAZÓN", effect: "REGEN 💖", icon: "💖" },
+        { name: "PESAS", effect: "GOLPE X3 🥊", icon: "🏋️" },
+        { name: "DORMIR", effect: "CONGELAR 🧊", icon: "�" }
     ];
 
     const legendaryGifts = [
         { name: "GALAXIA", effect: "⚡ RAYO", icon: "🌌" },
-        { name: "FUEGO", effect: "¡ INCENDIO !", icon: "🔥" },
-        { name: "UNIVERSO", effect: "💥 K.O. TOTAL!", icon: "🪐" },
+        { name: "FUEGO", effect: "¡ INCENDIO ! 🔥", icon: "🔥" },
+        { name: "UNIVERSO", effect: "💥 K.O. TOTAL", icon: "🪐" },
         { name: "LEÓN", effect: "⚙️ SIERRA", icon: "🦁" }
     ];
 
