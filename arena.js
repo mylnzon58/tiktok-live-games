@@ -735,10 +735,11 @@ socket.on("arena:leave", (data) => {
 socket.on("arena:like", (data) => {
     const p = players[data.userId];
     if (p) {
-        p.heal(data.likeCount * 2); // 2 Vida por Like
+        p.heal(data.likeCount * 5); // Aumentado: 5 Vida por Like (antes 2)
         p.flash = 1;
-        if (data.likeCount > 10) {
-            spawnFloatingText("TAP TAP! 🔥", p.x, p.y, "#2ed573");
+        // Mostrar texto de apoyo más seguido (desde 5 likes en combo)
+        if (data.likeCount >= 5) {
+            spawnFloatingText("TAP TAP! ✨", p.x, p.y, "#2ed573");
         }
     }
 });
