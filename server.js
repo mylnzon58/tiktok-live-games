@@ -392,13 +392,16 @@ function initOrUpdateArenaPlayer(user) {
   const id = user.uniqueId || user.userId;
 
   if (!arenaPlayers[id]) {
+    // REGLA DE ORO: Si ya existe en el Hall of Fame, heredar su score y HP previo
+    const persistentData = arenaHallOfFame[id] || {};
+
     // Si no existe, lo creamos y le damos spawn random en el cliente
     arenaPlayers[id] = {
       id: id,
       name: user.nickname || id,
       avatar: user.profilePictureUrl || "",
-      hp: 500, // Vida máxima optimizada
-      score: 0,
+      hp: persistentData.hp || 500, // Heredar HP si existe
+      score: persistentData.score || 0, // HEREDAR SCORE PERSISTENTE
       x: Math.random() * 800 + 100, // Posición base inicial
       y: Math.random() * 400 + 100,
       lastActive: Date.now()
@@ -453,11 +456,8 @@ setInterval(() => {
   }
 
   // 2. Limpiar Arena (Lucha activa) con Prioridad de Mérito (Neuromarketing)
-  // Hall of Fame Top 5 está protegido de borrado por AFK estándar
-  const topHallOfFameIds = Object.values(arenaHallOfFame)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 5)
-    .map(p => p.id);
+  // TODOS los miembros del Hall of Fame están protegidos de borrado por AFK mientras sean válidos (12h)
+  const hofMemberIds = Object.keys(arenaHallOfFame);
 
   // Ordenamos los jugadores actuales por score ASCENDENTE (los más pobres primero)
   const playersSortedAsc = playerIds.slice().sort((a, b) => (arenaPlayers[a].score || 0) - (arenaPlayers[b].score || 0));
@@ -467,7 +467,7 @@ setInterval(() => {
     if (!p) continue;
 
     const idleTime = now - p.lastActive;
-    const isKing = topHallOfFameIds.includes(id);
+    const isKing = hofMemberIds.includes(id);
     const score = p.score || 0;
 
     let shouldRemove = false;
