@@ -31,18 +31,73 @@ function getAudioCtx() {
 // Desbloqueo agresivo para iOS/Safari
 ['click', 'touchstart', 'mousedown'].forEach(evt => {
     document.addEventListener(evt, () => {
-        const ctx = getAudioCtx();
-        if (ctx.state === 'suspended') ctx.resume();
-
-        // Crear y detener un oscilador silencioso para "despertar" el audio
-        const osc = ctx.createOscillator();
-        const silent = ctx.createGain();
-        silent.gain.value = 0;
-        osc.connect(silent).connect(ctx.destination);
-        osc.start(0);
-        osc.stop(0.1);
+        tryUnlockAudio();
     }, { once: true });
 });
+
+function tryUnlockAudio() {
+    const ctx = getAudioCtx();
+    if (ctx.state === 'suspended') {
+        ctx.resume().then(() => {
+            if (!bgmStarted) {
+                playBackgroundMusic();
+                bgmStarted = true;
+            }
+        });
+    } else {
+        if (!bgmStarted) {
+            playBackgroundMusic();
+            bgmStarted = true;
+        }
+    }
+}
+
+// Revisar contínuamente si ya está running (OBS / TikTok Studio)
+let ctxUnlocker = setInterval(() => {
+    const ctx = getAudioCtx();
+    if (ctx.state === 'running') {
+        clearInterval(ctxUnlocker);
+        if (!bgmStarted) {
+            playBackgroundMusic();
+            bgmStarted = true;
+        }
+    } else {
+        ctx.resume().catch(e => { });
+    }
+}, 1000);
+
+let bgmStarted = false;
+function playBackgroundMusic() {
+    const ctx = getAudioCtx();
+    const masterGain = ctx.createGain();
+    masterGain.gain.value = 0.2; // Aumentado de 0.08 a 0.2 (250% más fuerte)
+    masterGain.connect(ctx.destination);
+
+    const notes = [
+        392.00, 392.00, 440.00, 392.00, 523.25, 493.88, // G4 G4 A4 G4 C5 B4
+        392.00, 392.00, 440.00, 392.00, 587.33, 523.25, // G4 G4 A4 G4 D5 C5
+        392.00, 392.00, 783.99, 659.25, 523.25, 493.88, 440.00, // G4 G4 G5 E5 C5 B4 A4
+        698.46, 698.46, 659.25, 523.25, 587.33, 523.25  // F5 F5 E5 C5 D5 C5
+    ];
+    let step = 0;
+
+    function nextStep() {
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = (step % 4 === 0) ? 'square' : 'triangle';
+        osc.frequency.setValueAtTime(notes[step % notes.length], now);
+        g.gain.setValueAtTime(0, now);
+        g.gain.linearRampToValueAtTime(0.2, now + 0.02);
+        g.gain.linearRampToValueAtTime(0, now + 0.2);
+        osc.connect(g).connect(masterGain);
+        osc.start(now);
+        osc.stop(now + 0.2);
+        step++;
+        setTimeout(nextStep, 200); // More energetic tempo
+    }
+    nextStep();
+}
 
 // Sonido: regalo normal (cha-ching moneda)
 function playCoinSound() {
@@ -180,17 +235,6 @@ document.addEventListener("DOMContentLoaded", () => {
     createParticles();
     startReactionLoop();
     startElapsed();
-
-    // Lógica del botón de prueba
-    const testBtn = document.getElementById("test-audio-btn");
-    if (testBtn) {
-        testBtn.addEventListener("click", () => {
-            playCoinSound();
-            spawnReaction("🔔");
-            // Una vez probado, hacerlo casi invisible o quitarlo
-            testBtn.style.display = "none";
-        });
-    }
 });
 
 // ──────────────────────────────────────────────────────────────
@@ -615,13 +659,38 @@ socket.on("roundReset", (data) => {
 socket.on("status", (data) => {
     const dot = document.getElementById("status-dot");
     const text = document.getElementById("status-text");
+    if (!dot || !text) return;
+
     if (data.connected) {
-        dot.className = "connected";
+        dot.className = "connected"; // Clase definida en style.css (verde)
         text.textContent = "EN VIVO — @" + data.username;
+    } else if (data.error) {
+        dot.className = "disconnected"; // Rojo
+        text.textContent = "ERROR: " + data.error;
     } else if (data.streamEnded) {
         dot.className = "disconnected";
         text.textContent = "Stream finalizado";
+    } else {
+        dot.className = ""; // Naranja (default blink)
+        text.textContent = "Conectando a @" + (data.username || "...");
     }
+});
+
+socket.on("ranking:countryJoined", (data) => {
+    // Si queremos un popup de feedback
+    const container = document.getElementById("reactions-container");
+    const el = document.createElement("div");
+    el.className = "reaction join-alert";
+    el.innerHTML = `<span style="font-size:40px">${data.flag}</span><br>@${data.userId} unido!`;
+    el.style.left = "50%";
+    el.style.transform = "translateX(-50%)";
+    el.style.top = "40%";
+    el.style.setProperty("--dur", "3s");
+    container.appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+
+    // Sonidito
+    playRankUpSound();
 });
 
 socket.on("connect", () => {
@@ -640,17 +709,41 @@ socket.on("disconnect", () => {
     if (text) text.innerText = "Servidor Desconectado";
 });
 
+// tiktokConnected legacy (ahora integrado en status)
 socket.on("tiktokConnected", (data) => {
-    const dot = document.getElementById("status-dot");
-    const text = document.getElementById("status-text");
-    if (dot) dot.className = "dot online";
-    if (text) text.innerText = `EN VIVO - @${data.username}`;
     elapsedSeconds = data.elapsed || 0;
 });
 
-socket.on("tiktokDisconnected", () => {
-    const dot = document.getElementById("status-dot");
-    const text = document.getElementById("status-text");
-    if (dot) dot.className = "dot offline";
-    if (text) text.innerText = "Reconectando TikTok...";
+// 🏆 Actualizar Campeón del Día (12h)
+socket.on("ranking:championUpdate", (data) => {
+    const section = document.getElementById("champion-section");
+    const nameEl = document.getElementById("champion-name");
+    const countryEl = document.getElementById("champion-country");
+    const avatarEl = document.getElementById("champion-avatar");
+    const followBtn = document.getElementById("follow-winner-btn");
+
+    if (!data) {
+        section.classList.add("hidden");
+        return;
+    }
+
+    section.classList.remove("hidden");
+    nameEl.textContent = data.name;
+    countryEl.textContent = `${data.flag} ${data.country}`;
+
+    if (data.avatar) {
+        avatarEl.style.backgroundImage = `url(${data.avatar})`;
+    } else {
+        avatarEl.style.backgroundImage = `none`;
+        avatarEl.innerHTML = `<div style="font-size:30px; display:flex; align-items:center; justify-content:center; height:100%">${data.flag}</div>`;
+    }
+
+    if (followBtn) {
+        followBtn.onclick = () => {
+            spawnReaction("👤");
+            // Nota: En un overlay real no podemos forzar follow, pero simulamos el feedback
+            followBtn.textContent = "✅ SIGUIENDO...";
+            setTimeout(() => { followBtn.textContent = "👤 SEGUIR AL GANADOR"; }, 3000);
+        };
+    }
 });

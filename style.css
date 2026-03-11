@@ -314,45 +314,162 @@ body {
 }
 
 /* ═══════════════════════════════════
-   RULES BANNER (Marquee Animado)
+   FIXED INSTRUCTIONS & DONATION POWERS
    ═══════════════════════════════════ */
-#rules-banner {
-  width: 100%;
-  background: rgba(251, 191, 36, 0.15);
-  /* Tono dorado/advertencia */
-  border-top: 1px solid rgba(251, 191, 36, 0.3);
-  border-bottom: 1px solid rgba(251, 191, 36, 0.3);
-  padding: 4px 0;
-  overflow: hidden;
-  white-space: nowrap;
-  position: relative;
-  z-index: 5;
-  margin-bottom: 4px;
+#fixed-instructions {
+  width: 90%;
+  margin: 10px auto;
+  background: rgba(255, 0, 0, 0.25);
+  border: 2px solid #ff4757;
+  color: #fff;
+  padding: 12px 15px;
+  border-radius: 12px;
+  font-size: 15px;
+  text-align: center;
+  z-index: 200;
+  backdrop-filter: blur(10px);
+  font-weight: 700;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 4px 15px rgba(255, 71, 87, 0.3);
 }
 
-.marquee {
-  display: inline-block;
-  padding-left: 100%;
-  animation: marqueeScrolling 25s linear infinite;
+#donation-powers {
+  width: 95%;
+  margin: 5px auto 15px;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.85) 0%, rgba(20, 20, 40, 0.85) 100%);
+  border: 2px solid rgba(0, 240, 255, 0.4);
+  border-radius: 15px;
+  padding: 10px;
+  color: #fff;
 }
 
-.marquee span {
-  font-family: var(--font-body);
+.powers-header {
+  font-family: var(--font-display);
   font-size: 14px;
-  font-weight: 600;
-  color: #fcd34d;
-  letter-spacing: 0.5px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  font-weight: 900;
+  text-align: center;
+  color: var(--accent-cyan);
+  margin-bottom: 8px;
+  letter-spacing: 1px;
 }
 
-@keyframes marqueeScrolling {
-  0% {
-    transform: translate(0, 0);
-  }
+.powers-grid.categorized {
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
 
-  100% {
-    transform: translate(-100%, 0);
-  }
+.power-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.group-label {
+  font-family: var(--font-display);
+  font-size: 9px;
+  color: var(--accent-gold);
+  text-align: center;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.power-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 5px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.power-item.full-width {
+  grid-column: span 4;
+  font-size: clamp(10px, 1.5vw, 13px);
+  background: linear-gradient(90deg, transparent, rgba(255, 71, 87, 0.2), transparent);
+  color: #fff;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+}
+
+/* ═══════════════════════════════════
+   CHAMPION SECTION (12h)
+   ═══════════════════════════════════ */
+#champion-section {
+  width: 90%;
+  margin: 10px auto;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(0, 0, 0, 0.8) 100%);
+  border: 2px solid var(--accent-gold);
+  border-radius: 15px;
+  padding: 12px;
+  box-shadow: 0 0 20px rgba(251, 191, 36, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.champion-label {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 900;
+  text-align: center;
+  color: var(--accent-gold);
+}
+
+.champion-card {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+#champion-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 3px solid var(--accent-gold);
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+}
+
+.champion-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#champion-name {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+#champion-country {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+#follow-winner-btn {
+  background: var(--accent-gold);
+  color: #000;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: transform 0.2s;
+}
+
+#follow-winner-btn:hover {
+  transform: scale(1.05);
 }
 
 /* ═══════════════════════════════════
@@ -1152,6 +1269,7 @@ body {
     transform: translateY(-800px) scale(0.5) rotate(-15deg);
   }
 }
+
 /* 💎 LLUVIA DE DIAMANTES (NEUROMARKETING) */
 .diamond-rain {
   position: fixed;
@@ -1172,15 +1290,47 @@ body {
 }
 
 @keyframes screenShakeOverlay {
-  0% { transform: translate(0, 0); }
-  10% { transform: translate(-10px, -10px); }
-  20% { transform: translate(10px, 10px); }
-  30% { transform: translate(-10px, 10px); }
-  40% { transform: translate(10px, -10px); }
-  50% { transform: translate(-10px, -10px); }
-  60% { transform: translate(10px, 10px); }
-  70% { transform: translate(-10px, 10px); }
-  80% { transform: translate(10px, -10px); }
-  90% { transform: translate(-10px, -10px); }
-  100% { transform: translate(0, 0); }
+  0% {
+    transform: translate(0, 0);
+  }
+
+  10% {
+    transform: translate(-10px, -10px);
+  }
+
+  20% {
+    transform: translate(10px, 10px);
+  }
+
+  30% {
+    transform: translate(-10px, 10px);
+  }
+
+  40% {
+    transform: translate(10px, -10px);
+  }
+
+  50% {
+    transform: translate(-10px, -10px);
+  }
+
+  60% {
+    transform: translate(10px, 10px);
+  }
+
+  70% {
+    transform: translate(-10px, 10px);
+  }
+
+  80% {
+    transform: translate(10px, -10px);
+  }
+
+  90% {
+    transform: translate(-10px, -10px);
+  }
+
+  100% {
+    transform: translate(0, 0);
+  }
 }

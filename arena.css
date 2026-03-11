@@ -473,8 +473,8 @@ html {
     top: 20px;
     left: 50%;
     transform: translateX(-50%);
-    width: 750px;
-    /* Aumentado sustancialmente */
+    width: 95%;
+    max-width: 750px;
     height: 180px;
     display: flex;
     justify-content: center;
@@ -494,12 +494,12 @@ html {
 #top-arena-showcase::before {
     content: "🏆 TOP ARENA";
     position: absolute;
-    top: -14px;
+    top: -20px;
     left: 40px;
     background: linear-gradient(90deg, #ffd700, #fff, #ffd700);
     color: #000;
     font-family: 'Bungee', cursive;
-    font-size: 14px;
+    font-size: 20px;
     padding: 3px 15px;
     border-radius: 12px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
@@ -511,11 +511,11 @@ html {
 #top-arena-showcase::after {
     content: "🔥 ¡SIGUE AL TOP PARA MÁS PODER! 🔥";
     position: absolute;
-    bottom: -25px;
+    bottom: -35px;
     left: 50%;
     transform: translateX(-50%);
     font-family: 'Bungee', cursive;
-    font-size: 11px;
+    font-size: 18px;
     color: #ffd700;
     text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
     width: 100%;
@@ -745,4 +745,103 @@ html {
 .countdown-overlay.normal {
     color: #ffd700;
     /* Dorado para el inicio del countdown */
+}
+
+/* --- PHASE 1: NEUROMARKETING --- */
+#x2-alpha-overlay {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+    z-index: 5000;
+}
+
+.x2-banner {
+    font-family: 'Bungee', cursive;
+    font-size: 140px;
+    color: #ff0000;
+    text-shadow:
+        0 0 20px rgba(255, 0, 0, 0.8),
+        0 0 50px rgba(255, 255, 255, 1);
+    animation: zoomPulse 0.5s infinite alternate;
+    margin: 0;
+}
+
+.x2-subtitle {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 40px;
+    background: #000;
+    color: #ffd700;
+    padding: 10px 30px;
+    border: 3px solid #ffd700;
+    border-radius: 50px;
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 10px;
+}
+
+@keyframes zoomPulse {
+    from {
+        transform: scale(1);
+        opacity: 0.9;
+    }
+
+    to {
+        transform: scale(1.1);
+        opacity: 1;
+    }
+}
+
+/* --- PHASE 3: VISUALS --- */
+#announcer-container {
+    position: fixed;
+    top: 25%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 2000;
+}
+
+.announcement-text {
+    font-size: 5rem;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 0 0 20px rgba(0, 0, 0, 0.8), 0 0 40px var(--accent);
+    animation: announceIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards,
+        announceOut 0.5s 1.5s ease-in forwards;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+}
+
+@keyframes announceIn {
+    0% {
+        transform: scale(0) rotate(-10deg);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+    }
+}
+
+@keyframes announceOut {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(2);
+        opacity: 0;
+    }
+}
+
+/* --- PHASE 4: SOCIAL --- */
+.duel-line {
+    filter: drop-shadow(0 0 10px #0ff);
 }

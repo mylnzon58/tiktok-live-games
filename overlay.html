@@ -16,10 +16,6 @@
 </head>
 
 <body>
-  <!-- Botón switch para ir a la Arena -->
-  <a href="/arena" class="btn-switch-overlay"
-    style="position:fixed; top:15px; left:15px; background:rgba(0,0,0,0.4); color:#a8b0c0; padding:8px 12px; font-size:13px; border-radius:8px; text-decoration:none; z-index:1000; border:1px solid rgba(255,255,255,0.2); font-family: 'Rajdhani', sans-serif; text-transform:uppercase; font-weight:bold;">⚔️
-    Cambiar a Arena</a>
 
   <!-- Fondo de estrellas -->
   <div id="stars-container"></div>
@@ -62,11 +58,48 @@
       <span id="status-text">Conectando...</span>
     </div>
 
-    <!-- Banner de Reglas -->
-    <div id="rules-banner">
-      <div class="marquee">
-        <span>⚠️ ¿No sale tu país? Ponte la bandera en tu nombre (Ej: @juan 🇦🇷) o pide a un moderador en el chat:
-          !pais @tu_usuario AR ⚠️</span>
+    <!-- Sección de Campeón del Día (12h) -->
+    <div id="champion-section" class="hidden">
+      <div class="champion-label">🏆 CAMPEÓN DEL DÍA 🏆</div>
+      <div class="champion-card">
+        <div id="champion-avatar"></div>
+        <div class="champion-info">
+          <div id="champion-name">@Usuario</div>
+          <div id="champion-country">🇦🇷 Argentina</div>
+          <button id="follow-winner-btn">👤 SEGUIR AL GANADOR</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alerta de Instrucciones Fija -->
+    <div id="fixed-instructions">
+      ⚠️ Escribe el prefijo de tu país (ej: <b>AR</b> o <b>Argentina</b>, <b>MX</b> o <b>México</b>) en el chat para
+      poder
+      participar. ⚠️
+    </div>
+
+    <!-- Guía de Puntos por Donación -->
+    <div id="donation-powers">
+      <div class="powers-header">💎 PUNTOS POR REGALOS 💎</div>
+      <div class="powers-grid categorized">
+        <div class="power-group">
+          <span class="group-label">LOW (100)</span>
+          <div class="power-item">🌹 🌹 🍦 🦊 🍩</div>
+        </div>
+        <div class="power-group">
+          <span class="group-label">MID (10K+)</span>
+          <div class="power-item">🎊 🥊 🕶️ 🎆 💸</div>
+        </div>
+        <div class="power-group">
+          <span class="group-label">HIGH (120K+)</span>
+          <div class="power-item">🌌 🎱 💍 🏮 🪞</div>
+        </div>
+        <div class="power-group">
+          <span class="group-label">ULTRA (2M+)</span>
+          <div class="power-item">🦁 🪐 🚀 🏰 💎</div>
+        </div>
+        <div class="power-item full-width">🚀 > 500 COINS = +20% PRESTIGIO</div>
+        <div class="power-item full-width">🔥 MUERTE SÚBITA = PUNTOS X2</div>
       </div>
     </div>
 
@@ -120,11 +153,6 @@
     <!-- Reacciones flotantes -->
     <div id="reactions-container"></div>
 
-    <!-- Botón secreto de prueba de sonido (se puede quitar luego) -->
-    <button id="test-audio-btn"
-      style="position:fixed; bottom:10px; right:10px; opacity:0.3; z-index:9999; padding:5px; font-size:10px; background:rgba(0,0,0,0.5); color:white; border:1px solid white; border-radius:5px; cursor:pointer;">
-      PROBAR SONIDO 🔊
-    </button>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
