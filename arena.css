@@ -208,6 +208,32 @@ html {
     color: #0abde3;
 }
 
+.powers-footer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    margin-top: 2px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+    font-family: 'Rajdhani', sans-serif;
+    color: #f8fafc;
+    text-transform: uppercase;
+    letter-spacing: 1.4px;
+}
+
+.powers-timer-label {
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+#round-time-remaining {
+    font-size: 24px;
+    font-weight: 700;
+    color: #ffd166;
+    text-shadow: 0 0 12px rgba(255, 209, 102, 0.38);
+}
+
 /* Ranking Horizontal Superior (Optimizado para Móvil) */
 #arena-ranking {
     position: absolute;

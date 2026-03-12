@@ -11,7 +11,7 @@ const { createStorage } = require("./lib/storage");
 const { createRankingManager } = require("./lib/ranking-manager");
 const { createArenaManager } = require("./lib/arena-manager");
 const { createGiftCatalog } = require("./lib/gift-catalog");
-const { normalizeGiftEvent, normalizeLikeEvent, normalizeChatEvent, normalizeUser } = require("./lib/live-event-adapter");
+const { normalizeGiftEvent, normalizeLikeEvent, normalizeChatEvent } = require("./lib/live-event-adapter");
 const { GAME_CONFIG } = require("./lib/game-config");
 
 loadEnvFile();
@@ -293,12 +293,6 @@ async function connectToTikTok() {
         console.log(`✅ TikTok LIVE conectado. Room ID: ${state.roomId}`);
         liveStatus = { connected: true, username: config.username };
         io.emit("status", liveStatus);
-
-        const host = normalizeUser({ uniqueId: config.username, nickname: config.username });
-        if (host) {
-            arena.ensurePlayer(host, "host");
-            queueArenaState(true);
-        }
     } catch (error) {
         const errorMessage = error.message.includes("isn't online")
             ? "Esperando que el Live inicie..."
@@ -352,7 +346,8 @@ function handleArenaGift(event) {
         sfx: event.gift.sfx,
         multiplier: result.comboMultiplier,
         damage: result.damage,
-        scoreGain: result.scoreGain
+        scoreGain: result.scoreGain,
+        scoreLoss: result.scoreLoss
     });
 
     if (result.comboMultiplier > 1) {
@@ -491,6 +486,7 @@ function bindTikTokListeners(connection) {
                 attacker: strike.attacker,
                 target: strike.target,
                 damage: strike.damage,
+                scoreLoss: strike.scoreLoss,
                 ko: strike.ko,
                 likeCount: event.likeCount,
                 comboLikes
