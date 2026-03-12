@@ -99,6 +99,9 @@ let lastFinalStretchCueAt = 0;
 let lastReentryCueAt = 0;
 let lastVisibleCompetitorCount = 0;
 let lastCompletedRoundWinner = null;
+let lastRoundWinnerHypeAt = 0;
+let lastRoundWinnerHypeId = null;
+let lastTopDuelVoiceAt = 0;
 
 // Attempt auto-unlock de AudioContext silencioso
 function tryUnlockAudio() {
@@ -237,7 +240,7 @@ function playArenaIntroAnnouncement(force = false) {
     if (introAnnouncementDone && !force) return;
     introAnnouncementDone = true;
     announce("Arena activa. El numero uno del arena sera el unico con lectura de chats.", { gapMs: 650 });
-    announce("Prueben regalos baratos como rosa, capibara, helado o dona para activar poderes.", { gapMs: 700 });
+    announce("Prueben rosa, capibara, helado o dona y miren como se enciende la arena.", { gapMs: 700 });
 }
 
 function promptReturnToArena(force = false) {
@@ -255,12 +258,12 @@ function announceGiftTip() {
     lastGiftTipAt = now;
     const tips = [
         "La rosa activa disparo rápido y baja puntos del oponente.",
-        "Prueben rosa, capibara o helado. Los regalos baratos tambien activan poderes.",
-        "La capibara y los regalos baratos meten presion y ayudan a pelear la ronda.",
+        "Rosa, capibara y helado tambien pueden mover la ronda y sorprender a todos.",
+        "Capibara, rosa o dona meten presion inmediata y hacen reaccionar la arena.",
         "La dona empuja al rival y activa una onda especial.",
-        "Fuegos artificiales activan una ráfaga especial sobre el oponente.",
-        "Galaxia activa rayos premium y baja muchos puntos del rival.",
-        "León y Universo activan megablast y pueden sacarlo de la ronda."
+        "Fuegos artificiales activan una ráfaga enorme que se siente en toda la arena.",
+        "Galaxia desata rayos premium enormes y cambia por completo una ronda.",
+        "León y Universo activan un megablast descomunal que sacude toda la arena."
     ];
     announce(tips[Math.floor(Math.random() * tips.length)], { gapMs: 650 });
 }
@@ -270,9 +273,10 @@ function announcePromoTip() {
     if (now - lastPromoTipAt < 98000) return;
     lastPromoTipAt = now;
     const promos = [
-        "Prueben regalos baratos para ver sus poderes. Rosa, capibara, helado o dona ya mueven la arena.",
+        "Prueben rosa, capibara, helado o dona y miren como cambia la pelea en segundos.",
         "Compartir y apoyarnos entre todos ayuda a viralizar este live y sumar seguidores.",
         "Apoyen siguiendo al creador del juego para impulsar esta arena en TikTok.",
+        "Quien gane la ronda puede cambiar toda la historia del arena.",
         "Quien gane el numero uno del arena tendra lectura de chats en voz.",
         "Si les interesa un juego como este, consulten por privado.",
         "Este juego tambien puede adaptarse por encargo. Consulten precio por privado."
@@ -367,13 +371,22 @@ const sfx = {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.connect(gain); gain.connect(audioCtx.destination);
+        const now = audioCtx.currentTime;
+        const oscClick = audioCtx.createOscillator();
+        osc.connect(gain);
+        oscClick.connect(gain);
         osc.type = 'square';
-        osc.frequency.setValueAtTime(200, audioCtx.currentTime); // Más grave
-        osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.15);
-        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.15);
-        osc.start(audioCtx.currentTime);
-        osc.stop(audioCtx.currentTime + 0.15);
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.exponentialRampToValueAtTime(34, now + 0.18);
+        oscClick.type = 'triangle';
+        oscClick.frequency.setValueAtTime(540, now);
+        oscClick.frequency.exponentialRampToValueAtTime(120, now + 0.08);
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+        osc.start(now);
+        oscClick.start(now);
+        osc.stop(now + 0.18);
+        oscClick.stop(now + 0.09);
     },
     explosion: () => {
         if (!soundEnabled) return;
@@ -440,7 +453,7 @@ const sfx = {
     buzzsaw: () => {
         if (!soundEnabled) return;
         const now = audioCtx.currentTime;
-        const pulseOffsets = [0, 0.045, 0.09];
+        const pulseOffsets = [0, 0.032, 0.064, 0.096];
 
         pulseOffsets.forEach((offset, index) => {
             const osc = audioCtx.createOscillator();
@@ -451,36 +464,44 @@ const sfx = {
             oscNoise.connect(gain);
             gain.connect(audioCtx.destination);
 
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(88 + (index * 10), now + offset);
-            osc.frequency.linearRampToValueAtTime(112 + (index * 12), now + offset + 0.055);
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(96 + (index * 18), now + offset);
+            osc.frequency.linearRampToValueAtTime(132 + (index * 22), now + offset + 0.04);
 
             oscNoise.type = 'sawtooth';
-            oscNoise.frequency.setValueAtTime(260 + (index * 35), now + offset);
-            oscNoise.frequency.linearRampToValueAtTime(420 + (index * 40), now + offset + 0.055);
+            oscNoise.frequency.setValueAtTime(310 + (index * 45), now + offset);
+            oscNoise.frequency.linearRampToValueAtTime(510 + (index * 50), now + offset + 0.04);
 
-            gain.gain.setValueAtTime(0.05, now + offset);
-            gain.gain.exponentialRampToValueAtTime(0.002, now + offset + 0.07);
+            gain.gain.setValueAtTime(0.06, now + offset);
+            gain.gain.exponentialRampToValueAtTime(0.002, now + offset + 0.05);
 
             osc.start(now + offset);
             oscNoise.start(now + offset);
-            osc.stop(now + offset + 0.075);
-            oscNoise.stop(now + offset + 0.075);
+            osc.stop(now + offset + 0.055);
+            oscNoise.stop(now + offset + 0.055);
         });
     },
     heavyExplosion: () => {
         if (!soundEnabled) return;
         const now = audioCtx.currentTime;
         const osc = audioCtx.createOscillator();
+        const oscPunch = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(55, now);
-        osc.frequency.exponentialRampToValueAtTime(28, now + 0.4);
-        gain.gain.setValueAtTime(0.18, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+        osc.connect(gain);
+        oscPunch.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(62, now);
+        osc.frequency.exponentialRampToValueAtTime(24, now + 0.5);
+        oscPunch.type = 'square';
+        oscPunch.frequency.setValueAtTime(118, now);
+        oscPunch.frequency.exponentialRampToValueAtTime(42, now + 0.12);
+        gain.gain.setValueAtTime(0.28, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.52);
         osc.start(now);
-        osc.stop(now + 0.45);
+        oscPunch.start(now);
+        osc.stop(now + 0.52);
+        oscPunch.stop(now + 0.14);
     },
     fire: () => {
         if (!soundEnabled) return;
@@ -853,15 +874,18 @@ function triggerOverlayFlash(color, alpha = 0.18) {
 function createExplosion(x, y, color, options = {}) {
     const count = Math.min(options.count || 30, 40);
     const speed = Math.min(options.speed || 12, 14);
-    const shake = Math.min(options.shake || 10, 18);
+    const shake = Math.min(options.shake || 10, 24);
+    const finalCount = isSuddenDeath ? Math.min(40, Math.round(count * 1.22)) : count;
+    const finalSpeed = isSuddenDeath ? Math.min(14, speed + 2) : speed;
+    const finalShake = isSuddenDeath ? Math.min(24, shake + 4) : shake;
 
-    screenShake = Math.max(screenShake, shake);
+    screenShake = Math.max(screenShake, finalShake);
 
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < finalCount; i++) {
         pushParticle({
             x, y,
-            vx: (Math.random() - 0.5) * speed,
-            vy: (Math.random() - 0.5) * speed,
+            vx: (Math.random() - 0.5) * finalSpeed,
+            vy: (Math.random() - 0.5) * finalSpeed,
             life: 1.0,
             size: Math.random() * 4 + 2,
             color: color || "#fff"
@@ -1139,7 +1163,7 @@ class Player {
             this.sawAngle += 0.4 * this.spinDirection;
             this.engagement = Math.max(this.engagement - 0.01, 0);
             const now = Date.now();
-            const sawPulseEveryMs = Math.max(95, 165 - Math.min(60, this.engagement * 2));
+            const sawPulseEveryMs = Math.max(60, 118 - Math.min(42, this.engagement * 1.6));
             if (now - (this.lastSawAudioAt || 0) >= sawPulseEveryMs) {
                 this.lastSawAudioAt = now;
                 playSound("buzzsaw");
@@ -1528,21 +1552,27 @@ class Player {
             grad.addColorStop(0.5, "#dcdde1");
             grad.addColorStop(1, "#353b48");
 
-            ctx.lineWidth = 4;
+            ctx.lineWidth = 6;
             ctx.strokeStyle = grad;
-            ctx.shadowBlur = 16;
-            ctx.shadowColor = "rgba(255,255,255,0.55)";
+            ctx.shadowBlur = 24;
+            ctx.shadowColor = "rgba(255,255,255,0.72)";
             ctx.stroke();
-            ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
+            ctx.fillStyle = "rgba(235, 239, 245, 0.42)";
             ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(0, 0, sawRadius + 6, 0, Math.PI * 2);
+            ctx.strokeStyle = "rgba(255, 184, 28, 0.38)";
+            ctx.lineWidth = 3;
+            ctx.stroke();
 
             // Nucleo visible para que la sierra nunca se pierda sobre el avatar.
             ctx.beginPath();
             ctx.arc(0, 0, Math.max(10, sawRadius * 0.22), 0, Math.PI * 2);
-            ctx.fillStyle = "#f5f5f5";
+            ctx.fillStyle = "#fff7cc";
             ctx.fill();
-            ctx.lineWidth = 3;
-            ctx.strokeStyle = "#4b5563";
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = "#374151";
             ctx.stroke();
             ctx.shadowBlur = 0;
 
@@ -1768,7 +1798,9 @@ socket.on("arena:suddenDeath", (active) => {
         showAnnouncer("FASE FINAL", "#ff8c42");
         playSound("heavyExplosion");
         triggerOverlayFlash("255, 120, 80", 0.1);
-        screenShake = 8;
+        createExplosion(canvas.width / 2, canvas.height / 2, "#ff8c42", { count: 36, speed: 14, shake: 18 });
+        pushShockwave({ x: canvas.width / 2, y: canvas.height / 2, r: 120, opacity: 0.85, color: "#ff8c42" });
+        screenShake = 16;
         announce("Fase final activada. Impacto reforzado.");
     } else {
         if (sdOverlay) sdOverlay.style.display = "none";
@@ -1994,9 +2026,14 @@ socket.on("arena:hallOfFameUpdate", (list) => {
 updatePowersGuide();
 
 function updateTopShowcase() {
+    const activeWindowMs = 90 * 1000;
+    const now = Date.now();
     const podium3 = Object.values(players)
         .filter((player) => player?.id)
         .filter((player) => player.state !== "REMOVED")
+        .filter((player) => player.state !== "IDLE")
+        .filter((player) => (now - (player.lastActive || 0)) <= activeWindowMs)
+        .filter((player) => (player.victories || 0) > 0)
         .map((player) => ({
             ...player,
             currentScore: Math.floor(player.score || 0),
@@ -2037,7 +2074,7 @@ function updateTopShowcase() {
             <div class="top-player-avatar" style="background-image: url('${p.avatar || ''}')"></div>
             <div class="top-rank-badge">${rank}</div>
             <div class="top-player-name">${p.name}</div>
-            ${!p.isPlaceholder ? `<div class="top-player-score">${p.victories > 0 ? `VICTORIAS ${Math.floor(p.victories || 0)}` : `PTS ${Math.floor(p.currentScore || p.displayScore || 0)}`}</div>` : ''}
+            ${!p.isPlaceholder ? `<div class="top-player-score">VICTORIAS ${Math.floor(p.victories || 0)}</div>` : ''}
             ${p.isPlaceholder ? '' : '<div class="follow-arrow">⬆️</div>'}
         `;
         topShowcaseEl.appendChild(item);
@@ -2102,10 +2139,10 @@ socket.on("arena:roundEnd", (data) => {
 
     const w = roundWinner;
     console.log("🏆 GANADOR DE LA RONDA:", w.name);
+    announce(`Ganador de la ronda actual. ${w.name}.`, { gapMs: 650 });
     if (arenaChampion?.name) {
         announce(`Ganador numero uno de la arena. ${arenaChampion.name}.`, { gapMs: 650 });
     }
-    announce(`Ganador de la ronda actual. ${w.name}.`, { gapMs: 650 });
 
     // Efecto visual masivo de Victoria (Volumen reducido)
     screenShake = 24;
@@ -2154,10 +2191,12 @@ socket.on("arena:powerup", (data) => {
         if (data.type === "buzzsaw") {
             target.sawLife = Math.max(target.sawLife || 0, data.duration || 600);
             target.engagement = Math.min((target.engagement || 0) + 20, 44);
+            target.lastSawAudioAt = 0;
+            target.flash = 1;
             playSound("buzzsaw");
             setTimeout(() => playSound("buzzsaw", 0.92), 120);
             spawnFloatingText("SIERRA ACTIVA", target.x, target.y - 40, "#ff9f43");
-            triggerOverlayFlash("255, 180, 90", 0.06);
+            triggerOverlayFlash("255, 180, 90", 0.09);
         }
     }
 });
@@ -2233,11 +2272,11 @@ socket.on("arena:like", (data) => {
     if (p) {
         p.lastActive = Date.now(); // Despierta de AFK inmediatamente
         p.heal(data.heal || data.likeCount);
-        p.engagement = Math.min((p.engagement || 0) + Math.max(4, data.likeCount * 1.15), 30);
+        p.engagement = Math.min((p.engagement || 0) + Math.max(5, data.likeCount * 1.35), 34);
         p.lastTapBoostAt = Date.now();
         p.flash = 1;
 
-        screenShake = Math.max(screenShake, 1.1); // Gratis: mucho mas contenido
+        screenShake = Math.max(screenShake, 2);
 
         // Dopamina física: El jugador "salta" o se empuja al recibir likes (MÁS INTENSO)
         p.vx += (Math.random() - 0.5) * 15;
@@ -2255,10 +2294,11 @@ socket.on("arena:like", (data) => {
         const pitchMod = Math.min(1 + (recentHeals[data.userId].strikes * 0.05), 2.0);
 
         playSound("heal", Math.min(pitchMod, 1.2));
+        spawnFloatingText(`TAP +${Math.max(1, Math.floor(data.likeCount || 1))}`, p.x, p.y - 10, "#86efac");
         if (data.scoreGain > 0) {
             spawnFloatingText(`+${data.scoreGain} PTS`, p.x, p.y - 28, "#fff3b0");
         }
-        if (data.comboLikes >= 25 && data.comboLikes % 25 === 0) {
+        if (data.comboLikes >= 16 && data.comboLikes % 8 === 0) {
             spawnFloatingText(`RUSH x${data.comboLikes}`, p.x, p.y - 54, "#7dd3fc");
             triggerOverlayFlash("120, 255, 210", 0.04);
             screenShake = Math.max(screenShake, Math.min(5, 2 + (data.comboLikes / 30)));
@@ -2269,7 +2309,7 @@ socket.on("arena:like", (data) => {
         if (strikes > 0 && strikes % 50 === 0) {
             spawnFloatingText(`COMBO x${strikes}`, p.x, p.y - 40, "#ff9f43");
             screenShake = Math.max(screenShake, 4);
-        } else if (data.likeCount >= 5 || strikes % 10 === 0) {
+        } else if (data.likeCount >= 3 || strikes % 6 === 0) {
             spawnFloatingText(`TAP x${strikes}`, p.x, p.y, "#2ed573");
         }
     }
@@ -2308,7 +2348,7 @@ socket.on("arena:likeStrike", (data) => {
     if (comboLikes >= 20) {
         spawnFloatingText("TAP STRIKE", attacker.x, attacker.y - 34, "#bbf7d0");
     }
-    screenShake = Math.max(screenShake, Math.min(5, 1.5 + (comboLikes / 18)));
+    screenShake = Math.max(screenShake, Math.min(isSuddenDeath ? 13 : 9, (isSuddenDeath ? 4.6 : 2.8) + (comboLikes / (isSuddenDeath ? 9 : 12))));
     playSound("hit", 1.08);
 });
 
@@ -2368,7 +2408,7 @@ socket.on("arena:ko", (data) => {
     createExplosion(x, y, "#fecaca", { count: 24, speed: 10, shake: 10 });
     triggerOverlayFlash("255, 180, 180", 0.1);
     playSound("heavyExplosion");
-    screenShake = Math.max(screenShake, 12);
+    screenShake = Math.max(screenShake, 18);
 });
 
 function resolveArenaGiftEffect(data, attacker, target, diamondsTotal, giftValue, giftName) {
@@ -2486,10 +2526,10 @@ socket.on("arena:gift", (data) => {
         if (giftValue >= 500) {
             focusCamera(attacker.x, attacker.y, Math.max(fxProfile.cameraScale, 1.48), Math.max(fxProfile.cameraFrames, 125));
             showAnnouncer("MOMENTO LEGENDARIO!!! 🔥", "#ffd700");
-            announce("Regalo legendario. Sigan al ataque.");
+            announce("Regalo legendario. Poder gigantesco. Impacto descomunal en la arena.");
         } else {
             showAnnouncer("GRAN REGALO! ✨", "#00d2ff");
-            announce("Gran regalo. Poder extremo.");
+            announce("Gran regalo. Poder enorme. Ataque muy fuerte sobre la arena.");
         }
     }
 
@@ -2531,11 +2571,11 @@ socket.on("arena:gift", (data) => {
     // Detección de tipos de ataque: cubrir todos los effectKey emitidos por el servidor.
     if (giftEffect.type === "megaBlast") {
         playSound("heavyExplosion");
-        screenShake = 26;
+        screenShake = isSuddenDeath ? 42 : 34;
         hitStopFrames = 18;
         triggerOverlayFlash("255, 240, 200", 0.24);
         spawnFloatingText("UNIVERSO", target.x, target.y, "#ffd166");
-        announce("Universo activado. Sigan al ganador.");
+        announce("Universo activado. Megablast total. Poder premium impresionante en toda la arena.");
         createExplosion(target.x, target.y, "#fff", { count: 44, speed: 14, shake: 14 });
         createExplosion(target.x + 40, target.y - 30, "#fbbf24", { count: 28, speed: 11, shake: 10 });
         createExplosion(target.x - 50, target.y + 20, "#ff8c42", { count: 28, speed: 11, shake: 10 });
@@ -2546,10 +2586,10 @@ socket.on("arena:gift", (data) => {
         atkType = "none";
     } else if (giftEffect.type === "lightningStorm") {
         playSound("lightning");
-        screenShake = 15;
+        screenShake = isSuddenDeath ? 30 : 22;
         triggerOverlayFlash("90, 200, 255", 0.14);
         spawnFloatingText("GALAXIA", target.x, target.y, "#7dd3fc");
-        announce("Galaxia activada. Top arena en combate.");
+        announce("Galaxia activada. Rayos premium enormes. La ronda puede cambiar por completo.");
         for (let i = 0; i < 5; i++) {
             setTimeout(() => {
                 pushLightningBolt({
@@ -2581,7 +2621,7 @@ socket.on("arena:gift", (data) => {
         createFireBurst(target.x, target.y, attacker.currentRadius + 50);
         createExplosion(target.x, target.y, "#ff8a00", { count: 30, speed: 11, shake: 10 });
         triggerOverlayFlash("255, 120, 40", 0.16);
-        screenShake = Math.max(screenShake, Math.max(screenShake, 18));
+        screenShake = Math.max(screenShake, Math.max(screenShake, isSuddenDeath ? 30 : 24));
         atkType = "lightning";
     } else if (giftEffect.type === "shockwave") {
         playSound("heavyExplosion");
@@ -2593,7 +2633,7 @@ socket.on("arena:gift", (data) => {
         pushShockwave({ x: target.x, y: target.y, r: 30, opacity: 0.95, color });
         pushShockwave({ x: target.x, y: target.y, r: 52, opacity: 0.7, color: "#fff3b0" });
         triggerOverlayFlash("255, 214, 120", 0.18);
-        screenShake = Math.max(screenShake, 20);
+        screenShake = Math.max(screenShake, isSuddenDeath ? 36 : 28);
         atkType = "lightning";
     } else if (data.sfx) {
         playSound(data.sfx);
@@ -2740,6 +2780,18 @@ socket.on("arena:currentRanking", (data) => {
     if (
         roundLeader &&
         roundRunnerUp &&
+        now - lastTopDuelVoiceAt > 24000
+    ) {
+        const duelThreshold = currentRoundSeconds <= 45 ? 150 : 110;
+        if (standingGap <= duelThreshold) {
+            lastTopDuelVoiceAt = now;
+            announce(`Duelo por la ronda. ${roundLeader.name} contra ${roundRunnerUp.name}.`, { gapMs: 650 });
+        }
+    }
+
+    if (
+        roundLeader &&
+        roundRunnerUp &&
         currentRoundSeconds <= 45 &&
         standingGap <= 130 &&
         now - lastFinalStretchCueAt > 16000
@@ -2752,27 +2804,57 @@ socket.on("arena:currentRanking", (data) => {
         screenShake = Math.max(screenShake, 3.2);
     }
 
+    const roundLeaderForVoice = roundRanking[0];
+    if (roundLeaderForVoice?.name) {
+        const shouldHypeRoundWinner =
+            roundLeaderForVoice.id !== lastRoundWinnerHypeId ||
+            now - lastRoundWinnerHypeAt > 21000;
+
+        if (shouldHypeRoundWinner) {
+            lastRoundWinnerHypeId = roundLeaderForVoice.id;
+            lastRoundWinnerHypeAt = now;
+            announce(`Ganador parcial de la ronda. ${roundLeaderForVoice.name}.`, { gapMs: 650 });
+            screenShake = Math.max(screenShake, 5);
+        }
+    }
+
     const leader = currentTopArenaLeader;
     if (leader && leader.name) {
         const shouldHypeLeader =
             leader.id !== lastLeaderHypeId ||
-            now - lastTopArenaHypeAt > 55000;
+            now - lastTopArenaHypeAt > 82000;
 
         if (shouldHypeLeader) {
             lastLeaderHypeId = leader.id;
             lastTopArenaHypeAt = now;
-            announce(`Ganador numero uno de la arena. ${leader.name}.`, { gapMs: 650 });
-            screenShake = Math.max(screenShake, 5);
+            announce(`Numero uno del arena. ${leader.name}.`, { gapMs: 650 });
+            screenShake = Math.max(screenShake, 4);
         }
     }
 });
 
 window.setInterval(() => {
-    if (!soundEnabled || !currentTopArenaLeader?.name) return;
-    const leader = currentTopArenaLeader;
-    if (!leader?.name) return;
-
-    announce(`Sigan al numero uno de la arena. ${leader.name}.`, { gapMs: 650 });
+    if (!soundEnabled) return;
+    const liveRoundLeader = roundRanking[0];
+    const liveRoundRunnerUp = roundRanking[1];
+    if (liveRoundLeader?.name) {
+        announce(`Lidera la ronda en este momento. ${liveRoundLeader.name}.`, { gapMs: 650 });
+    }
+    if (liveRoundLeader?.name && liveRoundRunnerUp?.name) {
+        const gap = Math.max(
+            0,
+            Math.floor((liveRoundLeader.standingScore || liveRoundLeader.score || 0) - (liveRoundRunnerUp.standingScore || liveRoundRunnerUp.score || 0))
+        );
+        if (gap <= 140) {
+            announce(`Pelea intensa arriba. ${liveRoundLeader.name} y ${liveRoundRunnerUp.name} van muy cerca.`, { gapMs: 650 });
+        }
+    }
+    if (lastCompletedRoundWinner?.name) {
+        announce(`Ultimo ganador de ronda. ${lastCompletedRoundWinner.name}.`, { gapMs: 650 });
+    }
+    if (currentTopArenaLeader?.name) {
+        announce(`Numero uno del arena. ${currentTopArenaLeader.name}.`, { gapMs: 650 });
+    }
     announceGiftTip();
     announcePromoTip();
 }, 78000);
@@ -2931,7 +3013,7 @@ function loop() {
                     p1.takeDamage(crashDamage, p2.id);
                     p2.takeDamage(crashDamage, p1.id);
                     spawnFloatingText("CHOQUE", (p1.x + p2.x) / 2, (p1.y + p2.y) / 2 - 16, "#fecaca");
-                    screenShake = Math.max(screenShake, 3.5);
+                    screenShake = Math.max(screenShake, 6);
                 }
             }
         }

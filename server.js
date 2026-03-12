@@ -478,7 +478,7 @@ function bindTikTokListeners(connection) {
 
         const support = arena.applyLikeSupport(player.id, event.likeCount);
         const comboLikes = support?.likeCombo || event.likeCount;
-        const strike = arena.applyLikeStrike(player.id, comboLikes);
+        const strike = arena.applyLikeStrike(player.id, comboLikes, isSuddenDeath);
         io.emit("arena:like", {
             userId: player.id,
             player: support?.player || null,

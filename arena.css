@@ -244,6 +244,7 @@ html {
     max-width: 980px;
     min-height: 86px;
     display: flex;
+    flex-wrap: wrap;
     align-items: stretch;
     z-index: 900;
     background: linear-gradient(135deg, rgba(10, 10, 25, 0.92) 0%, rgba(25, 30, 55, 0.92) 100%);
@@ -261,12 +262,13 @@ html {
     align-items: center;
     justify-content: center;
     padding: 0 20px;
-    font-size: 20px;
-    height: 100%;
+    font-size: 18px;
+    min-height: 84px;
     white-space: nowrap;
     border-right: 1px solid rgba(0, 0, 0, 0.2);
-    min-width: 200px;
+    min-width: 178px;
     text-align: center;
+    flex: 0 0 178px;
 }
 
 .ranking-header small {
@@ -277,12 +279,12 @@ html {
 }
 
 .round-winner-slot {
-    min-width: 240px;
-    max-width: 290px;
+    min-width: 0;
+    flex: 1 1 280px;
     padding: 10px 14px;
     display: flex;
     align-items: center;
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    justify-content: flex-start;
     background: linear-gradient(135deg, rgba(251, 191, 36, 0.14) 0%, rgba(120, 53, 15, 0.12) 100%);
 }
 
@@ -344,14 +346,15 @@ html {
 }
 
 #arena-leaderboard {
-    flex: 1;
+    flex: 1 1 100%;
     display: flex;
     flex-direction: row;
     align-items: center;
     gap: 15px;
-    padding: 0 15px;
+    padding: 12px 15px 10px;
     overflow-x: auto;
     scrollbar-width: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
     /* Firefox */
 }
 
