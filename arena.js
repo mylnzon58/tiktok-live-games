@@ -1887,6 +1887,35 @@ socket.on("arena:chatPower", (data) => {
     }
 });
 
+function resolveArenaGiftEffect(data, attacker, target, diamondsTotal, giftValue, giftName) {
+    const effectKey = data.effectKey || "";
+    const category = data.category || "";
+    const lowerName = (giftName || "").toLowerCase();
+
+    if (effectKey === "megaBlast" || category === "mega" || lowerName.includes("universe") || lowerName.includes("universo") || lowerName.includes("lion") || lowerName.includes("león") || giftValue >= 20000) {
+        return { type: "megaBlast", color: "#ffd166" };
+    }
+    if (effectKey === "orbitalStrike" || effectKey === "tripleLightning" || effectKey === "lightning" || category === "lightning" || lowerName.includes("galaxy") || lowerName.includes("galaxia") || lowerName.includes("planet") || lowerName.includes("planeta") || giftValue >= 1000) {
+        return { type: "lightningStorm", color: "#7dd3fc" };
+    }
+    if (effectKey === "fireBurst" || effectKey === "fireStorm" || category === "fire" || lowerName.includes("fire") || lowerName.includes("fuego") || lowerName.includes("flame") || lowerName.includes("fireworks")) {
+        return { type: "fireBurst", color: "#ff6b00" };
+    }
+    if (effectKey === "shockwave" || category === "shockwave" || lowerName.includes("donut") || lowerName.includes("dona") || lowerName.includes("ray") || lowerName.includes("relámpago")) {
+        return { type: "shockwave", color: "#fbbf24" };
+    }
+    if (effectKey === "buzzsaw") {
+        return { type: "buzzsaw", color: "#ff9f43" };
+    }
+    if (effectKey === "roseVolley" || effectKey === "projectile" || effectKey === "iceShot" || effectKey === "tapSpark" || category === "projectile" || category === "tap" || lowerName.includes("rose") || lowerName.includes("rosa") || lowerName.includes("ice")) {
+        return {
+            type: effectKey === "tapSpark" ? "tapSpark" : "projectile",
+            color: effectKey === "iceShot" ? "#9be7ff" : (effectKey === "tapSpark" ? "#fef08a" : "#ff4757")
+        };
+    }
+    return { type: "projectile", color: "#00f0ff" };
+}
+
 // EVENTO DE ATAQUE (REGALOS)
 socket.on("arena:gift", (data) => {
     const attackerId = data.attacker?.id;
@@ -1944,12 +1973,12 @@ socket.on("arena:gift", (data) => {
     attacker.flash = 1;
     screenShake = Math.max(screenShake, Math.min(18, 6 + Math.log2(diamondsTotal + 1) * 2));
 
+    const giftEffect = resolveArenaGiftEffect(data, attacker, target, diamondsTotal, giftValue, data.giftName || "");
     let atkType = "projectile";
-    let color = "#00f0ff";
-    const gName = (data.giftName || "").toLowerCase();
+    let color = giftEffect.color;
 
-    // Detección de tipos de ataque: confiar primero en el mapeo del servidor.
-    if (data.effectKey === "megaBlast" || data.category === "mega" || gName.includes("universe") || gName.includes("universo") || gName.includes("lion") || gName.includes("león") || giftValue >= 20000) {
+    // Detección de tipos de ataque: cubrir todos los effectKey emitidos por el servidor.
+    if (giftEffect.type === "megaBlast") {
         playSound("heavyExplosion");
         screenShake = 14;
         hitStopFrames = 12;
@@ -1962,7 +1991,7 @@ socket.on("arena:gift", (data) => {
         pushShockwave({ x: target.x, y: target.y, r: 10, opacity: 0.9, color: "#fff7d6" });
         target.takeDamage(diamondsTotal * 20, attacker.id);
         atkType = "none";
-    } else if (data.effectKey === "orbitalStrike" || data.effectKey === "tripleLightning" || data.effectKey === "lightning" || data.category === "lightning" || gName.includes("galaxy") || gName.includes("galaxia") || gName.includes("planet") || gName.includes("planeta") || giftValue >= 1000) {
+    } else if (giftEffect.type === "lightningStorm") {
         playSound("lightning");
         screenShake = 8;
         triggerOverlayFlash("90, 200, 255", 0.08);
@@ -1980,23 +2009,28 @@ socket.on("arena:gift", (data) => {
             }, i * 150);
         }
         atkType = "none";
-    } else if (data.effectKey === "buzzsaw" || giftValue >= 500 || gName.includes("sierra") || gName.includes("buzzsaw")) {
+    } else if (giftEffect.type === "buzzsaw" || giftValue >= 500) {
         // Power-up de Sierra (Aura)
         playSound("buzzsaw");
         attacker.sawLife = Math.max(attacker.sawLife, 900); // 15s de aura
         spawnFloatingText("SIERRA ACTIVA", attacker.x, attacker.y - 40, "#ff9f43");
         atkType = "none";
-    } else if (gName.includes("star") || gName.includes("estrella") || gName.includes("zapato") || gName.includes("hat")) {
-        atkType = "laser";
-    } else if (data.effectKey === "roseVolley" || gName.includes("rose") || gName.includes("rosa")) {
+    } else if (giftEffect.type === "projectile") {
         playSound("roseShot");
-        atkType = "projectile"; color = "#ff4757";
-    } else if (data.effectKey === "fireBurst" || data.effectKey === "fireStorm" || data.category === "fire" || gName.includes("fire") || gName.includes("fuego") || gName.includes("flame") || gName.includes("fireworks")) {
+        atkType = "projectile";
+    } else if (giftEffect.type === "tapSpark") {
+        playSound("hit");
+        atkType = "projectile";
+    } else if (giftEffect.type === "fireBurst") {
         playSound("fire");
         createFireBurst(target.x, target.y, attacker.currentRadius + 50);
-        atkType = "lightning"; color = "#ff6b00";
-    } else if (data.effectKey === "shockwave" || data.category === "shockwave" || gName.includes("donut") || gName.includes("dona") || gName.includes("ray") || gName.includes("relámpago")) {
-        atkType = "lightning"; color = "#fbbf24";
+        atkType = "lightning";
+    } else if (giftEffect.type === "shockwave") {
+        playSound("hit");
+        pushShockwave({ x: target.x, y: target.y, r: 20, opacity: 0.85, color });
+        atkType = "lightning";
+    } else if (data.sfx) {
+        playSound(data.sfx);
     }
 
     // Shockwave al atacar
