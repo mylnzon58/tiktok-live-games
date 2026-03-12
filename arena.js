@@ -86,6 +86,7 @@ let speechTimer = null;
 let lastSpeechAt = 0;
 let lastTopArenaHypeAt = 0;
 let lastLeaderHypeId = null;
+let introAnnouncementDone = false;
 
 // Attempt auto-unlock de AudioContext silencioso
 function tryUnlockAudio() {
@@ -230,10 +231,27 @@ function announceBilingual(spanishText, englishText, options = {}) {
     announce(englishText, { ...options, force: true, minIntervalMs: 0, gapMs: options.gapMs ?? 700 });
 }
 
+function playArenaIntroAnnouncement(force = false) {
+    if (introAnnouncementDone && !force) return;
+    introAnnouncementDone = true;
+    announceEs("Arena activa. Sigan al top arena y a los ganadores.", { force: true, minIntervalMs: 0, gapMs: 650 });
+    announce("Arena live is active. Follow the top arena and the winners.", { force: true, minIntervalMs: 0, gapMs: 700 });
+}
+
 // --- 🎙️ DOPAMINE ANNOUNCER (Voice Lines) ---
 window.speechSynthesis?.addEventListener?.("voiceschanged", () => {
     preferredVoices = { es: null, en: null };
+    if (!introAnnouncementDone) {
+        window.setTimeout(() => playArenaIntroAnnouncement(true), 300);
+    }
 });
+
+window.setTimeout(() => playArenaIntroAnnouncement(), 900);
+window.addEventListener("pointerdown", () => {
+    if (!introAnnouncementDone || !window.speechSynthesis?.speaking) {
+        playArenaIntroAnnouncement(true);
+    }
+}, { once: true });
 
 function speakCountdownNumber(seconds) {
     const words = {
@@ -964,7 +982,7 @@ class Player {
             (Math.sqrt(safeScore) * 1.45) + (Math.log2(safeScore + 1) * 3.5),
             118
         );
-        const engagementScale = Math.min(this.engagement * 0.2, 8);
+        const engagementScale = Math.min(this.engagement * 0.14, 5);
         const baseTargetRadius = PLAYER_RADIUS + scoreScale;
         let targetRadius = Math.max(PLAYER_RADIUS, baseTargetRadius + engagementScale);
 
@@ -2027,7 +2045,7 @@ socket.on("arena:like", (data) => {
     if (p) {
         p.lastActive = Date.now(); // Despierta de AFK inmediatamente
         p.heal(data.heal || data.likeCount);
-        p.engagement = Math.min((p.engagement || 0) + Math.max(5, data.likeCount * 1.75), 40);
+        p.engagement = Math.min((p.engagement || 0) + Math.max(3, data.likeCount * 0.95), 24);
         p.lastTapBoostAt = Date.now();
         p.flash = 1;
 
