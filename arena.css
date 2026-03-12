@@ -95,7 +95,7 @@ html {
     /* Casi pegado para ganar espacio */
     width: 98%;
     /* Máximo ancho posible */
-    background: linear-gradient(135deg, rgba(0, 0, 0, 0.96) 0%, rgba(10, 10, 10, 0.9) 100%);
+    background: rgba(255, 255, 255, 0.96);
     padding: 20px 15px;
     /* Más padding vertical */
     z-index: 100;
@@ -105,10 +105,10 @@ html {
     flex-direction: column;
     gap: 15px;
     /* Más espacio entre filas */
-    border: 3px solid rgba(255, 215, 0, 0.6);
+    border: 3px solid rgba(0, 0, 0, 0.14);
     /* Borde más grueso */
     border-radius: 15px;
-    box-shadow: 0 15px 60px rgba(0, 0, 0, 1);
+    box-shadow: 0 15px 60px rgba(0, 0, 0, 0.35);
 }
 
 .powers-row {
@@ -159,7 +159,7 @@ html {
     display: flex;
     align-items: center;
     gap: 6px;
-    text-shadow: 2px 2px 5px #000;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 
 #powers-guide .emoji {
