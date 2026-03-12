@@ -36,7 +36,7 @@ let camera = {
 function getArenaBounds() {
     const cx = canvas.width / 2;
     const cy = canvas.height / 2;
-    const radius = Math.min(canvas.width, canvas.height) / 2 - 30;
+    const radius = Math.min(canvas.width, canvas.height) / 2 - 48;
     return { cx, cy, radius };
 }
 
@@ -731,7 +731,7 @@ function pushHazard(hazard) {
 // ==========================================
 const MAX_HP = 1000; // Incrementado de 500 para mayor supervivencia
 let PLAYER_RADIUS = 50; // Aumentado de 45 a 50 para mejor escala inicial
-const BASE_SPEED = 2.35; // Un poco mas de rebote para evitar quietud
+const BASE_SPEED = 2.8; // Un poco mas de rebote para evitar quietud
 const NUM_STARS = 100;
 
 // Caché de imágenes pre-cargadas (Avatares)
@@ -1150,7 +1150,7 @@ class Player {
             (Math.sqrt(safeScore) * 1.45) + (Math.log2(safeScore + 1) * 3.5),
             118
         );
-        const engagementScale = Math.min(this.engagement * 0.19, 8);
+        const engagementScale = Math.min(this.engagement * 0.34, 42);
         const baseTargetRadius = PLAYER_RADIUS + scoreScale;
         let targetRadius = Math.max(PLAYER_RADIUS, baseTargetRadius + engagementScale);
 
@@ -1165,18 +1165,18 @@ class Player {
             this.vx *= 0.96;
             this.vy *= 0.96;
         } else if (this.state === "IDLE") {
-            this.opacity = Math.max(this.opacity - 0.03, 0.12);
-            this.currentRadius += ((Math.max(PLAYER_RADIUS, targetRadius * 0.94)) - this.currentRadius) * 0.08;
-            this.vx *= 0.99;
-            this.vy *= 0.99;
+            this.opacity = Math.max(this.opacity - 0.06, 0.06);
+            this.currentRadius += ((Math.max(PLAYER_RADIUS, targetRadius * 0.9)) - this.currentRadius) * 0.16;
+            this.vx *= 0.995;
+            this.vy *= 0.995;
         } else {
-            this.currentRadius += (targetRadius - this.currentRadius) * 0.1;
+            this.currentRadius += (targetRadius - this.currentRadius) * 0.16;
             this.opacity = 1.0;
         }
 
         const timeSinceTapBoost = Date.now() - (this.lastTapBoostAt || 0);
         if (this.sawLife <= 0) {
-            const passiveDecay = timeSinceTapBoost < 900 ? 0.08 : 0.42;
+            const passiveDecay = timeSinceTapBoost < 700 ? 0.18 : 0.95;
             this.engagement = Math.max(this.engagement - passiveDecay, 0);
         }
 
@@ -1190,9 +1190,9 @@ class Player {
 
         // --- MOVIMIENTO DINÁMICO (WANDERING) ---
         // Añadir pequeña fuerza aleatoria para que no se queden quietos
-        if (Math.random() < 0.07) {
-            this.vx += (Math.random() - 0.5) * 0.7;
-            this.vy += (Math.random() - 0.5) * 0.7;
+        if (Math.random() < 0.1) {
+            this.vx += (Math.random() - 0.5) * 1.1;
+            this.vy += (Math.random() - 0.5) * 1.1;
         }
 
         // --- LÓGICA DE SIERRA (POWER-UP) ---
@@ -1423,8 +1423,8 @@ class Player {
             ctx.fillStyle = "rgba(15, 23, 42, 0.82)";
             ctx.fill();
             ctx.fillStyle = "#fecaca";
-            ctx.font = `bold ${Math.max(11, Math.floor(skullRadius * 0.85))}px Rajdhani`;
-            ctx.fillText(`☠${this.deaths}`, skullX, skullY);
+            ctx.font = `bold ${Math.max(9, Math.floor(skullRadius * 0.68))}px Rajdhani`;
+            ctx.fillText(`VP ${this.deaths}`, skullX, skullY);
         }
 
         // Rango HOF (Si existe)
@@ -2032,7 +2032,14 @@ function renderLastRoundWinner() {
     if (!slot) return;
     const winner = lastCompletedRoundWinner;
     if (!winner?.id) {
-        slot.innerHTML = `<div class="round-winner-empty">ESPERANDO CIERRE DE RONDA</div>`;
+        const minutes = String(Math.floor(currentRoundSeconds / 60)).padStart(2, "0");
+        const secs = String(currentRoundSeconds % 60).padStart(2, "0");
+        slot.innerHTML = `
+            <div class="round-winner-empty">
+                <span class="round-winner-empty-label">CIERRE DE RONDA EN</span>
+                <span class="round-winner-empty-time">${minutes}:${secs}</span>
+            </div>
+        `;
         return;
     }
 
@@ -2044,7 +2051,7 @@ function renderLastRoundWinner() {
                 <div class="round-winner-name">${winner.name}</div>
                 <div class="round-winner-meta">
                     <span>⚔️ ${Math.floor(winner.standingScore || winner.score || 0)}</span>
-                    <span>☠ ${Math.floor(winner.deaths || 0)}</span>
+                    <span>VIDAS PERDIDAS ${Math.floor(winner.deaths || 0)}</span>
                 </div>
             </div>
         </div>
@@ -2064,7 +2071,7 @@ socket.on("arena:hallOfFameUpdate", (list) => {
 updatePowersGuide();
 
 function updateTopShowcase() {
-    const activeWindowMs = 90 * 1000;
+    const activeWindowMs = 60 * 1000;
     const now = Date.now();
     const podium3 = Object.values(players)
         .filter((player) => player?.id)
@@ -2133,6 +2140,9 @@ socket.on("timerUpdate", (seconds) => {
         const secs = String(currentRoundSeconds % 60).padStart(2, "0");
         roundTimerEl.textContent = `${minutes}:${secs}`;
     }
+    if (!lastCompletedRoundWinner?.id) {
+        renderLastRoundWinner();
+    }
 
     // REQUERIMIENTO: La sierra ahora es un poder de jugador, no un peligro global
     if (seconds <= 10 && seconds > 0) {
@@ -2179,7 +2189,7 @@ socket.on("arena:roundEnd", (data) => {
     console.log("🏆 GANADOR DE LA RONDA:", w.name);
     announce(`Ganador de la ronda actual. ${w.name}.`, { gapMs: 650 });
     if (arenaChampion?.name) {
-        announce(`Ganador numero uno de la arena. ${arenaChampion.name}.`, { gapMs: 650 });
+        announce(`Numero uno del arena. ${arenaChampion.name}. Lleva ${Math.floor(arenaChampion.victories || 0)} rondas ganadas.`, { gapMs: 650 });
     }
 
     // Efecto visual masivo de Victoria (Volumen reducido)
@@ -2196,7 +2206,7 @@ socket.on("arena:roundEnd", (data) => {
             <img class="victory-avatar" src="${w.avatar || 'https://www.tiktok.com/favicon.ico'}" onerror="this.src='https://www.tiktok.com/favicon.ico'"/>
             <h2 class="victory-name">${w.name}</h2>
             <div class="victory-stats">⚔️ VALOR DE RONDA: ${Math.floor(w.standingScore || w.score || 0)}</div>
-            ${arenaChampion?.name ? `<div class="victory-stats">👑 NUMERO UNO DEL ARENA: ${arenaChampion.name}</div>` : ""}
+            ${arenaChampion?.name ? `<div class="victory-stats">👑 NUMERO UNO DEL ARENA: ${arenaChampion.name} · ${Math.floor(arenaChampion.victories || 0)} RONDAS</div>` : ""}
         </div>
     `;
     document.body.appendChild(overlay);
@@ -2228,7 +2238,7 @@ socket.on("arena:powerup", (data) => {
     if (target) {
         if (data.type === "buzzsaw") {
             target.sawLife = Math.max(target.sawLife || 0, data.duration || 600);
-            target.engagement = Math.min((target.engagement || 0) + 20, 44);
+            target.engagement = Math.min((target.engagement || 0) + 20, 90);
             target.lastSawAudioAt = 0;
             target.flash = 1;
             playSound("buzzsaw");
@@ -2310,7 +2320,7 @@ socket.on("arena:like", (data) => {
     if (p) {
         p.lastActive = Date.now(); // Despierta de AFK inmediatamente
         p.heal(data.heal || data.likeCount);
-        p.engagement = Math.min((p.engagement || 0) + Math.max(5, data.likeCount * 1.35), 34);
+        p.engagement = Math.min((p.engagement || 0) + Math.max(10, data.likeCount * 2.8), 220);
         p.lastTapBoostAt = Date.now();
         p.flash = 1;
 
@@ -2531,7 +2541,7 @@ socket.on("arena:gift", (data) => {
     if (!attacker) return;
 
     attacker.lastActive = Date.now(); // Despierta de AFK inmediatamente
-    attacker.engagement = Math.min((attacker.engagement || 0) + Math.max(4, Math.log2((data.diamondCount || 1) * (data.repeatCount || 1) + 1) * 5), 40);
+    attacker.engagement = Math.min((attacker.engagement || 0) + Math.max(4, Math.log2((data.diamondCount || 1) * (data.repeatCount || 1) + 1) * 5), 120);
     const count = data.repeatCount || 1;
     const giftValue = data.diamondCount || 1;
     const diamondsTotal = giftValue * count;
@@ -2729,44 +2739,16 @@ function updateRankingDOM(force = false) {
 
     updateTopShowcase(); // Actualizar podio superior
     renderLastRoundWinner();
-    // Solo mostramos el TOP 5 en el ranking horizontal
-    const top5 = roundRanking.slice(0, 5);
-    leaderboardEl.innerHTML = "";
-
-    top5.forEach((p, idx) => {
-        let rankClass = (idx === 0) ? "p1" : "p-rest";
-
-        const row = document.createElement("div");
-        row.className = `arena-board-row ${rankClass}`;
-
-        // Fallback Image real de la API o genérica
-        const imgUrl = p.avatar || "https://www.tiktok.com/favicon.ico";
-
-        row.innerHTML = `
-            <span class="board-pos">#${idx + 1}</span>
-            <img class="board-avatar" src="${imgUrl}" onerror="this.src='https://www.tiktok.com/favicon.ico'" />
-            <div class="board-info">
-                <div class="board-name-row">
-                    <span class="board-name">${p.name}</span>
-                    ${p.victories > 0 ? `<span class="board-victories">🏆 ${p.victories}</span>` : ''}
-                </div>
-                <div class="board-stats">
-                    <span class="stat-hp">❤️ HP ${Math.floor(p.hp || 0)}</span>
-                    <span class="stat-score">⚔️ VALOR ${Math.floor(p.standingScore || p.score || 0)}</span>
-                    <span class="stat-score">☠ ${Math.floor(p.deaths || 0)}</span>
-                    ${p.state && p.state !== "ACTIVE" ? `<span class="stat-score">${p.state}</span>` : ""}
-                </div>
-            </div>
-        `;
-        leaderboardEl.appendChild(row);
-    });
+    if (leaderboardEl) {
+        leaderboardEl.innerHTML = "";
+    }
 }
 
 socket.on("arena:currentRanking", (data) => {
     roundRanking = data; // Ranking de la ronda actual
     updateRankingDOM(true); // Forzar actualización cuando cambian los líderes
 
-    const visibleCompetitors = roundRanking.filter((player) => player?.state !== "REMOVED").length;
+    const visibleCompetitors = roundRanking.filter((player) => player?.state !== "REMOVED" && player?.state !== "IDLE").length;
     if (visibleCompetitors <= 1) {
         promptReturnToArena();
     }
@@ -2891,7 +2873,7 @@ window.setInterval(() => {
         announce(`Ultimo ganador de ronda. ${lastCompletedRoundWinner.name}.`, { gapMs: 650 });
     }
     if (currentTopArenaLeader?.name) {
-        announce(`Numero uno del arena. ${currentTopArenaLeader.name}.`, { gapMs: 650 });
+        announce(`Numero uno del arena. ${currentTopArenaLeader.name}. Lleva ${Math.floor(currentTopArenaLeader.victories || 0)} rondas ganadas.`, { gapMs: 650 });
     }
     announceGiftTip();
     announcePromoTip();

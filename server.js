@@ -212,20 +212,22 @@ function resetRound() {
     updateRankingChampion(countryWinner);
 
     io.emit("roundReset", { winner: countryWinner, countries: ranking.getCountries() });
+    const finalArenaRoundWinner = persistedArenaWinner || arenaWinner;
+
     io.emit("arena:roundEnd", {
-        roundWinner: arenaWinner,
-        winner: arenaWinner
+        roundWinner: finalArenaRoundWinner,
+        winner: finalArenaRoundWinner
     });
-    if (arenaWinner?.id) {
+    if (finalArenaRoundWinner?.id) {
         lastCompletedRoundWinner = {
-            id: arenaWinner.id,
-            name: arenaWinner.name,
-            avatar: arenaWinner.avatar,
-            score: arenaWinner.score,
-            standingScore: arenaWinner.standingScore,
-            hp: arenaWinner.hp,
-            deaths: arenaWinner.deaths,
-            victories: arenaWinner.victories
+            id: finalArenaRoundWinner.id,
+            name: finalArenaRoundWinner.name,
+            avatar: finalArenaRoundWinner.avatar,
+            score: finalArenaRoundWinner.score,
+            standingScore: finalArenaRoundWinner.standingScore,
+            hp: finalArenaRoundWinner.hp,
+            deaths: finalArenaRoundWinner.deaths,
+            victories: finalArenaRoundWinner.victories
         };
         io.emit("arena:lastRoundWinner", lastCompletedRoundWinner);
     }

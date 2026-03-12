@@ -57,10 +57,10 @@
     <div id="arena-ranking">
         <div class="ranking-header">🏁 GANADOR RONDA<br><small>ULTIMO CIERRE</small></div>
         <div id="round-winner-slot" class="round-winner-slot">
-            <div class="round-winner-empty">ESPERANDO CIERRE DE RONDA</div>
-        </div>
-        <div id="arena-leaderboard">
-            <!-- Los jugadores se inyectarán aquí -->
+            <div class="round-winner-empty">
+                <span class="round-winner-empty-label">CIERRE DE RONDA EN</span>
+                <span class="round-winner-empty-time">05:00</span>
+            </div>
         </div>
     </div>
 
@@ -78,7 +78,7 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="/arena.js?v=25"></script>
+    <script src="/arena.js?v=26"></script>
 </body>
 
 </html>

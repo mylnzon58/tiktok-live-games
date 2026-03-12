@@ -283,6 +283,22 @@ html {
     font-weight: 800;
     letter-spacing: 1px;
     text-shadow: 0 0 10px rgba(0, 0, 0, 0.55);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.round-winner-empty-label {
+    font-size: 12px;
+    color: #fde68a;
+    letter-spacing: 1.2px;
+}
+
+.round-winner-empty-time {
+    font-size: 28px;
+    line-height: 1;
+    color: #fff7d6;
 }
 
 .round-winner-card {
@@ -331,76 +347,6 @@ html {
     font-size: 14px;
     color: #f8fafc;
     flex-wrap: wrap;
-}
-
-#arena-leaderboard {
-    flex: 1 1 100%;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 15px;
-    padding: 12px 15px 10px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    /* Firefox */
-}
-
-#arena-leaderboard::-webkit-scrollbar {
-    display: none;
-    /* Chrome/Safari */
-}
-
-.arena-board-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 35px;
-    padding: 10px 22px;
-    white-space: nowrap;
-    flex-shrink: 0;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.arena-board-row.p1 {
-    background: rgba(251, 191, 36, 0.15);
-    border-color: rgba(251, 191, 36, 0.5);
-    box-shadow: 0 0 10px rgba(251, 191, 36, 0.2);
-}
-
-.board-pos {
-    font-weight: 800;
-    font-size: 18px;
-    color: #fbbf24;
-}
-
-.board-avatar {
-    width: 65px;
-    height: 65px;
-    border-radius: 50%;
-    border: 2px solid #fbbf24;
-}
-
-.board-info {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 8px;
-}
-
-.board-name {
-    font-size: 19px;
-    font-weight: 700;
-    max-width: 150px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.board-stats {
-    display: flex;
-    gap: 12px;
-    font-size: 16px;
 }
 
 .stat-hp {
@@ -620,7 +566,7 @@ html {
 
 /* Follow Incentive integration */
 #top-arena-showcase::after {
-    content: "GANADOR DE LA RONDA ACTUAL";
+    content: "";
     position: absolute;
     bottom: -35px;
     left: 50%;
