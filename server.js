@@ -184,6 +184,7 @@ function updateRankingChampion(countryWinner) {
 function resetRound() {
     const countryWinner = ranking.getWinner();
     const arenaWinner = arena.getRoundWinner();
+    const currentArenaChampion = arena.getHallOfFameList(1)[0] || null;
 
     let persistedArenaWinner = null;
     if (arenaWinner?.id && isCompetitiveArenaPlayer(arenaWinner.id)) {
@@ -202,7 +203,11 @@ function resetRound() {
     updateRankingChampion(countryWinner);
 
     io.emit("roundReset", { winner: countryWinner, countries: ranking.getCountries() });
-    io.emit("arena:roundEnd", { winner: persistedArenaWinner || arenaWinner });
+    io.emit("arena:roundEnd", {
+        roundWinner: arenaWinner,
+        arenaChampion: currentArenaChampion,
+        winner: arenaWinner
+    });
     io.emit("arena:suddenDeath", false);
 
     currentLeaderCode = null;

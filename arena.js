@@ -87,6 +87,9 @@ let lastSpeechAt = 0;
 let lastTopArenaHypeAt = 0;
 let lastLeaderHypeId = null;
 let introAnnouncementDone = false;
+let lastReturnPromptAt = 0;
+let currentTopArenaLeader = null;
+let lastGiftTipAt = 0;
 
 // Attempt auto-unlock de AudioContext silencioso
 function tryUnlockAudio() {
@@ -152,15 +155,10 @@ soundBtn.addEventListener('click', (e) => {
     }
 });
 
-function resolvePreferredVoice(lang) {
+function resolvePreferredVoice() {
     const voices = window.speechSynthesis?.getVoices?.() || [];
-    if (lang === "es") {
-        return voices.find((voice) => /es-/i.test(voice.lang) && /female|monica|paulina|helena|sabina|google español/i.test(voice.name))
-            || voices.find((voice) => /es-/i.test(voice.lang))
-            || null;
-    }
-    return voices.find((voice) => /en-/i.test(voice.lang) && /female|samantha|victoria|zira|ava|google us english/i.test(voice.name))
-        || voices.find((voice) => /en-/i.test(voice.lang))
+    return voices.find((voice) => /es-/i.test(voice.lang) && /female|monica|paulina|helena|sabina|google español/i.test(voice.name))
+        || voices.find((voice) => /es-/i.test(voice.lang))
         || null;
 }
 
@@ -175,11 +173,11 @@ function flushSpeechQueue() {
     }
 
     const next = speechQueue.shift();
-    const voice = preferredVoices[next.lang] || resolvePreferredVoice(next.lang);
+    const voice = preferredVoices[next.lang] || resolvePreferredVoice();
     preferredVoices[next.lang] = voice;
 
     const msg = new window.SpeechSynthesisUtterance(next.text);
-    msg.lang = next.lang === "es" ? "es-ES" : "en-US";
+    msg.lang = "es-ES";
     if (voice) msg.voice = voice;
     msg.rate = next.rate ?? 1.03;
     msg.pitch = next.pitch ?? 1;
@@ -204,7 +202,7 @@ function queueAnnouncement(text, options = {}) {
         if (!options.force && now - lastSpeechAt < minIntervalMs) return;
         speechQueue.push({
             text,
-            lang: options.lang === "es" ? "es" : "en",
+            lang: "es",
             rate: options.rate,
             pitch: options.pitch,
             volume: options.volume,
@@ -218,24 +216,41 @@ function queueAnnouncement(text, options = {}) {
     }
 }
 
-function announce(text, options = {}) {
-    queueAnnouncement(text, { lang: "en", rate: 1.12, pitch: 0.88, volume: 0.86, ...options });
-}
-
 function announceEs(text, options = {}) {
     queueAnnouncement(text, { lang: "es", rate: 1.02, pitch: 0.98, volume: 0.9, ...options });
 }
 
-function announceBilingual(spanishText, englishText, options = {}) {
+function announce(spanishText, options = {}) {
     announceEs(spanishText, { ...options, force: true, minIntervalMs: 0 });
-    announce(englishText, { ...options, force: true, minIntervalMs: 0, gapMs: options.gapMs ?? 700 });
 }
 
 function playArenaIntroAnnouncement(force = false) {
     if (introAnnouncementDone && !force) return;
     introAnnouncementDone = true;
-    announceEs("Arena activa. Sigan al top arena y a los ganadores.", { force: true, minIntervalMs: 0, gapMs: 650 });
-    announce("Arena live is active. Follow the top arena and the winners.", { force: true, minIntervalMs: 0, gapMs: 700 });
+    announce("Arena activa. Sigan al top arena y a los ganadores.", { gapMs: 650 });
+}
+
+function promptReturnToArena(force = false) {
+    const now = Date.now();
+    if (!force && now - lastReturnPromptAt < 45000) return;
+    lastReturnPromptAt = now;
+    spawnFloatingText("TAP TAP O CHATEA PARA VOLVER", canvas.width / 2, canvas.height / 2 - 140, "#fef08a");
+    announce("Tap tap o escribe en el chat para volver al arena.", { gapMs: 650 });
+    screenShake = Math.max(screenShake, 4);
+}
+
+function announceGiftTip() {
+    const now = Date.now();
+    if (now - lastGiftTipAt < 52000) return;
+    lastGiftTipAt = now;
+    const tips = [
+        "La rosa dispara y le quita vida al oponente.",
+        "La dona empuja y golpea al rival con shockwave.",
+        "Fuegos artificiales activan fuego y queman al oponente.",
+        "Galaxia lanza rayos premium y castiga fuerte al rival.",
+        "León y Universo activan megablast y pueden dejar ko al enemigo."
+    ];
+    announce(tips[Math.floor(Math.random() * tips.length)], { gapMs: 650 });
 }
 
 // --- 🎙️ DOPAMINE ANNOUNCER (Voice Lines) ---
@@ -267,7 +282,21 @@ function speakCountdownNumber(seconds) {
         1: "one"
     };
     const word = words[seconds];
-    if (word) announce(word);
+    if (word) {
+        const spanishWords = {
+            ten: "diez",
+            nine: "nueve",
+            eight: "ocho",
+            seven: "siete",
+            six: "seis",
+            five: "cinco",
+            four: "cuatro",
+            three: "tres",
+            two: "dos",
+            one: "uno"
+        };
+        announce(spanishWords[word] || word);
+    }
 }
 
 const sfx = {
@@ -1647,11 +1676,11 @@ socket.on("arena:suddenDeath", (active) => {
         playSound("heavyExplosion");
         triggerOverlayFlash("255, 120, 80", 0.1);
         screenShake = 8;
-        announce("Sudden Death! Double damage enabled! Fight for your life!");
+        announce("Muerte súbita activada. Doble daño. Pelea por tu vida.");
     } else {
         if (sdOverlay) sdOverlay.style.display = "none";
         showAnnouncer("NORMAL MODE", "#2ed573");
-        announce("Normal mode restored.");
+        announce("Modo normal restaurado.");
     }
 });
 
@@ -1863,6 +1892,8 @@ function updateTopShowcase() {
         )
         .slice(0, 3);
 
+    currentTopArenaLeader = podium3.find((player) => !player.isPlaceholder) || null;
+
     // Rellenamos hasta tener siempre 3 slots
     while (podium3.length < 3) {
         podium3.push({
@@ -1941,17 +1972,20 @@ socket.on("arena:roundEnd", (data) => {
         player.engagement = 0;
     });
 
-    if (!data || !data.winner) {
+    const roundWinner = data?.roundWinner || data?.winner;
+    const arenaChampion = data?.arenaChampion || null;
+
+    if (!roundWinner) {
         spawnFloatingText("FIN DE RONDA", canvas.width / 2, canvas.height / 2 - 100, "#fff");
         return;
     }
 
-    const w = data.winner;
-    console.log("🏆 GANADOR DE LA ARENA:", w.name);
-    announceBilingual(
-        `Sigan todos a ${w.name}. Ganador de la ronda.`,
-        `Everybody follow ${w.name}. Round winner.`
-    );
+    const w = roundWinner;
+    console.log("🏆 GANADOR DE LA RONDA:", w.name);
+    announce(`Sigan todos a ${w.name}. Ganador de la ronda.`);
+    if (arenaChampion?.name) {
+        announce(`Top arena al medio. ${arenaChampion.name} sigue primero.`, { gapMs: 650 });
+    }
 
     // Efecto visual masivo de Victoria (Volumen reducido)
     screenShake = 24;
@@ -1963,10 +1997,11 @@ socket.on("arena:roundEnd", (data) => {
     overlay.className = "victory-overlay";
     overlay.innerHTML = `
         <div class="victory-card">
-            <h1 class="victory-title">👑 CAMPEÓN ARENA 👑</h1>
+            <h1 class="victory-title">🏁 GANADOR DE LA RONDA 🏁</h1>
             <img class="victory-avatar" src="${w.avatar || 'https://www.tiktok.com/favicon.ico'}" onerror="this.src='https://www.tiktok.com/favicon.ico'"/>
             <h2 class="victory-name">${w.name}</h2>
-            <div class="victory-stats">🏆 MVP GLADIADOR - SCORE: ${Math.floor(w.score)}</div>
+            <div class="victory-stats">⚔️ PUNTOS DE RONDA: ${Math.floor(w.score)}</div>
+            ${arenaChampion?.name ? `<div class="victory-stats">👑 TOP ARENA: ${arenaChampion.name}</div>` : ""}
         </div>
     `;
     document.body.appendChild(overlay);
@@ -2021,6 +2056,9 @@ socket.on("arena:leave", (data) => {
         createExplosion(players[data.id].x, players[data.id].y, "#555");
         delete players[data.id];
         updateRankingDOM();
+        if (Object.keys(players).length <= 1) {
+            promptReturnToArena();
+        }
     }
 });
 
@@ -2215,10 +2253,10 @@ socket.on("arena:gift", (data) => {
         if (giftValue >= 500) {
             focusCamera(attacker.x, attacker.y, 1.4, 110);
             showAnnouncer("MOMENTO LEGENDARIO!!! 🔥", "#ffd700");
-            announceBilingual("Regalo legendario. Sigan al ataque.", "Legendary gift. Follow the attack.");
+            announce("Regalo legendario. Sigan al ataque.");
         } else {
             showAnnouncer("GRAN REGALO! ✨", "#00d2ff");
-            announceBilingual("Gran regalo. Poder extremo.", "Big gift. Extreme power.");
+            announce("Gran regalo. Poder extremo.");
         }
     }
 
@@ -2264,7 +2302,7 @@ socket.on("arena:gift", (data) => {
         hitStopFrames = 12;
         triggerOverlayFlash("255, 240, 200", 0.16);
         spawnFloatingText("UNIVERSO", target.x, target.y, "#ffd166");
-        announceBilingual("Universo activado. Sigan al ganador.", "Universe activated. Follow the winner.");
+        announce("Universo activado. Sigan al ganador.");
         createExplosion(target.x, target.y, "#fff", { count: 26, speed: 10, shake: 10 });
         createExplosion(target.x + 40, target.y - 30, "#fbbf24", { count: 18, speed: 8, shake: 6 });
         createExplosion(target.x - 50, target.y + 20, "#ff8c42", { count: 18, speed: 8, shake: 6 });
@@ -2276,7 +2314,7 @@ socket.on("arena:gift", (data) => {
         screenShake = 8;
         triggerOverlayFlash("90, 200, 255", 0.08);
         spawnFloatingText("GALAXIA", target.x, target.y, "#7dd3fc");
-        announceBilingual("Galaxia activada. Top arena en combate.", "Galaxy activated. Top arena battle.");
+        announce("Galaxia activada. Top arena en combate.");
         for (let i = 0; i < 3; i++) {
             setTimeout(() => {
                 pushLightningBolt({
@@ -2393,7 +2431,11 @@ socket.on("arena:currentRanking", (data) => {
     roundRanking = data; // Ranking de la ronda actual
     updateRankingDOM(true); // Forzar actualización cuando cambian los líderes
 
-    const leader = roundRanking[0];
+    if (roundRanking.length <= 1) {
+        promptReturnToArena();
+    }
+
+    const leader = currentTopArenaLeader;
     const now = Date.now();
     if (leader && leader.name) {
         const shouldHypeLeader =
@@ -2403,20 +2445,19 @@ socket.on("arena:currentRanking", (data) => {
         if (shouldHypeLeader) {
             lastLeaderHypeId = leader.id;
             lastTopArenaHypeAt = now;
-            announceEs(`Sigan al top arena. ${leader.name} va ganando.`, { minIntervalMs: 0 });
-            announce(`Follow the arena leader. ${leader.name} is on top.`, { minIntervalMs: 0, gapMs: 700 });
+            announce(`Top arena. ${leader.name} va primero al medio.`, { gapMs: 650 });
             screenShake = Math.max(screenShake, 5);
         }
     }
 });
 
 window.setInterval(() => {
-    if (!soundEnabled || !roundRanking.length) return;
-    const leader = roundRanking[0];
+    if (!soundEnabled || !currentTopArenaLeader?.name) return;
+    const leader = currentTopArenaLeader;
     if (!leader?.name) return;
 
-    announceEs(`Top arena. Sigan a ${leader.name}.`, { minIntervalMs: 0 });
-    announce(`Top arena. Follow ${leader.name}.`, { minIntervalMs: 0, gapMs: 700 });
+    announce(`Top arena al medio. Sigan a ${leader.name}.`, { gapMs: 650 });
+    announceGiftTip();
 }, 78000);
 
 let frameCount = 0;

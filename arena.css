@@ -89,8 +89,8 @@ html {
 /* Guía Lateral Arriba o Abajo (Ajustado para no tapar) */
 #powers-guide {
     position: absolute;
-    bottom: 80px;
-    /* Un poco más arriba */
+    bottom: 28px;
+    /* Más abajo para liberar la arena */
     left: 1%;
     /* Casi pegado para ganar espacio */
     width: 98%;
