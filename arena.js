@@ -736,6 +736,7 @@ const NUM_STARS = 100;
 
 // Caché de imágenes pre-cargadas (Avatares)
 const avatarCache = {};
+const kingZoneImageUrl = "/zona-rey.webp";
 
 // Dibujar fondo animado espacial (estrellas)
 const bgStars = Array.from({ length: NUM_STARS }, () => ({
@@ -778,6 +779,8 @@ function drawBackground() {
 
     // --- NÚCLEO: ZONA REY ---
     const coreRadius = 120;
+    const kingZonePulse = 0.94 + ((Math.sin(Date.now() / 280) + 1) * 0.05);
+    const kingZoneImage = getAvatarImage(kingZoneImageUrl);
     ctx.beginPath();
     ctx.arc(cx, cy, coreRadius, 0, Math.PI * 2);
     ctx.fillStyle = "rgba(255, 215, 0, 0.08)";
@@ -788,11 +791,46 @@ function drawBackground() {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    ctx.fillStyle = "rgba(255, 215, 0, 0.5)";
-    ctx.font = "bold 24px Rajdhani";
+    const kingImageRadius = coreRadius * 0.64 * kingZonePulse;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy - 6, kingImageRadius, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+    if (kingZoneImage && kingZoneImage.complete && kingZoneImage.naturalWidth > 0) {
+        ctx.drawImage(
+            kingZoneImage,
+            cx - kingImageRadius,
+            cy - kingImageRadius - 6,
+            kingImageRadius * 2,
+            kingImageRadius * 2
+        );
+    } else {
+        ctx.fillStyle = "rgba(255, 215, 0, 0.18)";
+        ctx.fillRect(cx - kingImageRadius, cy - kingImageRadius - 6, kingImageRadius * 2, kingImageRadius * 2);
+    }
+    ctx.restore();
+
+    ctx.beginPath();
+    ctx.arc(cx, cy - 6, kingImageRadius + 3, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255, 223, 128, 0.9)";
+    ctx.lineWidth = 4;
+    ctx.shadowBlur = 18;
+    ctx.shadowColor = "rgba(255, 215, 0, 0.55)";
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    ctx.beginPath();
+    ctx.arc(cx, cy - 6, kingImageRadius + 11, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255, 215, 0, 0.25)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = "rgba(255, 215, 0, 0.88)";
+    ctx.font = "bold 20px Rajdhani";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("👑 ZONA REY", cx, cy);
+    ctx.fillText("👑 ZONA REY", cx, cy + coreRadius - 24);
     // ------------------------
 
     ctx.beginPath();
