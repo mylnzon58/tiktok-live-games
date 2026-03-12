@@ -90,6 +90,7 @@ let introAnnouncementDone = false;
 let lastReturnPromptAt = 0;
 let currentTopArenaLeader = null;
 let lastGiftTipAt = 0;
+let lastPromoTipAt = 0;
 
 // Attempt auto-unlock de AudioContext silencioso
 function tryUnlockAudio() {
@@ -227,7 +228,7 @@ function announce(spanishText, options = {}) {
 function playArenaIntroAnnouncement(force = false) {
     if (introAnnouncementDone && !force) return;
     introAnnouncementDone = true;
-    announce("Arena activa. Sigan al top arena y a los ganadores.", { gapMs: 650 });
+    announce("Arena activa. El numero uno del arena sera el unico con lectura de chats.", { gapMs: 650 });
 }
 
 function promptReturnToArena(force = false) {
@@ -244,13 +245,34 @@ function announceGiftTip() {
     if (now - lastGiftTipAt < 52000) return;
     lastGiftTipAt = now;
     const tips = [
-        "La rosa dispara y le quita vida al oponente.",
-        "La dona empuja y golpea al rival con shockwave.",
-        "Fuegos artificiales activan fuego y queman al oponente.",
-        "Galaxia lanza rayos premium y castiga fuerte al rival.",
-        "León y Universo activan megablast y pueden dejar ko al enemigo."
+        "La rosa activa disparo rápido y baja puntos del oponente.",
+        "La dona empuja al rival y activa una onda especial.",
+        "Fuegos artificiales activan una ráfaga especial sobre el oponente.",
+        "Galaxia activa rayos premium y baja muchos puntos del rival.",
+        "León y Universo activan megablast y pueden sacarlo de la ronda."
     ];
     announce(tips[Math.floor(Math.random() * tips.length)], { gapMs: 650 });
+}
+
+function announcePromoTip() {
+    const now = Date.now();
+    if (now - lastPromoTipAt < 98000) return;
+    lastPromoTipAt = now;
+    const promos = [
+        "Compartir y apoyarnos entre todos ayuda a viralizar este live y sumar seguidores.",
+        "Apoyen siguiendo al creador del juego para impulsar esta arena en TikTok.",
+        "Quien gane el numero uno del arena tendra lectura de chats en voz.",
+        "Si les interesa un juego como este, consulten por privado.",
+        "Este juego tambien puede adaptarse por encargo. Consulten precio por privado."
+    ];
+    announce(promos[Math.floor(Math.random() * promos.length)], { gapMs: 700 });
+}
+
+function speakLeaderChat(name, comment) {
+    const cleanName = String(name || "Ganador del arena").trim().slice(0, 32);
+    const cleanComment = String(comment || "").replace(/\s+/g, " ").trim().slice(0, 110);
+    if (!cleanComment) return;
+    announce(`Numero uno del arena. ${cleanName} dice: ${cleanComment}`, { gapMs: 700 });
 }
 
 // --- 🎙️ DOPAMINE ANNOUNCER (Voice Lines) ---
@@ -668,7 +690,7 @@ function pushHazard(hazard) {
 // ==========================================
 const MAX_HP = 1000; // Incrementado de 500 para mayor supervivencia
 let PLAYER_RADIUS = 50; // Aumentado de 45 a 50 para mejor escala inicial
-const BASE_SPEED = 2; // Velocidad de rebote
+const BASE_SPEED = 2.35; // Un poco mas de rebote para evitar quietud
 const NUM_STARS = 100;
 
 // Caché de imágenes pre-cargadas (Avatares)
@@ -1051,9 +1073,9 @@ class Player {
 
         // --- MOVIMIENTO DINÁMICO (WANDERING) ---
         // Añadir pequeña fuerza aleatoria para que no se queden quietos
-        if (Math.random() < 0.05) {
-            this.vx += (Math.random() - 0.5) * 0.5;
-            this.vy += (Math.random() - 0.5) * 0.5;
+        if (Math.random() < 0.07) {
+            this.vx += (Math.random() - 0.5) * 0.7;
+            this.vy += (Math.random() - 0.5) * 0.7;
         }
 
         // --- LÓGICA DE SIERRA (POWER-UP) ---
@@ -1671,15 +1693,15 @@ socket.on("arena:suddenDeath", (active) => {
     const sdOverlay = document.getElementById("x2-alpha-overlay");
     if (active) {
         if (sdOverlay) sdOverlay.style.display = "flex";
-        spawnFloatingText("SUDDEN DEATH", canvas.width / 2, canvas.height / 2 - 200, "#ff8c42");
-        showAnnouncer("SUDDEN DEATH", "#ff8c42");
+        spawnFloatingText("FASE FINAL", canvas.width / 2, canvas.height / 2 - 200, "#ff8c42");
+        showAnnouncer("FASE FINAL", "#ff8c42");
         playSound("heavyExplosion");
         triggerOverlayFlash("255, 120, 80", 0.1);
         screenShake = 8;
-        announce("Muerte súbita activada. Doble daño. Pelea por tu vida.");
+        announce("Fase final activada. Impacto reforzado.");
     } else {
         if (sdOverlay) sdOverlay.style.display = "none";
-        showAnnouncer("NORMAL MODE", "#2ed573");
+        showAnnouncer("RITMO NORMAL", "#2ed573");
         announce("Modo normal restaurado.");
     }
 });
@@ -1838,9 +1860,9 @@ function updatePowersGuide() {
     const giftRules = [
         { name: "ROSE / ICE CREAM", effect: "DISPARO RAPIDO", icon: "🌹" },
         { name: "DONUT / PERFUME", effect: "CHOQUE Y EMPUJE", icon: "🍩" },
-        { name: "FIREWORKS / DRAGON", effect: "ANILLO DE FUEGO", icon: "🔥" },
+        { name: "FIREWORKS / DRAGON", effect: "RAFAGA ESPECIAL", icon: "🔥" },
         { name: "GALAXY / PLANET", effect: "RAYO PREMIUM", icon: "🌌" },
-        { name: "LION / UNIVERSE", effect: "MEGABLAST + KO", icon: "🦁" },
+        { name: "LION / UNIVERSE", effect: "MEGABLAST + SALIDA", icon: "🦁" },
         { name: "LIKES / YO", effect: "CURA Y RESPAWN", icon: "💖" }
     ];
 
@@ -1918,8 +1940,7 @@ function updateTopShowcase() {
             <div class="top-player-avatar" style="background-image: url('${p.avatar || ''}')"></div>
             <div class="top-rank-badge">${rank}</div>
             <div class="top-player-name">${p.name}</div>
-            ${p.victories > 0 ? `<div class="top-player-victories">🏆 ${p.victories}</div>` : ''}
-            ${!p.isPlaceholder ? `<div class="top-player-score">${p.victories > 0 ? `RONDAS ${Math.floor(p.victories || 0)}` : `PTS ${Math.floor(p.currentScore || p.displayScore || 0)}`}</div>` : ''}
+            ${!p.isPlaceholder ? `<div class="top-player-score">${p.victories > 0 ? `VICTORIAS ${Math.floor(p.victories || 0)}` : `PTS ${Math.floor(p.currentScore || p.displayScore || 0)}`}</div>` : ''}
             ${p.isPlaceholder ? '' : '<div class="follow-arrow">⬆️</div>'}
         `;
         topShowcaseEl.appendChild(item);
@@ -1973,7 +1994,7 @@ socket.on("arena:roundEnd", (data) => {
     });
 
     const roundWinner = data?.roundWinner || data?.winner;
-    const arenaChampion = data?.arenaChampion || null;
+    const arenaChampion = currentTopArenaLeader;
 
     if (!roundWinner) {
         spawnFloatingText("FIN DE RONDA", canvas.width / 2, canvas.height / 2 - 100, "#fff");
@@ -1982,10 +2003,10 @@ socket.on("arena:roundEnd", (data) => {
 
     const w = roundWinner;
     console.log("🏆 GANADOR DE LA RONDA:", w.name);
-    announce(`Sigan todos a ${w.name}. Ganador de la ronda.`);
     if (arenaChampion?.name) {
-        announce(`Top arena al medio. ${arenaChampion.name} sigue primero.`, { gapMs: 650 });
+        announce(`Ganador numero uno de la arena. ${arenaChampion.name}.`, { gapMs: 650 });
     }
+    announce(`Ganador de la ronda actual. ${w.name}.`, { gapMs: 650 });
 
     // Efecto visual masivo de Victoria (Volumen reducido)
     screenShake = 24;
@@ -2001,7 +2022,7 @@ socket.on("arena:roundEnd", (data) => {
             <img class="victory-avatar" src="${w.avatar || 'https://www.tiktok.com/favicon.ico'}" onerror="this.src='https://www.tiktok.com/favicon.ico'"/>
             <h2 class="victory-name">${w.name}</h2>
             <div class="victory-stats">⚔️ PUNTOS DE RONDA: ${Math.floor(w.score)}</div>
-            ${arenaChampion?.name ? `<div class="victory-stats">👑 TOP ARENA: ${arenaChampion.name}</div>` : ""}
+            ${arenaChampion?.name ? `<div class="victory-stats">👑 NUMERO UNO DEL ARENA: ${arenaChampion.name}</div>` : ""}
         </div>
     `;
     document.body.appendChild(overlay);
@@ -2199,6 +2220,17 @@ socket.on("arena:chatPower", (data) => {
     }
 });
 
+socket.on("arena:leaderChat", (data) => {
+    if (!data?.comment) return;
+    if (!currentTopArenaLeader?.id || data.userId !== currentTopArenaLeader.id) return;
+    const focusX = canvas.width / 2;
+    const focusY = canvas.height / 2 - 190;
+    spawnFloatingText(`NUMERO 1 DEL ARENA: ${data.name}`, focusX, focusY, "#fde68a");
+    spawnFloatingText(`"${data.comment}"`, focusX, focusY + 34, "#f8fafc");
+    speakLeaderChat(data.name, data.comment);
+    screenShake = Math.max(screenShake, 3);
+});
+
 function resolveArenaGiftEffect(data, attacker, target, diamondsTotal, giftValue, giftName) {
     const effectKey = data.effectKey || "";
     const category = data.category || "";
@@ -2228,6 +2260,52 @@ function resolveArenaGiftEffect(data, attacker, target, diamondsTotal, giftValue
     return { type: "projectile", color: "#00f0ff" };
 }
 
+function getPaidGiftFxProfile(giftValue, diamondsTotal) {
+    const totalValue = Math.max(giftValue || 0, diamondsTotal || 0);
+    if (totalValue >= 20000) {
+        return {
+            cameraScale: 1.55,
+            cameraFrames: 145,
+            flashAlpha: 0.2,
+            shake: 24,
+            shockwaveRadius: 34,
+            burstCount: 38,
+            burstSpeed: 12
+        };
+    }
+    if (totalValue >= 1000) {
+        return {
+            cameraScale: 1.42,
+            cameraFrames: 110,
+            flashAlpha: 0.14,
+            shake: 16,
+            shockwaveRadius: 24,
+            burstCount: 26,
+            burstSpeed: 10
+        };
+    }
+    if (totalValue >= 100) {
+        return {
+            cameraScale: 1.28,
+            cameraFrames: 78,
+            flashAlpha: 0.1,
+            shake: 10,
+            shockwaveRadius: 18,
+            burstCount: 20,
+            burstSpeed: 8
+        };
+    }
+    return {
+        cameraScale: 1.16,
+        cameraFrames: 44,
+        flashAlpha: 0.06,
+        shake: 6,
+        shockwaveRadius: 14,
+        burstCount: 14,
+        burstSpeed: 6
+    };
+}
+
 // EVENTO DE ATAQUE (REGALOS)
 socket.on("arena:gift", (data) => {
     const attackerId = data.attacker?.id;
@@ -2239,19 +2317,33 @@ socket.on("arena:gift", (data) => {
     const count = data.repeatCount || 1;
     const giftValue = data.diamondCount || 1;
     const diamondsTotal = giftValue * count;
+    const fxProfile = getPaidGiftFxProfile(giftValue, diamondsTotal);
 
     // Feedback visual inmediato para TODOS los regalos
     spawnFloatingText(`${data.giftName} x${count}`, attacker.x, attacker.y, "#fdcb6e");
     if ((data.scoreGain || 0) > 0) {
         spawnFloatingText(`+${Math.floor(data.scoreGain)} PTS`, attacker.x, attacker.y - 28, "#fff3b0");
     }
+    createExplosion(attacker.x, attacker.y, "#ffd166", {
+        count: fxProfile.burstCount,
+        speed: fxProfile.burstSpeed,
+        shake: fxProfile.shake * 0.35
+    });
+    triggerOverlayFlash("255, 210, 120", fxProfile.flashAlpha * 0.7);
+    pushShockwave({
+        x: attacker.x,
+        y: attacker.y,
+        r: fxProfile.shockwaveRadius,
+        opacity: 0.85,
+        color: "#ffe29a"
+    });
 
     // Zoom automático si es un regalo grande
-    if (giftValue >= 100) {
-        focusCamera(attacker.x, attacker.y, 1.22, 60);
+    if (giftValue >= 1) {
+        focusCamera(attacker.x, attacker.y, fxProfile.cameraScale, fxProfile.cameraFrames);
 
         if (giftValue >= 500) {
-            focusCamera(attacker.x, attacker.y, 1.4, 110);
+            focusCamera(attacker.x, attacker.y, Math.max(fxProfile.cameraScale, 1.48), Math.max(fxProfile.cameraFrames, 125));
             showAnnouncer("MOMENTO LEGENDARIO!!! 🔥", "#ffd700");
             announce("Regalo legendario. Sigan al ataque.");
         } else {
@@ -2289,7 +2381,7 @@ socket.on("arena:gift", (data) => {
     let damage = diamondsTotal * 100;
 
     attacker.flash = 1;
-    screenShake = Math.max(screenShake, Math.min(18, 6 + Math.log2(diamondsTotal + 1) * 2));
+    screenShake = Math.max(screenShake, Math.max(fxProfile.shake, Math.min(24, 8 + Math.log2(diamondsTotal + 1) * 2.5)));
 
     const giftEffect = resolveArenaGiftEffect(data, attacker, target, diamondsTotal, giftValue, data.giftName || "");
     let atkType = "projectile";
@@ -2298,24 +2390,26 @@ socket.on("arena:gift", (data) => {
     // Detección de tipos de ataque: cubrir todos los effectKey emitidos por el servidor.
     if (giftEffect.type === "megaBlast") {
         playSound("heavyExplosion");
-        screenShake = 14;
-        hitStopFrames = 12;
-        triggerOverlayFlash("255, 240, 200", 0.16);
+        screenShake = 26;
+        hitStopFrames = 18;
+        triggerOverlayFlash("255, 240, 200", 0.24);
         spawnFloatingText("UNIVERSO", target.x, target.y, "#ffd166");
         announce("Universo activado. Sigan al ganador.");
-        createExplosion(target.x, target.y, "#fff", { count: 26, speed: 10, shake: 10 });
-        createExplosion(target.x + 40, target.y - 30, "#fbbf24", { count: 18, speed: 8, shake: 6 });
-        createExplosion(target.x - 50, target.y + 20, "#ff8c42", { count: 18, speed: 8, shake: 6 });
-        pushShockwave({ x: target.x, y: target.y, r: 10, opacity: 0.9, color: "#fff7d6" });
+        createExplosion(target.x, target.y, "#fff", { count: 44, speed: 14, shake: 14 });
+        createExplosion(target.x + 40, target.y - 30, "#fbbf24", { count: 28, speed: 11, shake: 10 });
+        createExplosion(target.x - 50, target.y + 20, "#ff8c42", { count: 28, speed: 11, shake: 10 });
+        createExplosion(target.x, target.y, "#ffd166", { count: 36, speed: 9, shake: 12 });
+        pushShockwave({ x: target.x, y: target.y, r: 16, opacity: 1, color: "#fff7d6" });
+        pushShockwave({ x: target.x, y: target.y, r: 28, opacity: 0.78, color: "#ffd166" });
         target.takeDamage(diamondsTotal * 20, attacker.id);
         atkType = "none";
     } else if (giftEffect.type === "lightningStorm") {
         playSound("lightning");
-        screenShake = 8;
-        triggerOverlayFlash("90, 200, 255", 0.08);
+        screenShake = 15;
+        triggerOverlayFlash("90, 200, 255", 0.14);
         spawnFloatingText("GALAXIA", target.x, target.y, "#7dd3fc");
         announce("Galaxia activada. Top arena en combate.");
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < 5; i++) {
             setTimeout(() => {
                 pushLightningBolt({
                     sx: attacker.x, sy: attacker.y,
@@ -2323,6 +2417,7 @@ socket.on("arena:gift", (data) => {
                     ty: target.y + (Math.random() - 0.5) * 100,
                     life: 1.0, color: "#0abde3"
                 });
+                createExplosion(target.x + (Math.random() - 0.5) * 24, target.y + (Math.random() - 0.5) * 24, "#7dd3fc", { count: 12, speed: 6, shake: 3 });
                 target.takeDamage(diamondsTotal * 5, attacker.id);
             }, i * 150);
         }
@@ -2330,8 +2425,9 @@ socket.on("arena:gift", (data) => {
     } else if (giftEffect.type === "buzzsaw" || giftValue >= 500) {
         // Power-up de Sierra (Aura)
         playSound("buzzsaw");
-        attacker.sawLife = Math.max(attacker.sawLife, 900); // 15s de aura
+        attacker.sawLife = Math.max(attacker.sawLife, 1080); // 18s de aura
         spawnFloatingText("SIERRA ACTIVA", attacker.x, attacker.y - 40, "#ff9f43");
+        createExplosion(attacker.x, attacker.y, "#ff9f43", { count: 22, speed: 8, shake: 5 });
         atkType = "none";
     } else if (giftEffect.type === "projectile") {
         playSound("roseShot");
@@ -2353,25 +2449,25 @@ socket.on("arena:gift", (data) => {
 
     // Shockwave al atacar
     if (diamondsTotal > 10) {
-        pushShockwave({ x: attacker.x, y: attacker.y, r: 10, opacity: 0.8, color: color });
+        pushShockwave({ x: attacker.x, y: attacker.y, r: fxProfile.shockwaveRadius, opacity: 0.8, color: color });
     }
 
     // Ejecución de Proyectiles/Efectos persistentes
     if (atkType === "projectile") {
-        const pCount = Math.min(count, 10);
+        const pCount = Math.min(Math.max(count, giftValue >= 100 ? 3 : 1), giftValue >= 1000 ? 14 : 10);
         for (let i = 0; i < pCount; i++) {
             setTimeout(() => {
                 if (attacker && target && target.hp > 0) {
                     playSound("shoot");
-                    spawnProjectileBurst(attacker, target, 1, damage / pCount, color, { wobble: 4, life: 100 });
+                    spawnProjectileBurst(attacker, target, 1, damage / pCount, color, { wobble: giftValue >= 100 ? 8 : 4, life: giftValue >= 100 ? 120 : 100 });
                 }
-            }, i * 100);
+            }, i * 80);
         }
     } else if (atkType === "lightning") {
         playSound("lightning");
         pushLightningBolt({ sx: attacker.x, sy: attacker.y, tx: target.x, ty: target.y, life: 1.0, color });
         target.takeDamage(damage, attacker.id);
-        createExplosion(target.x, target.y, color);
+        createExplosion(target.x, target.y, color, { count: 24, speed: 9, shake: 7 });
     } else if (atkType === "laser") {
         playSound("lightning");
         spawnFloatingText("LASER", attacker.x, attacker.y, "#a855f7");
@@ -2445,7 +2541,7 @@ socket.on("arena:currentRanking", (data) => {
         if (shouldHypeLeader) {
             lastLeaderHypeId = leader.id;
             lastTopArenaHypeAt = now;
-            announce(`Top arena. ${leader.name} va primero al medio.`, { gapMs: 650 });
+            announce(`Ganador numero uno de la arena. ${leader.name}.`, { gapMs: 650 });
             screenShake = Math.max(screenShake, 5);
         }
     }
@@ -2456,8 +2552,9 @@ window.setInterval(() => {
     const leader = currentTopArenaLeader;
     if (!leader?.name) return;
 
-    announce(`Top arena al medio. Sigan a ${leader.name}.`, { gapMs: 650 });
+    announce(`Sigan al numero uno de la arena. ${leader.name}.`, { gapMs: 650 });
     announceGiftTip();
+    announcePromoTip();
 }, 78000);
 
 let frameCount = 0;

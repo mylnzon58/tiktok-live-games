@@ -46,6 +46,7 @@ const userCountryOverrides = {};
 let liveStatus = { connected: false, username: process.env.TIKTOK_USERNAME || DEFAULT_TIKTOK_USERNAME };
 let tiktokLive = null;
 let isConnectingToTikTok = false;
+let arenaLeaderVoiceWindow = { leaderId: null, count: 0 };
 
 app.use(express.static(__dirname));
 app.get("/overlay", (req, res) => res.sendFile(path.join(__dirname, "overlay.html")));
@@ -110,6 +111,14 @@ function broadcastChampions() {
 
 function broadcastHallOfFame() {
     io.emit("arena:hallOfFameUpdate", arena.getHallOfFameList(10));
+}
+
+function sanitizeLeaderChatMessage(comment) {
+    const normalized = String(comment || "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 110);
+    return normalized;
 }
 
 function resolveCountry(rawData) {
@@ -184,7 +193,6 @@ function updateRankingChampion(countryWinner) {
 function resetRound() {
     const countryWinner = ranking.getWinner();
     const arenaWinner = arena.getRoundWinner();
-    const currentArenaChampion = arena.getHallOfFameList(1)[0] || null;
 
     let persistedArenaWinner = null;
     if (arenaWinner?.id && isCompetitiveArenaPlayer(arenaWinner.id)) {
@@ -205,7 +213,6 @@ function resetRound() {
     io.emit("roundReset", { winner: countryWinner, countries: ranking.getCountries() });
     io.emit("arena:roundEnd", {
         roundWinner: arenaWinner,
-        arenaChampion: currentArenaChampion,
         winner: arenaWinner
     });
     io.emit("arena:suddenDeath", false);
@@ -540,6 +547,8 @@ function bindTikTokListeners(connection) {
             text.includes(`+${GAME_CONFIG.arena.chatPowerKeyword}`) ||
             text.includes(GAME_CONFIG.arena.chatPowerKeyword);
         const power = chatRequestedPower ? arena.applyChatPower(player.id) : null;
+        const topArenaLeader = arena.getTopArenaLeader();
+        const cleanComment = sanitizeLeaderChatMessage(event.comment);
 
         if (chatRequestedPower) {
             io.emit("arena:chatPower", {
@@ -562,6 +571,27 @@ function bindTikTokListeners(connection) {
         }
         if (activity?.respawned) {
             io.emit("arena:respawn", { userId: player.id, mode: "basic" });
+        }
+
+        if (
+            topArenaLeader?.id &&
+            topArenaLeader.id === player.id &&
+            cleanComment &&
+            cleanComment.length >= 3 &&
+            !chatRequestedPower
+        ) {
+            if (arenaLeaderVoiceWindow.leaderId !== topArenaLeader.id) {
+                arenaLeaderVoiceWindow = { leaderId: topArenaLeader.id, count: 0 };
+            }
+            if (arenaLeaderVoiceWindow.count < 5) {
+                arenaLeaderVoiceWindow.count += 1;
+                io.emit("arena:leaderChat", {
+                    userId: player.id,
+                    name: player.name,
+                    comment: cleanComment,
+                    remaining: Math.max(0, 5 - arenaLeaderVoiceWindow.count)
+                });
+            }
         }
     });
 }
