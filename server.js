@@ -47,6 +47,7 @@ let liveStatus = { connected: false, username: process.env.TIKTOK_USERNAME || DE
 let tiktokLive = null;
 let isConnectingToTikTok = false;
 let arenaLeaderVoiceWindow = { leaderId: null, count: 0 };
+let lastCompletedRoundWinner = null;
 
 app.use(express.static(__dirname));
 app.get("/overlay", (req, res) => res.sendFile(path.join(__dirname, "overlay.html")));
@@ -215,6 +216,19 @@ function resetRound() {
         roundWinner: arenaWinner,
         winner: arenaWinner
     });
+    if (arenaWinner?.id) {
+        lastCompletedRoundWinner = {
+            id: arenaWinner.id,
+            name: arenaWinner.name,
+            avatar: arenaWinner.avatar,
+            score: arenaWinner.score,
+            standingScore: arenaWinner.standingScore,
+            hp: arenaWinner.hp,
+            deaths: arenaWinner.deaths,
+            victories: arenaWinner.victories
+        };
+        io.emit("arena:lastRoundWinner", lastCompletedRoundWinner);
+    }
     io.emit("arena:suddenDeath", false);
 
     currentLeaderCode = null;
@@ -619,6 +633,7 @@ io.on("connection", (socket) => {
     socket.emit("arena:sync", arena.getPlayers());
     socket.emit("arena:currentRanking", arena.getCurrentRanking());
     socket.emit("arena:champion", arena.getLastWinnerId());
+    socket.emit("arena:lastRoundWinner", lastCompletedRoundWinner);
     socket.emit("ranking:championUpdate", ranking.getRankingChampion());
     socket.emit("status", liveStatus);
     broadcastHallOfFame();

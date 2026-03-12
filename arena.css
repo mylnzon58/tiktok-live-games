@@ -276,6 +276,73 @@ html {
     margin-top: 4px;
 }
 
+.round-winner-slot {
+    min-width: 240px;
+    max-width: 290px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.14) 0%, rgba(120, 53, 15, 0.12) 100%);
+}
+
+.round-winner-empty {
+    width: 100%;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.74);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+}
+
+.round-winner-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.round-winner-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 2px solid rgba(251, 191, 36, 0.8);
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.round-winner-info {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.round-winner-label {
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 1.1px;
+    color: #fde68a;
+    text-transform: uppercase;
+}
+
+.round-winner-name {
+    font-size: 18px;
+    font-weight: 800;
+    color: #fff7d6;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.round-winner-meta {
+    display: flex;
+    gap: 10px;
+    font-size: 14px;
+    color: #f8fafc;
+    flex-wrap: wrap;
+}
+
 #arena-leaderboard {
     flex: 1;
     display: flex;

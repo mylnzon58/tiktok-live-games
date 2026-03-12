@@ -91,6 +91,14 @@ let lastReturnPromptAt = 0;
 let currentTopArenaLeader = null;
 let lastGiftTipAt = 0;
 let lastPromoTipAt = 0;
+let currentRoundSeconds = 5 * 60;
+let lastRoundLeaderId = null;
+let lastRoundLeaderCueAt = 0;
+let lastClutchCueAt = 0;
+let lastFinalStretchCueAt = 0;
+let lastReentryCueAt = 0;
+let lastVisibleCompetitorCount = 0;
+let lastCompletedRoundWinner = null;
 
 // Attempt auto-unlock de AudioContext silencioso
 function tryUnlockAudio() {
@@ -427,31 +435,34 @@ const sfx = {
     },
     buzzsaw: () => {
         if (!soundEnabled) return;
-        const osc = audioCtx.createOscillator();
-        const oscNoise = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
+        const now = audioCtx.currentTime;
+        const pulseOffsets = [0, 0.045, 0.09];
 
-        osc.connect(gain);
-        oscNoise.connect(gain);
-        gain.connect(audioCtx.destination);
+        pulseOffsets.forEach((offset, index) => {
+            const osc = audioCtx.createOscillator();
+            const oscNoise = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
 
-        // Motor grave
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(70, audioCtx.currentTime);
+            osc.connect(gain);
+            oscNoise.connect(gain);
+            gain.connect(audioCtx.destination);
 
-        // Ruido metálico agudo
-        oscNoise.type = 'triangle';
-        oscNoise.frequency.setValueAtTime(240, audioCtx.currentTime);
-        oscNoise.frequency.linearRampToValueAtTime(380, audioCtx.currentTime + 0.25);
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(88 + (index * 10), now + offset);
+            osc.frequency.linearRampToValueAtTime(112 + (index * 12), now + offset + 0.055);
 
-        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-        // Fade out
-        gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.28);
+            oscNoise.type = 'sawtooth';
+            oscNoise.frequency.setValueAtTime(260 + (index * 35), now + offset);
+            oscNoise.frequency.linearRampToValueAtTime(420 + (index * 40), now + offset + 0.055);
 
-        osc.start(audioCtx.currentTime);
-        oscNoise.start(audioCtx.currentTime);
-        osc.stop(audioCtx.currentTime + 0.28);
-        oscNoise.stop(audioCtx.currentTime + 0.28);
+            gain.gain.setValueAtTime(0.05, now + offset);
+            gain.gain.exponentialRampToValueAtTime(0.002, now + offset + 0.07);
+
+            osc.start(now + offset);
+            oscNoise.start(now + offset);
+            osc.stop(now + offset + 0.075);
+            oscNoise.stop(now + offset + 0.075);
+        });
     },
     heavyExplosion: () => {
         if (!soundEnabled) return;
@@ -662,6 +673,11 @@ function pushLightningBolt(bolt) {
         lightningBolts.shift();
     }
     lightningBolts.push(bolt);
+}
+
+function getSizeDominance(player) {
+    if (!player) return 0;
+    return Math.max(0, Math.min(1.2, ((player.currentRadius || PLAYER_RADIUS) - PLAYER_RADIUS) / 90));
 }
 
 function pushShockwave(shockwave) {
@@ -1015,6 +1031,8 @@ class Player {
         this.avatar = data.avatar || "";
         this.hp = data.hp || MAX_HP;
         this.score = data.score || 0;
+        this.standingScore = data.standingScore || this.score || 0;
+        this.deaths = data.deaths || 0;
         this.lastActive = data.lastActive || Date.now();
         this.state = data.state || "NEW";
         this.invulnerableUntil = data.invulnerableUntil || 0;
@@ -1051,6 +1069,7 @@ class Player {
         this.lastTapBoostAt = 0;
         this.respawnSizeLockUntil = 0;
         this.lastBodyHitAt = 0;
+        this.lastSawAudioAt = 0;
 
         // Intervalo de reporte de posición al servidor
         if (this.id === socket.id || this.id.startsWith("bot_")) {
@@ -1065,7 +1084,7 @@ class Player {
             (Math.sqrt(safeScore) * 1.45) + (Math.log2(safeScore + 1) * 3.5),
             118
         );
-        const engagementScale = Math.min(this.engagement * 0.14, 5);
+        const engagementScale = Math.min(this.engagement * 0.19, 8);
         const baseTargetRadius = PLAYER_RADIUS + scoreScale;
         let targetRadius = Math.max(PLAYER_RADIUS, baseTargetRadius + engagementScale);
 
@@ -1115,6 +1134,12 @@ class Player {
             this.sawLife--;
             this.sawAngle += 0.4 * this.spinDirection;
             this.engagement = Math.max(this.engagement - 0.01, 0);
+            const now = Date.now();
+            const sawPulseEveryMs = Math.max(95, 165 - Math.min(60, this.engagement * 2));
+            if (now - (this.lastSawAudioAt || 0) >= sawPulseEveryMs) {
+                this.lastSawAudioAt = now;
+                playSound("buzzsaw");
+            }
 
             // Daño en área (Aura de Sierra)
             if (Date.now() % 200 < 50) { // Throttled damage
@@ -1321,7 +1346,20 @@ class Player {
         ctx.font = `bold ${Math.floor(badgeSize * 0.55)}px Rajdhani`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(Math.floor(this.score), this.x, this.y + (this.currentRadius * 0.3));
+        ctx.fillText(Math.floor(this.standingScore ?? this.score), this.x, this.y + (this.currentRadius * 0.3));
+
+        if ((this.deaths || 0) > 0) {
+            const skullX = this.x + (this.currentRadius * 0.56);
+            const skullY = this.y - (this.currentRadius * 0.58);
+            const skullRadius = Math.max(10, this.currentRadius * 0.19);
+            ctx.beginPath();
+            ctx.arc(skullX, skullY, skullRadius, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(15, 23, 42, 0.82)";
+            ctx.fill();
+            ctx.fillStyle = "#fecaca";
+            ctx.font = `bold ${Math.max(11, Math.floor(skullRadius * 0.85))}px Rajdhani`;
+            ctx.fillText(`☠${this.deaths}`, skullX, skullY);
+        }
 
         // Rango HOF (Si existe)
         if (!!arenaHallOfFame[this.id]) {
@@ -1522,9 +1560,6 @@ class Player {
                     { count: 4, speed: 4, shake: 0 }
                 );
             }
-
-            // Hum de sierra (Throttled)
-            if (Date.now() % 500 < 50) sfx.buzzsaw();
         }
 
         ctx.shadowBlur = 0;
@@ -1838,6 +1873,8 @@ function syncPlayerFromServer(sp) {
         players[sp.id] = new Player(sp);
     } else {
         players[sp.id].score = sp.score ?? players[sp.id].score;
+        players[sp.id].standingScore = sp.standingScore ?? players[sp.id].standingScore ?? players[sp.id].score ?? 0;
+        players[sp.id].deaths = sp.deaths ?? players[sp.id].deaths ?? 0;
         players[sp.id].hp = sp.hp ?? players[sp.id].hp;
         players[sp.id].name = sp.name || players[sp.id].name;
         players[sp.id].victories = sp.victories ?? players[sp.id].victories ?? 0;
@@ -1915,6 +1952,30 @@ function updatePowersGuide() {
         </div>
     `;
 }
+
+function renderLastRoundWinner() {
+    const slot = document.getElementById("round-winner-slot");
+    if (!slot) return;
+    const winner = lastCompletedRoundWinner;
+    if (!winner?.id) {
+        slot.innerHTML = `<div class="round-winner-empty">ESPERANDO CIERRE DE RONDA</div>`;
+        return;
+    }
+
+    slot.innerHTML = `
+        <div class="round-winner-card">
+            <img class="round-winner-avatar" src="${winner.avatar || 'https://www.tiktok.com/favicon.ico'}" onerror="this.src='https://www.tiktok.com/favicon.ico'" />
+            <div class="round-winner-info">
+                <div class="round-winner-label">ULTIMO GANADOR REAL</div>
+                <div class="round-winner-name">${winner.name}</div>
+                <div class="round-winner-meta">
+                    <span>⚔️ ${Math.floor(winner.standingScore || winner.score || 0)}</span>
+                    <span>☠ ${Math.floor(winner.deaths || 0)}</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
 // Escuchamos el Hall of Fame persistente del servidor (Top 10 real de 12 horas)
 socket.on("arena:hallOfFameUpdate", (list) => {
     console.log("🏆 Recibido Hall of Fame:", list);
@@ -1986,11 +2047,11 @@ countdownOverlay.className = "countdown-overlay";
 document.body.appendChild(countdownOverlay);
 
 socket.on("timerUpdate", (seconds) => {
+    currentRoundSeconds = Math.max(0, Number(seconds) || 0);
     const roundTimerEl = document.getElementById("round-time-remaining");
     if (roundTimerEl) {
-        const safeSeconds = Math.max(0, Number(seconds) || 0);
-        const minutes = String(Math.floor(safeSeconds / 60)).padStart(2, "0");
-        const secs = String(safeSeconds % 60).padStart(2, "0");
+        const minutes = String(Math.floor(currentRoundSeconds / 60)).padStart(2, "0");
+        const secs = String(currentRoundSeconds % 60).padStart(2, "0");
         roundTimerEl.textContent = `${minutes}:${secs}`;
     }
 
@@ -2026,6 +2087,8 @@ socket.on("arena:roundEnd", (data) => {
     });
 
     const roundWinner = data?.roundWinner || data?.winner;
+    lastCompletedRoundWinner = roundWinner || lastCompletedRoundWinner;
+    renderLastRoundWinner();
     const arenaChampion = currentTopArenaLeader;
 
     if (!roundWinner) {
@@ -2053,7 +2116,7 @@ socket.on("arena:roundEnd", (data) => {
             <h1 class="victory-title">🏁 GANADOR DE LA RONDA 🏁</h1>
             <img class="victory-avatar" src="${w.avatar || 'https://www.tiktok.com/favicon.ico'}" onerror="this.src='https://www.tiktok.com/favicon.ico'"/>
             <h2 class="victory-name">${w.name}</h2>
-            <div class="victory-stats">⚔️ PUNTOS DE RONDA: ${Math.floor(w.score)}</div>
+            <div class="victory-stats">⚔️ VALOR DE RONDA: ${Math.floor(w.standingScore || w.score || 0)}</div>
             ${arenaChampion?.name ? `<div class="victory-stats">👑 NUMERO UNO DEL ARENA: ${arenaChampion.name}</div>` : ""}
         </div>
     `;
@@ -2076,12 +2139,17 @@ socket.on("arena:roundEnd", (data) => {
     }, 8000);
 });
 
+socket.on("arena:lastRoundWinner", (winner) => {
+    lastCompletedRoundWinner = winner || null;
+    renderLastRoundWinner();
+});
+
 socket.on("arena:powerup", (data) => {
     const target = players[data.userId];
     if (target) {
         if (data.type === "buzzsaw") {
-            target.sawLife = data.duration || 600;
-            target.engagement = Math.min((target.engagement || 0) + 16, 40);
+            target.sawLife = Math.max(target.sawLife || 0, data.duration || 600);
+            target.engagement = Math.min((target.engagement || 0) + 20, 44);
             playSound("buzzsaw");
             setTimeout(() => playSound("buzzsaw", 0.92), 120);
             spawnFloatingText("SIERRA ACTIVA", target.x, target.y - 40, "#ff9f43");
@@ -2161,11 +2229,11 @@ socket.on("arena:like", (data) => {
     if (p) {
         p.lastActive = Date.now(); // Despierta de AFK inmediatamente
         p.heal(data.heal || data.likeCount);
-        p.engagement = Math.min((p.engagement || 0) + Math.max(3, data.likeCount * 0.95), 24);
+        p.engagement = Math.min((p.engagement || 0) + Math.max(4, data.likeCount * 1.15), 30);
         p.lastTapBoostAt = Date.now();
         p.flash = 1;
 
-        screenShake = Math.max(screenShake, 2); // Micro-temblor por cada like activo
+        screenShake = Math.max(screenShake, 1.1); // Gratis: mucho mas contenido
 
         // Dopamina física: El jugador "salta" o se empuja al recibir likes (MÁS INTENSO)
         p.vx += (Math.random() - 0.5) * 15;
@@ -2182,23 +2250,21 @@ socket.on("arena:like", (data) => {
         // Limitar pitch para no romper los tímpanos (máximo 2x pitch normal)
         const pitchMod = Math.min(1 + (recentHeals[data.userId].strikes * 0.05), 2.0);
 
-        playSound("heal", pitchMod);
-        playSound("hit", 1.2); // Ruidito extra "pop" para los taps
+        playSound("heal", Math.min(pitchMod, 1.2));
         if (data.scoreGain > 0) {
             spawnFloatingText(`+${data.scoreGain} PTS`, p.x, p.y - 28, "#fff3b0");
         }
         if (data.comboLikes >= 25 && data.comboLikes % 25 === 0) {
             spawnFloatingText(`RUSH x${data.comboLikes}`, p.x, p.y - 54, "#7dd3fc");
             triggerOverlayFlash("120, 255, 210", 0.04);
-            screenShake = Math.max(screenShake, Math.min(9, 4 + (data.comboLikes / 18)));
+            screenShake = Math.max(screenShake, Math.min(5, 2 + (data.comboLikes / 30)));
         }
 
         // Mostrar texto de apoyo adictivo (Combos épicos)
         const strikes = recentHeals[data.userId].strikes;
         if (strikes > 0 && strikes % 50 === 0) {
             spawnFloatingText(`COMBO x${strikes}`, p.x, p.y - 40, "#ff9f43");
-            screenShake = Math.max(screenShake, 10);
-            playSound("heavyExplosion"); // Boom para celebrar el combo
+            screenShake = Math.max(screenShake, 4);
         } else if (data.likeCount >= 5 || strikes % 10 === 0) {
             spawnFloatingText(`TAP x${strikes}`, p.x, p.y, "#2ed573");
         }
@@ -2211,6 +2277,7 @@ socket.on("arena:likeStrike", (data) => {
     if (!attacker || !target) return;
 
     const comboLikes = data.comboLikes || data.likeCount || 0;
+    const sizeDominance = getSizeDominance(attacker);
     if (comboLikes >= 25) {
         const burstShots = Math.min(4, Math.max(2, Math.floor(comboLikes / 25)));
         setTimeout(() => {
@@ -2224,7 +2291,7 @@ socket.on("arena:likeStrike", (data) => {
             sy: attacker.y,
             tx: target.x,
             ty: target.y,
-            life: 0.7,
+            life: 0.7 + (sizeDominance * 0.65),
             color: "#bbf7d0"
         });
     }
@@ -2237,7 +2304,7 @@ socket.on("arena:likeStrike", (data) => {
     if (comboLikes >= 20) {
         spawnFloatingText("TAP STRIKE", attacker.x, attacker.y - 34, "#bbf7d0");
     }
-    screenShake = Math.max(screenShake, Math.min(10, 2 + (comboLikes / 10)));
+    screenShake = Math.max(screenShake, Math.min(5, 1.5 + (comboLikes / 18)));
     playSound("hit", 1.08);
 });
 
@@ -2272,8 +2339,8 @@ socket.on("arena:chatPower", (data) => {
             });
         }
 
-        playSound("heal", 0.5); // Sonido suave para el aura
-        screenShake = Math.max(screenShake, 3);
+        playSound("heal", 0.45); // Sonido suave para el aura
+        screenShake = Math.max(screenShake, 1.8);
     }
 });
 
@@ -2286,6 +2353,18 @@ socket.on("arena:leaderChat", (data) => {
     spawnFloatingText(`"${data.comment}"`, focusX, focusY + 34, "#f8fafc");
     speakLeaderChat(data.name, data.comment);
     screenShake = Math.max(screenShake, 3);
+});
+
+socket.on("arena:ko", (data) => {
+    const attacker = players[data.attackerId];
+    const target = players[data.targetId];
+    const x = target?.x || attacker?.x || (canvas.width / 2);
+    const y = target?.y || attacker?.y || (canvas.height / 2);
+    spawnFloatingText("KO", x, y - 70, "#fecaca");
+    createExplosion(x, y, "#fecaca", { count: 24, speed: 10, shake: 10 });
+    triggerOverlayFlash("255, 180, 180", 0.1);
+    playSound("heavyExplosion");
+    screenShake = Math.max(screenShake, 12);
 });
 
 function resolveArenaGiftEffect(data, attacker, target, diamondsTotal, giftValue, giftName) {
@@ -2321,45 +2400,45 @@ function getPaidGiftFxProfile(giftValue, diamondsTotal) {
     const totalValue = Math.max(giftValue || 0, diamondsTotal || 0);
     if (totalValue >= 20000) {
         return {
-            cameraScale: 1.55,
-            cameraFrames: 145,
-            flashAlpha: 0.2,
-            shake: 24,
-            shockwaveRadius: 34,
-            burstCount: 38,
-            burstSpeed: 12
+            cameraScale: 1.72,
+            cameraFrames: 185,
+            flashAlpha: 0.28,
+            shake: 34,
+            shockwaveRadius: 52,
+            burstCount: 40,
+            burstSpeed: 14
         };
     }
     if (totalValue >= 1000) {
         return {
-            cameraScale: 1.42,
-            cameraFrames: 110,
-            flashAlpha: 0.14,
-            shake: 16,
-            shockwaveRadius: 24,
-            burstCount: 26,
-            burstSpeed: 10
+            cameraScale: 1.54,
+            cameraFrames: 145,
+            flashAlpha: 0.22,
+            shake: 24,
+            shockwaveRadius: 38,
+            burstCount: 34,
+            burstSpeed: 12
         };
     }
     if (totalValue >= 100) {
         return {
-            cameraScale: 1.28,
-            cameraFrames: 78,
-            flashAlpha: 0.1,
-            shake: 10,
-            shockwaveRadius: 18,
-            burstCount: 20,
-            burstSpeed: 8
+            cameraScale: 1.4,
+            cameraFrames: 110,
+            flashAlpha: 0.16,
+            shake: 16,
+            shockwaveRadius: 28,
+            burstCount: 28,
+            burstSpeed: 10
         };
     }
     return {
-        cameraScale: 1.16,
-        cameraFrames: 44,
-        flashAlpha: 0.06,
-        shake: 6,
-        shockwaveRadius: 14,
-        burstCount: 14,
-        burstSpeed: 6
+        cameraScale: 1.28,
+        cameraFrames: 76,
+        flashAlpha: 0.12,
+        shake: 10,
+        shockwaveRadius: 20,
+        burstCount: 22,
+        burstSpeed: 8
     };
 }
 
@@ -2375,6 +2454,7 @@ socket.on("arena:gift", (data) => {
     const giftValue = data.diamondCount || 1;
     const diamondsTotal = giftValue * count;
     const fxProfile = getPaidGiftFxProfile(giftValue, diamondsTotal);
+    const sizeDominance = getSizeDominance(attacker);
 
     // Feedback visual inmediato para TODOS los regalos
     spawnFloatingText(`${data.giftName} x${count}`, attacker.x, attacker.y, "#fdcb6e");
@@ -2384,7 +2464,7 @@ socket.on("arena:gift", (data) => {
     createExplosion(attacker.x, attacker.y, "#ffd166", {
         count: fxProfile.burstCount,
         speed: fxProfile.burstSpeed,
-        shake: fxProfile.shake * 0.35
+        shake: fxProfile.shake * 0.45
     });
     triggerOverlayFlash("255, 210, 120", fxProfile.flashAlpha * 0.7);
     pushShockwave({
@@ -2438,7 +2518,7 @@ socket.on("arena:gift", (data) => {
     let damage = diamondsTotal * 100;
 
     attacker.flash = 1;
-    screenShake = Math.max(screenShake, Math.max(fxProfile.shake, Math.min(24, 8 + Math.log2(diamondsTotal + 1) * 2.5)));
+    screenShake = Math.max(screenShake, Math.max(fxProfile.shake, Math.min(34, 10 + Math.log2(diamondsTotal + 1) * 3.2)));
 
     const giftEffect = resolveArenaGiftEffect(data, attacker, target, diamondsTotal, giftValue, data.giftName || "");
     let atkType = "projectile";
@@ -2472,7 +2552,7 @@ socket.on("arena:gift", (data) => {
                     sx: attacker.x, sy: attacker.y,
                     tx: target.x + (Math.random() - 0.5) * 100,
                     ty: target.y + (Math.random() - 0.5) * 100,
-                    life: 1.0, color: "#0abde3"
+                    life: 1.0 + (sizeDominance * 0.85), color: "#0abde3"
                 });
                 createExplosion(target.x + (Math.random() - 0.5) * 24, target.y + (Math.random() - 0.5) * 24, "#7dd3fc", { count: 12, speed: 6, shake: 3 });
                 target.takeDamage(diamondsTotal * 5, attacker.id);
@@ -2495,10 +2575,21 @@ socket.on("arena:gift", (data) => {
     } else if (giftEffect.type === "fireBurst") {
         playSound("fire");
         createFireBurst(target.x, target.y, attacker.currentRadius + 50);
+        createExplosion(target.x, target.y, "#ff8a00", { count: 30, speed: 11, shake: 10 });
+        triggerOverlayFlash("255, 120, 40", 0.16);
+        screenShake = Math.max(screenShake, Math.max(screenShake, 18));
         atkType = "lightning";
     } else if (giftEffect.type === "shockwave") {
-        playSound("hit");
-        pushShockwave({ x: target.x, y: target.y, r: 20, opacity: 0.85, color });
+        playSound("heavyExplosion");
+        hitStopFrames = Math.max(hitStopFrames, 10);
+        focusCamera(target.x, target.y, Math.max(fxProfile.cameraScale, 1.38), Math.max(fxProfile.cameraFrames, 95));
+        createExplosion(target.x, target.y, color, { count: 34, speed: 12, shake: 14 });
+        createExplosion(target.x + 28, target.y - 18, "#fff3b0", { count: 18, speed: 8, shake: 8 });
+        createExplosion(target.x - 28, target.y + 18, "#f59e0b", { count: 18, speed: 8, shake: 8 });
+        pushShockwave({ x: target.x, y: target.y, r: 30, opacity: 0.95, color });
+        pushShockwave({ x: target.x, y: target.y, r: 52, opacity: 0.7, color: "#fff3b0" });
+        triggerOverlayFlash("255, 214, 120", 0.18);
+        screenShake = Math.max(screenShake, 20);
         atkType = "lightning";
     } else if (data.sfx) {
         playSound(data.sfx);
@@ -2522,7 +2613,14 @@ socket.on("arena:gift", (data) => {
         }
     } else if (atkType === "lightning") {
         playSound("lightning");
-        pushLightningBolt({ sx: attacker.x, sy: attacker.y, tx: target.x, ty: target.y, life: 1.0, color });
+        pushLightningBolt({
+            sx: attacker.x,
+            sy: attacker.y,
+            tx: target.x,
+            ty: target.y,
+            life: 1.0 + (sizeDominance * 0.75),
+            color
+        });
         target.takeDamage(damage, attacker.id);
         createExplosion(target.x, target.y, color, { count: 24, speed: 9, shake: 7 });
     } else if (atkType === "laser") {
@@ -2548,6 +2646,7 @@ function updateRankingDOM(force = false) {
     lastUIUpdate = now;
 
     updateTopShowcase(); // Actualizar podio superior
+    renderLastRoundWinner();
     // Solo mostramos el TOP 5 en el ranking horizontal
     const top5 = roundRanking.slice(0, 5);
     leaderboardEl.innerHTML = "";
@@ -2571,7 +2670,8 @@ function updateRankingDOM(force = false) {
                 </div>
                 <div class="board-stats">
                     <span class="stat-hp">❤️ HP ${Math.floor(p.hp || 0)}</span>
-                    <span class="stat-score">⚔️ PTS ${Math.floor(p.score || 0)}</span>
+                    <span class="stat-score">⚔️ VALOR ${Math.floor(p.standingScore || p.score || 0)}</span>
+                    <span class="stat-score">☠ ${Math.floor(p.deaths || 0)}</span>
                     ${p.state && p.state !== "ACTIVE" ? `<span class="stat-score">${p.state}</span>` : ""}
                 </div>
             </div>
@@ -2584,12 +2684,71 @@ socket.on("arena:currentRanking", (data) => {
     roundRanking = data; // Ranking de la ronda actual
     updateRankingDOM(true); // Forzar actualización cuando cambian los líderes
 
-    if (roundRanking.length <= 1) {
+    const visibleCompetitors = roundRanking.filter((player) => player?.state !== "REMOVED").length;
+    if (visibleCompetitors <= 1) {
         promptReturnToArena();
     }
 
-    const leader = currentTopArenaLeader;
     const now = Date.now();
+    if (visibleCompetitors >= 2 && lastVisibleCompetitorCount <= 1 && now - lastReentryCueAt > 20000) {
+        lastReentryCueAt = now;
+        showAnnouncer("LA ARENA VOLVIO A ENCENDERSE", "#86efac");
+        spawnFloatingText("VUELVE LA PELEA", canvas.width / 2, canvas.height / 2 - 170, "#86efac");
+        playSound("heal", 0.92);
+        screenShake = Math.max(screenShake, 3);
+    }
+    lastVisibleCompetitorCount = visibleCompetitors;
+
+    const roundLeader = roundRanking[0] || null;
+    const roundRunnerUp = roundRanking[1] || null;
+    const leaderStanding = Math.floor(roundLeader?.standingScore || roundLeader?.score || 0);
+    const runnerStanding = Math.floor(roundRunnerUp?.standingScore || roundRunnerUp?.score || 0);
+    const standingGap = Math.max(0, leaderStanding - runnerStanding);
+
+    if (
+        roundLeader?.id &&
+        roundLeader.id !== lastRoundLeaderId &&
+        now - lastRoundLeaderCueAt > 7000
+    ) {
+        lastRoundLeaderId = roundLeader.id;
+        lastRoundLeaderCueAt = now;
+        showAnnouncer(`NUMERO UNO DE RONDA: ${roundLeader.name}`, "#fef08a");
+        spawnFloatingText(`NUMERO 1 DE RONDA`, canvas.width / 2, 190, "#fef08a");
+        playSound("jackpot", 0.62);
+        triggerOverlayFlash("255, 235, 140", 0.07);
+        screenShake = Math.max(screenShake, 4);
+    }
+
+    if (
+        roundLeader &&
+        roundRunnerUp &&
+        standingGap <= 90 &&
+        now - lastClutchCueAt > 18000
+    ) {
+        lastClutchCueAt = now;
+        showAnnouncer("PELEA CERRADA POR LA RONDA", "#7dd3fc");
+        spawnFloatingText(`${roundLeader.name} VS ${roundRunnerUp.name}`, canvas.width / 2, 226, "#e0f2fe");
+        playSound("hit", 1.05);
+        triggerOverlayFlash("120, 210, 255", 0.05);
+        screenShake = Math.max(screenShake, 2.4);
+    }
+
+    if (
+        roundLeader &&
+        roundRunnerUp &&
+        currentRoundSeconds <= 45 &&
+        standingGap <= 130 &&
+        now - lastFinalStretchCueAt > 16000
+    ) {
+        lastFinalStretchCueAt = now;
+        showAnnouncer("ULTIMOS SEGUNDOS TODO PUEDE CAMBIAR", "#fda4af");
+        spawnFloatingText("ULTIMO EMPUJE", canvas.width / 2, canvas.height / 2 - 200, "#fda4af");
+        playSound("tick");
+        triggerOverlayFlash("255, 160, 160", 0.06);
+        screenShake = Math.max(screenShake, 3.2);
+    }
+
+    const leader = currentTopArenaLeader;
     if (leader && leader.name) {
         const shouldHypeLeader =
             leader.id !== lastLeaderHypeId ||
