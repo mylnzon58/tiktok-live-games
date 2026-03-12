@@ -5,6 +5,7 @@ const { Server } = require("socket.io");
 const { WebcastPushConnection } = require("tiktok-live-connector");
 
 const { loadEnvFile } = require("./lib/env");
+const { syncTikTokEnvFromChrome } = require("./lib/chrome-cookie-sync");
 const { DEFAULT_COUNTRIES, NAME_TO_CODE } = require("./lib/constants");
 const { createStorage } = require("./lib/storage");
 const { createRankingManager } = require("./lib/ranking-manager");
@@ -16,9 +17,8 @@ const { GAME_CONFIG } = require("./lib/game-config");
 loadEnvFile();
 
 const PORT = process.env.PORT || 3000;
-const TIKTOK_USERNAME = process.env.TIKTOK_USERNAME || "juanjoclassic";
-const TIKTOK_SESSION_ID = process.env.TIKTOK_SESSION_ID || "";
-const TIKTOK_TT_TARGET_IDC = process.env.TIKTOK_TT_TARGET_IDC || "";
+const DEFAULT_TIKTOK_USERNAME = "juanjoclassic";
+const CHROME_SYNC_INTERVAL_MS = 60000;
 
 const app = express();
 const server = http.createServer(app);
@@ -39,10 +39,13 @@ let isSuddenDeath = false;
 let timeRemaining = GAME_CONFIG.countries.roundDurationSeconds;
 let timerInterval = null;
 let tiktokRetryTimer = null;
+let chromeSyncTimer = null;
 let arenaBroadcastTimer = null;
 let rankingBroadcastTimer = null;
 const userCountryOverrides = {};
-let liveStatus = { connected: false, username: TIKTOK_USERNAME };
+let liveStatus = { connected: false, username: process.env.TIKTOK_USERNAME || DEFAULT_TIKTOK_USERNAME };
+let tiktokLive = null;
+let isConnectingToTikTok = false;
 
 app.use(express.static(__dirname));
 app.get("/overlay", (req, res) => res.sendFile(path.join(__dirname, "overlay.html")));
@@ -234,24 +237,53 @@ function startTimer() {
     }, 1000);
 }
 
-const tiktokOptions = {
-    ...(TIKTOK_SESSION_ID ? { sessionId: TIKTOK_SESSION_ID } : {}),
-    ...(TIKTOK_TT_TARGET_IDC ? { ttTargetIdc: TIKTOK_TT_TARGET_IDC } : {}),
-    requestOptions: { timeout: 10000 }
-};
+function getTikTokConfig() {
+    return {
+        username: process.env.TIKTOK_USERNAME || DEFAULT_TIKTOK_USERNAME,
+        sessionId: process.env.TIKTOK_SESSION_ID || "",
+        ttTargetIdc: process.env.TIKTOK_TT_TARGET_IDC || ""
+    };
+}
 
-const tiktokLive = new WebcastPushConnection(TIKTOK_USERNAME, tiktokOptions);
+function createTikTokConnection(config) {
+    const tiktokOptions = {
+        ...(config.sessionId ? { sessionId: config.sessionId } : {}),
+        ...(config.ttTargetIdc ? { ttTargetIdc: config.ttTargetIdc } : {}),
+        requestOptions: { timeout: 10000 }
+    };
+
+    return new WebcastPushConnection(config.username, tiktokOptions);
+}
 
 async function connectToTikTok() {
+    if (isConnectingToTikTok) return;
+    isConnectingToTikTok = true;
     clearTimeout(tiktokRetryTimer);
     const minRetry = 30000;
     const maxRetry = 60000;
     const retryDelay = Math.floor(Math.random() * (maxRetry - minRetry + 1)) + minRetry;
 
     try {
+        syncTikTokEnvFromChrome({ logger: console });
+        const config = getTikTokConfig();
+
+        if (tiktokLive?.removeAllListeners) {
+            tiktokLive.removeAllListeners();
+        }
+        if (tiktokLive?.disconnect) {
+            try {
+                await tiktokLive.disconnect();
+            } catch {
+                // Ignore stale disconnect failures before rebuilding the client.
+            }
+        }
+
+        tiktokLive = createTikTokConnection(config);
+        bindTikTokListeners(tiktokLive);
+
         const isLive = await tiktokLive.fetchIsLive();
         if (!isLive) {
-            liveStatus = { connected: false, username: TIKTOK_USERNAME, error: "Esperando que el Live inicie..." };
+            liveStatus = { connected: false, username: config.username, error: "Esperando que el Live inicie..." };
             io.emit("status", liveStatus);
             tiktokRetryTimer = setTimeout(connectToTikTok, retryDelay);
             return;
@@ -259,10 +291,10 @@ async function connectToTikTok() {
 
         const state = await tiktokLive.connect();
         console.log(`✅ TikTok LIVE conectado. Room ID: ${state.roomId}`);
-        liveStatus = { connected: true, username: TIKTOK_USERNAME };
+        liveStatus = { connected: true, username: config.username };
         io.emit("status", liveStatus);
 
-        const host = normalizeUser({ uniqueId: TIKTOK_USERNAME, nickname: TIKTOK_USERNAME });
+        const host = normalizeUser({ uniqueId: config.username, nickname: config.username });
         if (host) {
             arena.ensurePlayer(host, "host");
             queueArenaState(true);
@@ -274,11 +306,13 @@ async function connectToTikTok() {
 
         liveStatus = {
             connected: false,
-            username: TIKTOK_USERNAME,
+            username: getTikTokConfig().username,
             error: errorMessage
         };
         io.emit("status", liveStatus);
         tiktokRetryTimer = setTimeout(connectToTikTok, retryDelay);
+    } finally {
+        isConnectingToTikTok = false;
     }
 }
 
@@ -303,6 +337,8 @@ function handleArenaGift(event) {
 
     io.emit("arena:gift", {
         attacker: { id: result.attacker.id, x: result.attacker.x, y: result.attacker.y },
+        attackerState: result.attacker,
+        target: result.target,
         targetId: result.target.id,
         targetState: result.target.state,
         diamondCount: event.gift.diamondCount,
@@ -310,6 +346,7 @@ function handleArenaGift(event) {
         totalDiamonds: event.gift.totalDiamonds,
         giftName: event.gift.name,
         tier: event.gift.tier,
+        category: event.gift.category,
         effectKey: event.gift.fx,
         label: event.gift.label,
         sfx: event.gift.sfx,
@@ -388,84 +425,98 @@ function handleRankingGift(event, rawData) {
     queueRankingState();
 }
 
-tiktokLive.on("gift", (rawData) => {
-    try {
-        const event = normalizeGiftEvent(rawData, giftCatalog);
-        if (!event.user) return;
-        handleRankingGift(event, rawData);
-        handleArenaGift(event);
-    } catch (error) {
-        console.error("Gift error:", error.message);
-    }
-});
-
-tiktokLive.on("like", (rawData) => {
-    const event = normalizeLikeEvent(rawData);
-    if (!event.user) return;
-
-    const country = resolveCountry(rawData);
-    if (ranking.addLikes(country, event.likeCount, GAME_CONFIG.countries.likesPerPoint)) {
-        queueRankingState();
-    }
-
-    const player = arena.ensurePlayer(event.user, "like");
-    if (!player) return;
-
-    const support = arena.applyLikeSupport(player.id, event.likeCount);
-    io.emit("arena:like", {
-        userId: player.id,
-        likeCount: event.likeCount,
-        heal: support?.heal || 0,
-        respawned: Boolean(support?.respawned)
+function bindTikTokListeners(connection) {
+    connection.on("gift", (rawData) => {
+        try {
+            const event = normalizeGiftEvent(rawData, giftCatalog);
+            if (!event.user) return;
+            handleRankingGift(event, rawData);
+            handleArenaGift(event);
+        } catch (error) {
+            console.error("Gift error:", error.message);
+        }
     });
 
-    if (support?.respawned) {
-        io.emit("arena:respawn", { userId: player.id, mode: "basic" });
-    }
+    connection.on("like", (rawData) => {
+        const event = normalizeLikeEvent(rawData);
+        if (!event.user) return;
 
-    queueArenaState();
-});
-
-tiktokLive.on("chat", (rawData) => {
-    const event = normalizeChatEvent(rawData);
-    if (!event.user) return;
-
-    const text = event.comment.toUpperCase();
-    let detectedCountry = null;
-    for (const word of text.split(/\s+/)) {
-        if (word.length === 2 && DEFAULT_COUNTRIES[word]) {
-            detectedCountry = word;
-            break;
+        const country = resolveCountry(rawData);
+        if (ranking.addLikes(country, event.likeCount, GAME_CONFIG.countries.likesPerPoint)) {
+            queueRankingState();
         }
-        if (NAME_TO_CODE[word]) {
-            detectedCountry = NAME_TO_CODE[word];
-            break;
-        }
-    }
 
-    if (detectedCountry) {
-        userCountryOverrides[event.user.id.toLowerCase()] = detectedCountry;
-        io.emit("ranking:countryJoined", {
-            userId: event.user.id,
-            country: detectedCountry,
-            flag: DEFAULT_COUNTRIES[detectedCountry].flag
+        const player = arena.ensurePlayer(event.user, "like");
+        if (!player) return;
+
+        const support = arena.applyLikeSupport(player.id, event.likeCount);
+        io.emit("arena:like", {
+            userId: player.id,
+            player: support?.player || null,
+            likeCount: event.likeCount,
+            heal: support?.heal || 0,
+            respawned: Boolean(support?.respawned)
         });
-    }
 
-    const player = arena.ensurePlayer(event.user, "chat");
-    if (!player) return;
-    const activity = arena.applyChatActivity(player.id);
+        if (support?.respawned) {
+            io.emit("arena:respawn", { userId: player.id, mode: "basic" });
+        }
 
-    if (text.includes(GAME_CONFIG.arena.chatPowerKeyword)) {
-        io.emit("arena:chatPower", { userId: player.id, keyword: GAME_CONFIG.arena.chatPowerKeyword });
-    }
-    if (text.includes(GAME_CONFIG.arena.chatWakeKeyword) || activity?.respawned) {
         queueArenaState();
-    }
-    if (activity?.respawned) {
-        io.emit("arena:respawn", { userId: player.id, mode: "basic" });
-    }
-});
+    });
+
+    connection.on("chat", (rawData) => {
+        const event = normalizeChatEvent(rawData);
+        if (!event.user) return;
+
+        const text = event.comment.toUpperCase();
+        let detectedCountry = null;
+        for (const word of text.split(/\s+/)) {
+            if (word.length === 2 && DEFAULT_COUNTRIES[word]) {
+                detectedCountry = word;
+                break;
+            }
+            if (NAME_TO_CODE[word]) {
+                detectedCountry = NAME_TO_CODE[word];
+                break;
+            }
+        }
+
+        if (detectedCountry) {
+            userCountryOverrides[event.user.id.toLowerCase()] = detectedCountry;
+            io.emit("ranking:countryJoined", {
+                userId: event.user.id,
+                country: detectedCountry,
+                flag: DEFAULT_COUNTRIES[detectedCountry].flag
+            });
+        }
+
+        const player = arena.ensurePlayer(event.user, "chat");
+        if (!player) return;
+        const activity = arena.applyChatActivity(player.id);
+
+        if (text.includes(GAME_CONFIG.arena.chatPowerKeyword)) {
+            io.emit("arena:chatPower", { userId: player.id, keyword: GAME_CONFIG.arena.chatPowerKeyword });
+        }
+        if (text.includes(GAME_CONFIG.arena.chatWakeKeyword) || activity?.respawned) {
+            queueArenaState();
+        }
+        if (activity?.respawned) {
+            io.emit("arena:respawn", { userId: player.id, mode: "basic" });
+        }
+    });
+}
+
+function startChromeCookieSync() {
+    clearInterval(chromeSyncTimer);
+    chromeSyncTimer = setInterval(() => {
+        const syncResult = syncTikTokEnvFromChrome({ logger: console });
+        if (syncResult.updatedKeys.length && !liveStatus.connected) {
+            clearTimeout(tiktokRetryTimer);
+            tiktokRetryTimer = setTimeout(connectToTikTok, 1000);
+        }
+    }, CHROME_SYNC_INTERVAL_MS);
+}
 
 io.on("connection", (socket) => {
     socket.emit("rankingUpdate", ranking.getCountries());
@@ -485,6 +536,7 @@ io.on("connection", (socket) => {
     });
 
     socket.on("arena:debug:gift", (data) => {
+        if (!tiktokLive) return;
         const mockData = {
             uniqueId: data.uniqueId || "debug_user",
             nickname: "MODO DEBUG",
@@ -529,4 +581,5 @@ setTimeout(connectToTikTok, initialDelay);
 server.listen(PORT, () => {
     console.log(`🚀 Server on http://localhost:${PORT}`);
     startTimer();
+    startChromeCookieSync();
 });

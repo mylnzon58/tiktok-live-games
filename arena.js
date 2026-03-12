@@ -874,10 +874,11 @@ class Player {
     update() {
         // --- DINÁMICA DE TAMAÑO ---
         const scoreScale = Math.min(Math.sqrt(this.score) * 1.15, 82);
+        const engagementScale = Math.min(this.engagement * 0.55, 18);
 
         // REQUERIMIENTO: "Dejarlos bien chiquitos si pierden vida"
         const hpMultiplier = 0.5 + (Math.max(this.hp, 0) / MAX_HP) * 0.5; // Escala entre 50% y 100% según HP
-        const baseTargetRadius = PLAYER_RADIUS + scoreScale;
+        const baseTargetRadius = PLAYER_RADIUS + scoreScale + engagementScale;
         const targetRadius = baseTargetRadius * hpMultiplier;
 
         if (this.state === "ELIMINATED") {
@@ -1551,39 +1552,7 @@ function showAnnouncer(text, color) {
 socket.on("arena:sync", (serverPlayers) => {
     for (const id in serverPlayers) {
         const sp = serverPlayers[id];
-        if (!players[id]) {
-            players[id] = new Player(sp);
-        } else {
-            // Sincronizar stats vitales desde el servidor (Autoridad)
-            players[id].score = sp.score;
-            players[id].hp = sp.hp;
-            players[id].name = sp.name;
-            players[id].state = sp.state || players[id].state;
-            players[id].lastActive = sp.lastActive || players[id].lastActive;
-            players[id].invulnerableUntil = sp.invulnerableUntil || 0;
-            if (sp.avatar) players[id].avatar = sp.avatar;
-
-            // Solo sincronizamos X/Y si NO es nuestro propio jugador (para evitar jitter)
-            if (!id.startsWith("bot_")) {
-                players[id].x = sp.x;
-                players[id].y = sp.y;
-            }
-        }
-
-        players[id].hp = sp.hp;
-        players[id].state = sp.state || players[id].state;
-        players[id].invulnerableUntil = sp.invulnerableUntil || 0;
-
-        // REQUERIMIENTO: Sincronizar Power-ups (Sierra)
-        if (sp.sawActiveUntil > Date.now()) {
-            const remainingFrames = Math.floor((sp.sawActiveUntil - Date.now()) / (1000 / 60));
-            // Solo actualizamos si es significativamente diferente para evitar saltos visuales
-            if (Math.abs(players[id].sawLife - remainingFrames) > 60) {
-                players[id].sawLife = remainingFrames;
-            }
-        } else {
-            players[id].sawLife = 0;
-        }
+        syncPlayerFromServer(sp);
     }
 
     // Remover jugadores que ya no están en el servidor
@@ -1591,6 +1560,44 @@ socket.on("arena:sync", (serverPlayers) => {
         if (!serverPlayers[id]) delete players[id];
     }
 });
+
+function syncPlayerFromServer(sp) {
+    if (!sp?.id) return null;
+
+    if (!players[sp.id]) {
+        players[sp.id] = new Player(sp);
+    } else {
+        players[sp.id].score = sp.score ?? players[sp.id].score;
+        players[sp.id].hp = sp.hp ?? players[sp.id].hp;
+        players[sp.id].name = sp.name || players[sp.id].name;
+        players[sp.id].state = sp.state || players[sp.id].state;
+        players[sp.id].lastActive = sp.lastActive || players[sp.id].lastActive;
+        players[sp.id].invulnerableUntil = sp.invulnerableUntil || 0;
+        players[sp.id].totalGiftDiamonds = sp.totalGiftDiamonds || players[sp.id].totalGiftDiamonds || 0;
+        players[sp.id].totalLikes = sp.totalLikes || players[sp.id].totalLikes || 0;
+        if (sp.avatar) players[sp.id].avatar = sp.avatar;
+
+        if (!sp.id.startsWith("bot_")) {
+            players[sp.id].x = sp.x ?? players[sp.id].x;
+            players[sp.id].y = sp.y ?? players[sp.id].y;
+        }
+    }
+
+    players[sp.id].hp = sp.hp ?? players[sp.id].hp;
+    players[sp.id].state = sp.state || players[sp.id].state;
+    players[sp.id].invulnerableUntil = sp.invulnerableUntil || 0;
+
+    if (sp.sawActiveUntil > Date.now()) {
+        const remainingFrames = Math.floor((sp.sawActiveUntil - Date.now()) / (1000 / 60));
+        if (Math.abs((players[sp.id].sawLife || 0) - remainingFrames) > 60) {
+            players[sp.id].sawLife = remainingFrames;
+        }
+    } else {
+        players[sp.id].sawLife = 0;
+    }
+
+    return players[sp.id];
+}
 
 // --- CAPA TOP SHOWCASE (Podio Superior) ---
 const topShowcaseEl = document.getElementById("top-arena-showcase") || document.createElement("div");
@@ -1640,8 +1647,14 @@ socket.on("arena:hallOfFameUpdate", (list) => {
 updatePowersGuide();
 
 function updateTopShowcase() {
-    // Tomar estrictamente los 3 primeros para el podio
-    const podium3 = (persistentHOF || []).slice(0, 3);
+    // El podio superior debe seguir el ranking autoritativo de la ronda actual.
+    const podiumSource = roundRanking.length ? roundRanking : persistentHOF;
+    const podium3 = podiumSource.slice(0, 3).map((player) => ({
+        ...player,
+        displayScore: roundRanking.length
+            ? Math.floor(player.score || 0)
+            : Math.floor(player.bestScore || player.score || 0)
+    }));
 
     // Rellenamos hasta tener siempre 3 slots
     while (podium3.length < 3) {
@@ -1668,7 +1681,7 @@ function updateTopShowcase() {
             <div class="top-rank-badge">${rank}</div>
             <div class="top-player-name">${p.name}</div>
             ${p.victories > 0 ? `<div class="top-player-victories">🏆 ${p.victories}</div>` : ''}
-            ${!p.isPlaceholder ? `<div class="top-player-score">BEST ${Math.floor(p.bestScore || p.score || 0)}</div>` : ''}
+            ${!p.isPlaceholder ? `<div class="top-player-score">${roundRanking.length ? "PTS" : "BEST"} ${p.displayScore}</div>` : ''}
             ${p.isPlaceholder ? '' : '<div class="follow-arrow">⬆️</div>'}
         `;
         topShowcaseEl.appendChild(item);
@@ -1805,7 +1818,7 @@ const recentHeals = {};
 
 // EVENTO DE CURACIÓN / APOYO (LIKES / TAP TAP)
 socket.on("arena:like", (data) => {
-    const p = players[data.userId];
+    const p = syncPlayerFromServer(data.player) || players[data.userId];
     if (p) {
         p.lastActive = Date.now(); // Despierta de AFK inmediatamente
         p.heal(data.heal || data.likeCount);
@@ -1877,7 +1890,7 @@ socket.on("arena:chatPower", (data) => {
 // EVENTO DE ATAQUE (REGALOS)
 socket.on("arena:gift", (data) => {
     const attackerId = data.attacker?.id;
-    const attacker = players[attackerId];
+    const attacker = syncPlayerFromServer(data.attackerState) || players[attackerId];
     if (!attacker) return;
 
     attacker.lastActive = Date.now(); // Despierta de AFK inmediatamente
@@ -1904,7 +1917,7 @@ socket.on("arena:gift", (data) => {
     }
 
     // Buscar el objetivo más cercano
-    let target = players[data.targetId];
+    let target = syncPlayerFromServer(data.target) || players[data.targetId];
     if (!target) {
         let minDist = Infinity;
         for (const id in players) {
@@ -1935,8 +1948,8 @@ socket.on("arena:gift", (data) => {
     let color = "#00f0ff";
     const gName = (data.giftName || "").toLowerCase();
 
-    // Detección de tipos de ataque
-    if (gName.includes("universe") || gName.includes("universo") || gName.includes("lion") || gName.includes("león") || giftValue >= 20000) {
+    // Detección de tipos de ataque: confiar primero en el mapeo del servidor.
+    if (data.effectKey === "megaBlast" || data.category === "mega" || gName.includes("universe") || gName.includes("universo") || gName.includes("lion") || gName.includes("león") || giftValue >= 20000) {
         playSound("heavyExplosion");
         screenShake = 14;
         hitStopFrames = 12;
@@ -1949,7 +1962,7 @@ socket.on("arena:gift", (data) => {
         pushShockwave({ x: target.x, y: target.y, r: 10, opacity: 0.9, color: "#fff7d6" });
         target.takeDamage(diamondsTotal * 20, attacker.id);
         atkType = "none";
-    } else if (gName.includes("galaxy") || gName.includes("galaxia") || gName.includes("planet") || gName.includes("planeta") || giftValue >= 1000) {
+    } else if (data.effectKey === "orbitalStrike" || data.effectKey === "tripleLightning" || data.effectKey === "lightning" || data.category === "lightning" || gName.includes("galaxy") || gName.includes("galaxia") || gName.includes("planet") || gName.includes("planeta") || giftValue >= 1000) {
         playSound("lightning");
         screenShake = 8;
         triggerOverlayFlash("90, 200, 255", 0.08);
@@ -1967,7 +1980,7 @@ socket.on("arena:gift", (data) => {
             }, i * 150);
         }
         atkType = "none";
-    } else if (giftValue >= 500 || gName.includes("sierra") || gName.includes("buzzsaw")) {
+    } else if (data.effectKey === "buzzsaw" || giftValue >= 500 || gName.includes("sierra") || gName.includes("buzzsaw")) {
         // Power-up de Sierra (Aura)
         playSound("buzzsaw");
         attacker.sawLife = Math.max(attacker.sawLife, 900); // 15s de aura
@@ -1975,14 +1988,14 @@ socket.on("arena:gift", (data) => {
         atkType = "none";
     } else if (gName.includes("star") || gName.includes("estrella") || gName.includes("zapato") || gName.includes("hat")) {
         atkType = "laser";
-    } else if (gName.includes("rose") || gName.includes("rosa")) {
+    } else if (data.effectKey === "roseVolley" || gName.includes("rose") || gName.includes("rosa")) {
         playSound("roseShot");
         atkType = "projectile"; color = "#ff4757";
-    } else if (gName.includes("fire") || gName.includes("fuego") || gName.includes("flame") || gName.includes("fireworks")) {
+    } else if (data.effectKey === "fireBurst" || data.effectKey === "fireStorm" || data.category === "fire" || gName.includes("fire") || gName.includes("fuego") || gName.includes("flame") || gName.includes("fireworks")) {
         playSound("fire");
         createFireBurst(target.x, target.y, attacker.currentRadius + 50);
         atkType = "lightning"; color = "#ff6b00";
-    } else if (gName.includes("donut") || gName.includes("dona") || gName.includes("ray") || gName.includes("relámpago")) {
+    } else if (data.effectKey === "shockwave" || data.category === "shockwave" || gName.includes("donut") || gName.includes("dona") || gName.includes("ray") || gName.includes("relámpago")) {
         atkType = "lightning"; color = "#fbbf24";
     }
 
