@@ -13,10 +13,10 @@
 </head>
 
 <body>
-    <!-- Overlay X2 Alpha (Sudden Death) -->
+    <!-- Overlay Sudden Death -->
     <div id="x2-alpha-overlay">
-        <h1 class="x2-banner">X2 ALPHA</h1>
-        <div class="x2-subtitle">PUNTOS DOBLES</div>
+        <h1 class="x2-banner">SUDDEN DEATH</h1>
+        <div class="x2-subtitle">DOUBLE DAMAGE ACTIVATED</div>
     </div>
 
     <!-- Ticker de Campeones -->
@@ -26,8 +26,6 @@
     <div id="announcer-container"></div>
 
     <!-- Switch Button para regresar al Ranking -->
-    <a href="/overlay" id="switch-btn">🌎 Cambiar a Países</a>
-
     <a href="/overlay" id="switch-btn">🌎 Cambiar a Países</a>
 
     <!-- Botón habilitar Sonido -->
@@ -57,7 +55,7 @@
 
     <!-- Panel Lateral Derecho: Ranking de la Arena -->
     <div id="arena-ranking">
-        <div class="ranking-header">📊 RANKING ARENA</div>
+        <div class="ranking-header">📊 RONDA ACTUAL<br><small>TOP 5 POR PUNTOS</small></div>
         <div id="arena-leaderboard">
             <!-- Los jugadores se inyectarán aquí -->
         </div>
@@ -65,6 +63,16 @@
 
     <!-- Efectos y UI Flotante HTMl (si los hay) -->
     <div id="floating-ui-layer"></div>
+
+    <!-- Panel de Debug para Pruebas -->
+    <div id="debug-panel">
+        <div class="debug-header">🛠️ MODO DESARROLLO</div>
+        <button id="debug-spawn-bot">🤖 Spawn Bot</button>
+        <button id="debug-gift-rose">🌹 Rosa (1)</button>
+        <button id="debug-gift-galaxy">🌌 Galaxia (1000)</button>
+        <button id="debug-gift-universe">🦁 Universo (35000)</button>
+        <button id="debug-toggle-sd">🔥 Sudden Death</button>
+    </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="/arena.js?v=2"></script>

@@ -1,0 +1,93 @@
+{
+  "Rose": {
+    "aliases": ["rosa", "rose"],
+    "tier": "small",
+    "category": "projectile",
+    "rarity": "common",
+    "scoreScale": 1,
+    "damageScale": 18,
+    "sizeScale": 0.15,
+    "knockback": 0.4,
+    "fx": "roseVolley",
+    "sfx": "roseShot",
+    "label": "Disparo rapido"
+  },
+  "Donut": {
+    "aliases": ["donut", "dona"],
+    "tier": "medium",
+    "category": "shockwave",
+    "rarity": "uncommon",
+    "scoreScale": 1,
+    "damageScale": 26,
+    "sizeScale": 0.28,
+    "knockback": 0.9,
+    "fx": "shockwave",
+    "sfx": "hit",
+    "label": "Impacto circular"
+  },
+  "Perfume": {
+    "aliases": ["perfume"],
+    "tier": "medium",
+    "category": "shockwave",
+    "rarity": "uncommon",
+    "scoreScale": 1,
+    "damageScale": 24,
+    "sizeScale": 0.25,
+    "knockback": 0.8,
+    "fx": "shockwave",
+    "sfx": "hit",
+    "label": "Shock aromatico"
+  },
+  "Fireworks": {
+    "aliases": ["fireworks", "fuegos artificiales"],
+    "tier": "large",
+    "category": "fire",
+    "rarity": "rare",
+    "scoreScale": 1,
+    "damageScale": 30,
+    "sizeScale": 0.35,
+    "knockback": 1.2,
+    "fx": "fireBurst",
+    "sfx": "fire",
+    "label": "Anillo de fuego"
+  },
+  "Galaxy": {
+    "aliases": ["galaxy", "galaxia"],
+    "tier": "epic",
+    "category": "lightning",
+    "rarity": "epic",
+    "scoreScale": 1.02,
+    "damageScale": 34,
+    "sizeScale": 0.4,
+    "knockback": 1.4,
+    "fx": "tripleLightning",
+    "sfx": "lightning",
+    "label": "Triple rayo"
+  },
+  "Lion": {
+    "aliases": ["lion", "leon", "león"],
+    "tier": "legendary",
+    "category": "mega",
+    "rarity": "legendary",
+    "scoreScale": 1.08,
+    "damageScale": 40,
+    "sizeScale": 0.55,
+    "knockback": 1.8,
+    "fx": "megaBlast",
+    "sfx": "heavyExplosion",
+    "label": "Megablast"
+  },
+  "TikTok Universe": {
+    "aliases": ["tiktok universe", "universe", "universo"],
+    "tier": "legendary",
+    "category": "mega",
+    "rarity": "mythic",
+    "scoreScale": 1.1,
+    "damageScale": 44,
+    "sizeScale": 0.6,
+    "knockback": 2,
+    "fx": "megaBlast",
+    "sfx": "heavyExplosion",
+    "label": "Megablast premium"
+  }
+}

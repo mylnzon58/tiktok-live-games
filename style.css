@@ -658,6 +658,60 @@ body {
 }
 
 /* ── Barra de progreso coloreada ── */
+.rank-bar-outer {
+  flex-grow: 1;
+  height: 28px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 14px;
+  overflow: hidden;
+  /* Importante para que no se salga la barra */
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Regalo volador en la barra */
+.gift-fly {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 100;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: giftSlide 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.gift-fly img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid #fdcb6e;
+  box-shadow: 0 0 10px rgba(253, 203, 110, 0.8);
+}
+
+@keyframes giftSlide {
+  0% {
+    left: -40px;
+    opacity: 0;
+    scale: 0.5;
+  }
+
+  20% {
+    opacity: 1;
+    scale: 1.2;
+  }
+
+  100% {
+    left: 100%;
+    opacity: 0;
+    scale: 0.8;
+  }
+}
+
 .rank-bar-wrap {
   flex: 1;
   display: flex;

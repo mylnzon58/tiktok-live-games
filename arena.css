@@ -120,6 +120,10 @@ html {
     width: 100%;
 }
 
+.powers-row.full-guide {
+    justify-content: center;
+}
+
 .powers-category {
     font-family: 'Bungee', cursive;
     font-size: 16px;
@@ -136,10 +140,10 @@ html {
 #powers-guide ul {
     list-style: none;
     display: flex;
-    flex-wrap: nowrap;
-    justify-content: space-around;
+    flex-wrap: wrap;
+    justify-content: center;
     /* Distribuir uniformemente */
-    gap: 5px;
+    gap: 12px;
     /* Gap mínimo */
     padding: 0;
     margin: 0;
@@ -206,8 +210,21 @@ html {
 
 /* Ranking Horizontal Superior (Optimizado para Móvil) */
 #arena-ranking {
-    display: none;
-    /* Reemplazado por #top-arena-showcase */
+    position: absolute;
+    top: 220px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 94%;
+    max-width: 980px;
+    min-height: 86px;
+    display: flex;
+    align-items: stretch;
+    z-index: 900;
+    background: linear-gradient(135deg, rgba(10, 10, 25, 0.92) 0%, rgba(25, 30, 55, 0.92) 100%);
+    border: 2px solid rgba(255, 215, 0, 0.28);
+    border-radius: 22px;
+    backdrop-filter: blur(14px);
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.45);
 }
 
 .ranking-header {
@@ -222,6 +239,15 @@ html {
     height: 100%;
     white-space: nowrap;
     border-right: 1px solid rgba(0, 0, 0, 0.2);
+    min-width: 200px;
+    text-align: center;
+}
+
+.ranking-header small {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 1px;
+    margin-top: 4px;
 }
 
 #arena-leaderboard {
@@ -315,12 +341,13 @@ html {
 .floating-text {
     position: absolute;
     font-family: 'Bungee', cursive;
-    font-size: 24px;
+    font-size: 18px;
     pointer-events: none;
     animation: floatUpFade 1.2s ease-out forwards;
-    text-shadow: 0 0 4px #000, 2px 2px 0px #000;
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.85), 1px 1px 0px rgba(0, 0, 0, 0.85);
     transform: translate(-50%, -50%);
     /* Centrado sobre el origen de spawn */
+    will-change: transform, opacity;
 }
 
 @keyframes floatUpFade {
@@ -492,7 +519,7 @@ html {
 
 /* Title integrated into the card */
 #top-arena-showcase::before {
-    content: "🏆 TOP ARENA";
+    content: "🏆 TOP ARENA 12H";
     position: absolute;
     top: -20px;
     left: 40px;
@@ -509,7 +536,7 @@ html {
 
 /* Follow Incentive integration */
 #top-arena-showcase::after {
-    content: "🔥 ¡SIGUE AL TOP PARA MÁS PODER! 🔥";
+    content: "VICTORIAS MANDAN · BEST SCORE DESEMPATA";
     position: absolute;
     bottom: -35px;
     left: 50%;
@@ -585,6 +612,17 @@ html {
     background-size: cover;
     background-position: center;
     margin-bottom: 10px;
+}
+
+.top-player-score {
+    margin-top: 6px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.45);
+    color: #7df9ff;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
 }
 
 .top-player-name {
@@ -747,7 +785,7 @@ html {
     /* Dorado para el inicio del countdown */
 }
 
-/* --- PHASE 1: NEUROMARKETING --- */
+/* --- PHASE 1: SUDDEN DEATH --- */
 #x2-alpha-overlay {
     position: fixed;
     top: 50%;
@@ -758,30 +796,39 @@ html {
     align-items: center;
     pointer-events: none;
     z-index: 5000;
+    opacity: 0.75;
+    background: radial-gradient(circle, rgba(255, 120, 60, 0.1) 0%, rgba(0, 0, 0, 0) 65%);
+    width: 100vw;
+    height: 100vh;
+    justify-content: center;
 }
 
 .x2-banner {
     font-family: 'Bungee', cursive;
-    font-size: 140px;
-    color: #ff0000;
+    font-size: clamp(52px, 9vw, 96px);
+    color: #ff9f43;
     text-shadow:
-        0 0 20px rgba(255, 0, 0, 0.8),
-        0 0 50px rgba(255, 255, 255, 1);
-    animation: zoomPulse 0.5s infinite alternate;
+        0 0 12px rgba(255, 140, 66, 0.45),
+        0 0 28px rgba(255, 159, 67, 0.3);
+    animation: zoomPulse 0.8s infinite alternate;
     margin: 0;
+    font-style: normal;
+    letter-spacing: 1px;
 }
 
 .x2-subtitle {
     font-family: 'Rajdhani', sans-serif;
-    font-size: 40px;
-    background: #000;
-    color: #ffd700;
-    padding: 10px 30px;
-    border: 3px solid #ffd700;
-    border-radius: 50px;
-    box-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
+    font-size: clamp(18px, 3vw, 28px);
+    background: rgba(255, 159, 67, 0.12);
+    color: #ffffff;
+    padding: 12px 24px;
+    border: 2px solid rgba(255, 159, 67, 0.65);
+    border-radius: 4px;
+    box-shadow: 0 0 18px rgba(255, 159, 67, 0.22);
     text-transform: uppercase;
-    letter-spacing: 10px;
+    letter-spacing: 6px;
+    font-weight: 900;
+    backdrop-filter: blur(2px);
 }
 
 @keyframes zoomPulse {
@@ -796,6 +843,65 @@ html {
     }
 }
 
+/* =========================================
+   DEBUG PANEL (Dev Mode)
+   ========================================= */
+#debug-panel {
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    background: rgba(0, 0, 0, 0.85);
+    border: 2px solid #ff4757;
+    border-radius: 12px;
+    padding: 15px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 0 20px rgba(255, 71, 87, 0.3);
+    min-width: 180px;
+}
+
+#debug-panel[hidden] {
+    display: none !important;
+}
+
+.debug-header {
+    font-family: 'Bungee', cursive;
+    font-size: 14px;
+    color: #ff4757;
+    text-align: center;
+    margin-bottom: 5px;
+    border-bottom: 1px solid rgba(255, 71, 87, 0.3);
+    padding-bottom: 5px;
+}
+
+#debug-panel button {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: bold;
+    font-size: 13px;
+    text-align: left;
+    transition: all 0.2s;
+}
+
+#debug-panel button:hover {
+    background: #ff4757;
+    color: #fff;
+    border-color: #fff;
+    transform: translateX(5px);
+}
+
+#debug-panel button:active {
+    transform: scale(0.95);
+}
+
 /* --- PHASE 3: VISUALS --- */
 #announcer-container {
     position: fixed;
@@ -807,14 +913,16 @@ html {
 }
 
 .announcement-text {
-    font-size: 5rem;
+    font-size: clamp(2rem, 4.5vw, 3.4rem);
     font-weight: 900;
     color: #fff;
-    text-shadow: 0 0 20px rgba(0, 0, 0, 0.8), 0 0 40px var(--accent);
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.8), 0 0 18px var(--accent);
     animation: announceIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards,
         announceOut 0.5s 1.5s ease-in forwards;
-    letter-spacing: 5px;
+    letter-spacing: 2px;
     text-transform: uppercase;
+    text-align: center;
+    max-width: min(80vw, 900px);
 }
 
 @keyframes announceIn {

@@ -7,7 +7,6 @@ const socket = io();
 // ──────────────────────────────────────────────────────────────
 // Estado
 // ──────────────────────────────────────────────────────────────
-let countriesData = {};
 let previousScores = {};
 let maxScore = 0;
 const ROUND_DURATION = 7 * 60;
@@ -62,7 +61,7 @@ let ctxUnlocker = setInterval(() => {
             bgmStarted = true;
         }
     } else {
-        ctx.resume().catch(e => { });
+        ctx.resume().catch(() => { });
     }
 }, 1000);
 
@@ -350,6 +349,10 @@ function triggerScreenShake(intensity = 15) {
     overlay.style.animation = `none`;
     overlay.offsetHeight; // trigger reflow
     overlay.style.animation = `screenShakeOverlay 0.5s ease-out`;
+    overlay.style.transform = `translate3d(${Math.round(intensity / 3)}px, 0, 0)`;
+    setTimeout(() => {
+        overlay.style.transform = "";
+    }, 500);
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -410,7 +413,6 @@ function updateScaleLabels() {
 // Ranking Update
 // ──────────────────────────────────────────────────────────────
 socket.on("rankingUpdate", (countries) => {
-    countriesData = countries;
     renderRanking(countries);
 });
 
@@ -496,9 +498,8 @@ function renderRanking(countries) {
       <div class="rank-code">${code}</div>
       <div class="rank-bar-wrap">
         <div class="rank-bar-outer">
-          <div class="rank-bar-fill ${colorClass}" style="width:${barPct}%">
-             <div class="bar-avatars-container">${avatarsHTML}</div>
-          </div>
+          <div class="rank-bar-fill ${colorClass}" style="width:${barPct}%"></div>
+          <div class="bar-avatars-container" style="left:${barPct}%">${avatarsHTML}</div>
         </div>
       </div>
       <div class="rank-flag">${data.flag}</div>
@@ -697,7 +698,7 @@ socket.on("connect", () => {
     console.log("✅ Conectado al servidor");
     const dot = document.getElementById("status-dot");
     const text = document.getElementById("status-text");
-    if (dot) dot.className = "dot offline";
+    if (dot) dot.className = "dot online";
     if (text) text.innerText = "Sincronizando TikTok...";
 });
 
@@ -709,10 +710,32 @@ socket.on("disconnect", () => {
     if (text) text.innerText = "Servidor Desconectado";
 });
 
-// tiktokConnected legacy (ahora integrado en status)
-socket.on("tiktokConnected", (data) => {
-    elapsedSeconds = data.elapsed || 0;
+// ──────────────────────────────────────────────────────────────
+// Animación de Regalo Volador en la Barra
+// ──────────────────────────────────────────────────────────────
+socket.on("ranking:gift", (data) => {
+    spawnGiftFly(data);
 });
+
+function spawnGiftFly(data) {
+    const { country, avatarUrl } = data;
+    const row = document.querySelector(`.rank-row[data-code="${country}"]`);
+    if (!row) return;
+    const barOuter = row.querySelector(".rank-bar-outer");
+    if (!barOuter) return;
+
+    const fly = document.createElement("div");
+    fly.className = "gift-fly";
+
+    if (avatarUrl) {
+        fly.innerHTML = `<img src="${avatarUrl}" alt="gift" onerror="this.src='https://www.tiktok.com/favicon.ico'" />`;
+    } else {
+        fly.innerHTML = `<div style="font-size:20px">💎</div>`;
+    }
+
+    barOuter.appendChild(fly);
+    setTimeout(() => fly.remove(), 2000);
+}
 
 // 🏆 Actualizar Campeón del Día (12h)
 socket.on("ranking:championUpdate", (data) => {
@@ -732,6 +755,7 @@ socket.on("ranking:championUpdate", (data) => {
     countryEl.textContent = `${data.flag} ${data.country}`;
 
     if (data.avatar) {
+        avatarEl.innerHTML = "";
         avatarEl.style.backgroundImage = `url(${data.avatar})`;
     } else {
         avatarEl.style.backgroundImage = `none`;

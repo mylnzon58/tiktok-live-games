@@ -2,9 +2,15 @@ const socket = io();
 
 // Elementos DOM
 const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
+const ctx = canvas.getContext("2d", { alpha: false, desynchronized: true }) || canvas.getContext("2d");
 const leaderboardEl = document.getElementById("arena-leaderboard");
 const floatingLayer = document.getElementById("floating-ui-layer");
+const debugPanel = document.getElementById("debug-panel");
+const DEBUG_MODE = new window.URLSearchParams(window.location.search).get("debug") === "1";
+
+if (debugPanel) {
+    debugPanel.hidden = !DEBUG_MODE;
+}
 
 // Ajustar Canvas
 canvas.width = window.innerWidth || 800;
@@ -26,25 +32,62 @@ let camera = {
     targetScale: 1,
     zoomTimer: 0
 };
+
+function getArenaBounds() {
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    const radius = Math.min(canvas.width, canvas.height) / 2 - 30;
+    return { cx, cy, radius };
+}
+
+function clampToArena(x, y, margin = 120) {
+    const { cx, cy, radius } = getArenaBounds();
+    const dx = x - cx;
+    const dy = y - cy;
+    const distance = Math.sqrt(dx * dx + dy * dy) || 1;
+    const maxDistance = Math.max(radius - margin, 1);
+
+    if (distance <= maxDistance) {
+        return { x, y };
+    }
+
+    const ratio = maxDistance / distance;
+    return {
+        x: cx + dx * ratio,
+        y: cy + dy * ratio
+    };
+}
+
+function focusCamera(x, y, scale, frames) {
+    const clamped = clampToArena(x, y);
+    camera.targetX = clamped.x;
+    camera.targetY = clamped.y;
+    camera.targetScale = Math.min(scale, 1.45);
+    camera.zoomTimer = frames;
+}
+
 // Inicializar cámara al centro después de que el canvas tenga tamaño
 setTimeout(() => {
     camera.x = camera.targetX = canvas.width / 2;
     camera.y = camera.targetY = canvas.height / 2;
 }, 100);
 let duelBeams = []; // Phase 4
+let arenaHallOfFame = {}; // Kings of the last 12 hours
+let persistentHOF = [];
 
 // ==========================================
 // MOTOR DE AUDIO (SYNTH)
 // ==========================================
 let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 let soundEnabled = true; // REVERTIDO: Por defecto activado (OBS / TikTok Studio lo permiten)
+let preferredVoice = null;
 
 // Attempt auto-unlock de AudioContext silencioso
 function tryUnlockAudio() {
     if (audioCtx.state === 'suspended') {
         audioCtx.resume().then(() => {
             checkAudioState();
-        }).catch(e => { });
+        }).catch(() => { });
     } else {
         checkAudioState();
     }
@@ -74,7 +117,7 @@ let ctxUnlocker = setInterval(() => {
         checkAudioState();
     } else {
         // Intento silencioso constante
-        audioCtx.resume().catch(e => { });
+        audioCtx.resume().catch(() => { });
     }
 }, 500);
 
@@ -103,57 +146,64 @@ soundBtn.addEventListener('click', (e) => {
     }
 });
 
-const debugBtn = document.getElementById("debug-spawn-btn");
-if (debugBtn) {
-    debugBtn.onclick = () => {
-        const testId = "bot_tester_" + Math.floor(Math.random() * 1000);
-        players[testId] = new Player({
-            id: testId,
-            name: "TESTER 🤖",
-            hp: 500,
-            score: 100
-        });
-        console.log("🧪 Debug: Spawning local tester player", testId);
-    };
+// --- 🎙️ DOPAMINE ANNOUNCER (English Voice Lines) ---
+function announce(text) {
+    if (!soundEnabled) return;
+    try {
+        if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
+        if (!preferredVoice) {
+            const voices = window.speechSynthesis.getVoices();
+            preferredVoice = voices.find((voice) => /en-/i.test(voice.lang) && /female|samantha|victoria|zira|ava|google us english/i.test(voice.name))
+                || voices.find((voice) => /en-/i.test(voice.lang))
+                || null;
+        }
+        const msg = new window.SpeechSynthesisUtterance(text);
+        msg.lang = 'en-US';
+        if (preferredVoice) msg.voice = preferredVoice;
+        msg.rate = 1.2;
+        msg.pitch = 0.8; // Más épico
+        msg.volume = 0.8;
+        window.speechSynthesis.speak(msg);
+    } catch (error) { console.error("Speech error:", error); }
 }
 
-let bgMusicSource = null;
+window.speechSynthesis?.addEventListener?.("voiceschanged", () => {
+    preferredVoice = null;
+});
 
-function playBackgroundMusic() {
-    if (!soundEnabled || bgMusicSource) return;
-
-    // Sintetizar un loop melódico suave (Ambient Techno/Game style)
-    const now = audioCtx.currentTime;
-    const notes = [261.63, 329.63, 392.00, 523.25]; // C4, E4, G4, C5
-
-    const masterGain = audioCtx.createGain();
-    masterGain.gain.setValueAtTime(0.2, now); // Volumen aumentado a 0.2
-    masterGain.connect(audioCtx.destination);
-
-    function triggerNote(freq, time) {
-        const osc = audioCtx.createOscillator();
-        const g = audioCtx.createGain();
-        osc.type = 'triangle'; // Cambiado a triangle para un sonido más cálido y retro
-        osc.frequency.setValueAtTime(freq, time);
-        g.gain.setValueAtTime(0, time);
-        g.gain.linearRampToValueAtTime(0.08, time + 0.05); // Ataque más rápido
-        g.gain.linearRampToValueAtTime(0, time + 1.5);
-        osc.connect(g).connect(masterGain);
-        osc.start(time);
-        osc.stop(time + 1.5);
-    }
-
-    let nextNoteTime = now;
-    const timer = setInterval(() => {
-        if (!soundEnabled) { clearInterval(timer); bgMusicSource = null; return; }
-        const note = notes[Math.floor(Math.random() * notes.length)];
-        triggerNote(note, audioCtx.currentTime);
-    }, 1000);
-
-    bgMusicSource = timer;
+function speakCountdownNumber(seconds) {
+    const words = {
+        10: "ten",
+        9: "nine",
+        8: "eight",
+        7: "seven",
+        6: "six",
+        5: "five",
+        4: "four",
+        3: "three",
+        2: "two",
+        1: "one"
+    };
+    const word = words[seconds];
+    if (word) announce(word);
 }
 
 const sfx = {
+    roseShot: () => {
+        if (!soundEnabled) return;
+        const now = audioCtx.currentTime;
+        [980, 1320, 1760].forEach((freq, index) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, now + index * 0.03);
+            gain.gain.setValueAtTime(0.08, now + index * 0.03);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + index * 0.03 + 0.09);
+            osc.start(now + index * 0.03);
+            osc.stop(now + index * 0.03 + 0.1);
+        });
+    },
     shoot: () => {
         if (!soundEnabled) return;
         const osc = audioCtx.createOscillator();
@@ -162,7 +212,7 @@ const sfx = {
         osc.type = 'square';
         osc.frequency.setValueAtTime(800, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.01, audioCtx.currentTime); // Reducido aún más para no tapar música
+        gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.1);
         osc.start(audioCtx.currentTime);
         osc.stop(audioCtx.currentTime + 0.1);
@@ -172,10 +222,10 @@ const sfx = {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.type = 'square'; // Sonido más impactante
-        osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(200, audioCtx.currentTime); // Más grave
         osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.15);
-        gain.gain.setValueAtTime(0.04, audioCtx.currentTime); // Un poco más alto
+        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.15);
         osc.start(audioCtx.currentTime);
         osc.stop(audioCtx.currentTime + 0.15);
@@ -185,26 +235,26 @@ const sfx = {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.type = 'sawtooth'; // Ruido blanco sería mejor pero esto sirve
-        osc.frequency.setValueAtTime(50, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(1, audioCtx.currentTime + 0.5);
-        gain.gain.setValueAtTime(0.4, audioCtx.currentTime); // Aumentado para impacto
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(60, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1, audioCtx.currentTime + 0.6);
+        gain.gain.setValueAtTime(0.8, audioCtx.currentTime); // ¡DOPAMINA! Aumentado de 0.4 a 0.8
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
         osc.start(audioCtx.currentTime);
-        osc.stop(audioCtx.currentTime + 0.5);
+        osc.stop(audioCtx.currentTime + 0.6);
     },
     lightning: () => {
         if (!soundEnabled) return;
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(400, audioCtx.currentTime);
-        osc.frequency.linearRampToValueAtTime(800, audioCtx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.6, audioCtx.currentTime); // Duplicado de 0.3 para ser "Sorprendente"
-        gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(420, audioCtx.currentTime);
+        osc.frequency.linearRampToValueAtTime(920, audioCtx.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.22);
         osc.start(audioCtx.currentTime);
-        osc.stop(audioCtx.currentTime + 0.2);
+        osc.stop(audioCtx.currentTime + 0.22);
     },
     heal: (pitchMod = 1, force = false) => {
         if (!soundEnabled) return;
@@ -234,13 +284,13 @@ const sfx = {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.04);
-        gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(720, audioCtx.currentTime + 0.05);
+        gain.gain.setValueAtTime(0.025, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
         osc.start(audioCtx.currentTime);
-        osc.stop(audioCtx.currentTime + 0.04);
+        osc.stop(audioCtx.currentTime + 0.05);
     },
     buzzsaw: () => {
         if (!soundEnabled) return;
@@ -253,35 +303,50 @@ const sfx = {
         gain.connect(audioCtx.destination);
 
         // Motor grave
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(50, audioCtx.currentTime);
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(70, audioCtx.currentTime);
 
         // Ruido metálico agudo
-        oscNoise.type = 'square';
-        oscNoise.frequency.setValueAtTime(800, audioCtx.currentTime);
-        oscNoise.frequency.linearRampToValueAtTime(1200, audioCtx.currentTime + 0.3);
+        oscNoise.type = 'triangle';
+        oscNoise.frequency.setValueAtTime(240, audioCtx.currentTime);
+        oscNoise.frequency.linearRampToValueAtTime(380, audioCtx.currentTime + 0.25);
 
-        gain.gain.setValueAtTime(0.4, audioCtx.currentTime); // Sierra ruidosa y dopamínica
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
         // Fade out
-        gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+        gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.28);
 
         osc.start(audioCtx.currentTime);
         oscNoise.start(audioCtx.currentTime);
-        osc.stop(audioCtx.currentTime + 0.4);
-        oscNoise.stop(audioCtx.currentTime + 0.4);
+        osc.stop(audioCtx.currentTime + 0.28);
+        oscNoise.stop(audioCtx.currentTime + 0.28);
     },
     heavyExplosion: () => {
         if (!soundEnabled) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(55, now);
+        osc.frequency.exponentialRampToValueAtTime(28, now + 0.4);
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+        osc.start(now);
+        osc.stop(now + 0.45);
+    },
+    fire: () => {
+        if (!soundEnabled) return;
+        const now = audioCtx.currentTime;
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.connect(gain); gain.connect(audioCtx.destination);
         osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(40, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(1, audioCtx.currentTime + 1.2);
-        gain.gain.setValueAtTime(0.6, audioCtx.currentTime); // Boom masivo
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.2);
-        osc.start(audioCtx.currentTime);
-        osc.stop(audioCtx.currentTime + 1.2);
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.exponentialRampToValueAtTime(90, now + 0.35);
+        gain.gain.setValueAtTime(0.14, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        osc.start(now);
+        osc.stop(now + 0.35);
     },
     jackpot: () => {
         if (!soundEnabled) return;
@@ -352,7 +417,7 @@ function scheduleNote(step, time) {
     oscArp.frequency.value = arp * 2;
 
     // Decaimiento corto para dar efecto de 8-bits percusivo
-    gainArp.gain.setValueAtTime(0.04, time);
+        gainArp.gain.setValueAtTime(0.028, time);
     gainArp.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
 
     oscArp.connect(gainArp); gainArp.connect(audioCtx.destination);
@@ -365,7 +430,7 @@ function scheduleNote(step, time) {
         oscBass.type = 'sawtooth';
         oscBass.frequency.value = bass / 2; // Bien grave
 
-        gainBass.gain.setValueAtTime(0.08, time);
+        gainBass.gain.setValueAtTime(0.05, time);
         gainBass.gain.exponentialRampToValueAtTime(0.001, time + 0.2);
 
         oscBass.connect(gainBass); gainBass.connect(audioCtx.destination);
@@ -380,7 +445,7 @@ function scheduleNote(step, time) {
         oscSnare.frequency.setValueAtTime(400, time);
         oscSnare.frequency.exponentialRampToValueAtTime(10, time + 0.1);
 
-        gainSnare.gain.setValueAtTime(0.05, time);
+        gainSnare.gain.setValueAtTime(0.03, time);
         gainSnare.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
 
         oscSnare.connect(gainSnare); gainSnare.connect(audioCtx.destination);
@@ -428,11 +493,66 @@ const shockwaves = []; // Para efectos visuales de impactos grandes
 
 let screenShake = 0; // Intensidad de vibración de pantalla
 let hitStopFrames = 0; // Para el efecto visual congelado en grandes impactos
+let overlayFlashAlpha = 0;
+let overlayFlashColor = "255, 255, 255";
+let lastFloatingTextAt = 0;
+let lastAnnouncerAt = 0;
+const MAX_PARTICLES = 900;
+const MAX_AMBIENT_PARTICLES = 220;
+const MAX_LIGHTNING_BOLTS = 18;
+const MAX_FLOATING_TEXTS = 40;
+const MAX_PROJECTILES = 32;
+const MAX_HAZARDS = 12;
+const MAX_SHOCKWAVES = 12;
+const FLOATING_TEXT_INTERVAL_MS = 90;
+const ANNOUNCER_INTERVAL_MS = 240;
+
+function pushParticle(particle) {
+    if (particles.length >= MAX_PARTICLES) {
+        particles.splice(0, particles.length - MAX_PARTICLES + 1);
+    }
+    particles.push(particle);
+}
+
+function pushAmbientParticle(particle) {
+    if (ambientParticles.length >= MAX_AMBIENT_PARTICLES) {
+        ambientParticles.splice(0, ambientParticles.length - MAX_AMBIENT_PARTICLES + 1);
+    }
+    ambientParticles.push(particle);
+}
+
+function pushLightningBolt(bolt) {
+    if (lightningBolts.length >= MAX_LIGHTNING_BOLTS) {
+        lightningBolts.shift();
+    }
+    lightningBolts.push(bolt);
+}
+
+function pushShockwave(shockwave) {
+    if (shockwaves.length >= MAX_SHOCKWAVES) {
+        shockwaves.shift();
+    }
+    shockwaves.push(shockwave);
+}
+
+function pushProjectile(projectile) {
+    if (projectiles.length >= MAX_PROJECTILES) {
+        projectiles.shift();
+    }
+    projectiles.push(projectile);
+}
+
+function pushHazard(hazard) {
+    if (hazards.length >= MAX_HAZARDS) {
+        hazards.shift();
+    }
+    hazards.push(hazard);
+}
 
 // ==========================================
 // CONFIGURACIONES FÍSICAS
 // ==========================================
-const MAX_HP = 500; // Sincronizado con el servidor
+const MAX_HP = 1000; // Incrementado de 500 para mayor supervivencia
 let PLAYER_RADIUS = 50; // Aumentado de 45 a 50 para mejor escala inicial
 const BASE_SPEED = 2; // Velocidad de rebote
 const NUM_STARS = 100;
@@ -471,9 +591,7 @@ function drawBackground() {
     });
 
     // Dibujar Jaula Circular (Arena limit)
-    const cx = canvas.width / 2;
-    const cy = canvas.height / 2;
-    const arenaRadius = Math.min(canvas.width, canvas.height) / 2 - 10;
+    const { cx, cy, radius: arenaRadius } = getArenaBounds();
 
     ctx.beginPath();
     ctx.arc(cx, cy, arenaRadius, 0, Math.PI * 2);
@@ -513,7 +631,7 @@ function drawBackground() {
 // ==========================================
 // MOUSE INTERACTION (Para lanzar bot local de prueba)
 // ==========================================
-canvas.addEventListener("mousedown", (e) => {
+canvas.addEventListener("mousedown", () => {
     // Inicializar audio al hacer click (necesario por navegadores)
     if (audioCtx.state === 'suspended') {
         audioCtx.resume();
@@ -527,7 +645,7 @@ canvas.addEventListener("mousedown", (e) => {
 
 // Inicializar partículas ambientales
 for (let i = 0; i < 50; i++) {
-    ambientParticles.push({
+    pushAmbientParticle({
         x: Math.random() * ctx.canvas.width,
         y: Math.random() * ctx.canvas.width, // Usar width por si no hay height aún
         vx: (Math.random() - 0.5) * 0.5,
@@ -552,6 +670,15 @@ function getAvatarImage(url) {
 }
 
 function spawnFloatingText(text, x, y, color) {
+    const now = Date.now();
+    if (now - lastFloatingTextAt < FLOATING_TEXT_INTERVAL_MS) {
+        return;
+    }
+    lastFloatingTextAt = now;
+
+    while (floatingLayer.childElementCount >= MAX_FLOATING_TEXTS) {
+        floatingLayer.firstElementChild?.remove();
+    }
     const el = document.createElement("div");
     el.className = "floating-text";
     el.textContent = text;
@@ -562,20 +689,136 @@ function spawnFloatingText(text, x, y, color) {
     setTimeout(() => el.remove(), 1200);
 }
 
-function createExplosion(x, y, color) {
-    // Screen shake en explosiones
-    screenShake = Math.max(screenShake, 10);
+function triggerOverlayFlash(color, alpha = 0.18) {
+    overlayFlashColor = color;
+    overlayFlashAlpha = Math.max(overlayFlashAlpha, Math.min(alpha, 0.22));
+}
 
-    for (let i = 0; i < 30; i++) {
-        particles.push({
+function createExplosion(x, y, color, options = {}) {
+    const count = Math.min(options.count || 30, 40);
+    const speed = Math.min(options.speed || 12, 14);
+    const shake = Math.min(options.shake || 10, 18);
+
+    screenShake = Math.max(screenShake, shake);
+
+    for (let i = 0; i < count; i++) {
+        pushParticle({
             x, y,
-            vx: (Math.random() - 0.5) * 12,
-            vy: (Math.random() - 0.5) * 12,
+            vx: (Math.random() - 0.5) * speed,
+            vy: (Math.random() - 0.5) * speed,
             life: 1.0,
             size: Math.random() * 4 + 2,
             color: color || "#fff"
         });
     }
+}
+
+function createFireBurst(x, y, radius = 70) {
+    for (let i = 0; i < 16; i++) {
+        const angle = (i / 16) * Math.PI * 2;
+        pushParticle({
+            x: x + Math.cos(angle) * radius * 0.25,
+            y: y + Math.sin(angle) * radius * 0.25,
+            vx: Math.cos(angle) * (2 + Math.random() * 4),
+            vy: Math.sin(angle) * (2 + Math.random() * 4) - Math.random() * 2,
+            life: 1.0,
+            size: Math.random() * 6 + 4,
+            color: i % 3 === 0 ? "#ff6b00" : (i % 2 === 0 ? "#ffb400" : "#ff3b30")
+        });
+    }
+}
+
+function buildLightningPath(bolt, segments = 8, spread = 22) {
+    const points = [{ x: bolt.sx, y: bolt.sy }];
+    const dx = bolt.tx - bolt.sx;
+    const dy = bolt.ty - bolt.sy;
+    const length = Math.sqrt(dx * dx + dy * dy) || 1;
+    const nx = -dy / length;
+    const ny = dx / length;
+
+    for (let step = 1; step < segments; step++) {
+        const t = step / segments;
+        const offset = (Math.random() - 0.5) * spread * (1 - Math.abs(0.5 - t));
+        points.push({
+            x: bolt.sx + dx * t + nx * offset,
+            y: bolt.sy + dy * t + ny * offset
+        });
+    }
+
+    points.push({ x: bolt.tx, y: bolt.ty });
+    return points;
+}
+
+function drawLightningBolt(bolt) {
+    const mainPath = buildLightningPath(bolt, 8, 26);
+
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    // Outer glow
+    ctx.beginPath();
+    ctx.moveTo(mainPath[0].x, mainPath[0].y);
+    for (let i = 1; i < mainPath.length; i++) {
+        ctx.lineTo(mainPath[i].x, mainPath[i].y);
+    }
+    ctx.strokeStyle = "rgba(125, 211, 252, 0.22)";
+    ctx.lineWidth = Math.max(8, bolt.life * 12);
+    ctx.shadowBlur = 28;
+    ctx.shadowColor = bolt.color;
+    ctx.stroke();
+
+    // Core beam
+    ctx.beginPath();
+    ctx.moveTo(mainPath[0].x, mainPath[0].y);
+    for (let i = 1; i < mainPath.length; i++) {
+        ctx.lineTo(mainPath[i].x, mainPath[i].y);
+    }
+    ctx.strokeStyle = bolt.color;
+    ctx.lineWidth = Math.max(2.5, bolt.life * 4.2);
+    ctx.shadowBlur = 14;
+    ctx.shadowColor = "#ffffff";
+    ctx.stroke();
+
+    // White hot center
+    ctx.beginPath();
+    ctx.moveTo(mainPath[0].x, mainPath[0].y);
+    for (let i = 1; i < mainPath.length; i++) {
+        ctx.lineTo(mainPath[i].x, mainPath[i].y);
+    }
+    ctx.strokeStyle = "rgba(255,255,255,0.92)";
+    ctx.lineWidth = Math.max(1.2, bolt.life * 1.9);
+    ctx.shadowBlur = 0;
+    ctx.stroke();
+
+    // Small branches
+    const branchCount = 2;
+    for (let branchIndex = 0; branchIndex < branchCount; branchIndex++) {
+        const anchorIndex = 1 + Math.floor(Math.random() * (mainPath.length - 2));
+        const anchor = mainPath[anchorIndex];
+        const next = mainPath[Math.min(anchorIndex + 1, mainPath.length - 1)];
+        const bx = next.x - anchor.x;
+        const by = next.y - anchor.y;
+        const branchLength = 18 + Math.random() * 26;
+        const norm = Math.sqrt(bx * bx + by * by) || 1;
+        const px = -by / norm;
+        const py = bx / norm;
+        const polarity = Math.random() > 0.5 ? 1 : -1;
+
+        ctx.beginPath();
+        ctx.moveTo(anchor.x, anchor.y);
+        ctx.lineTo(
+            anchor.x + px * branchLength * polarity + (Math.random() - 0.5) * 10,
+            anchor.y + py * branchLength * polarity + (Math.random() - 0.5) * 10
+        );
+        ctx.strokeStyle = "rgba(180, 235, 255, 0.7)";
+        ctx.lineWidth = Math.max(1, bolt.life * 1.6);
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = bolt.color;
+        ctx.stroke();
+    }
+
+    ctx.restore();
 }
 
 // ==========================================
@@ -589,6 +832,8 @@ class Player {
         this.hp = data.hp || MAX_HP;
         this.score = data.score || 0;
         this.lastActive = data.lastActive || Date.now();
+        this.state = data.state || "NEW";
+        this.invulnerableUntil = data.invulnerableUntil || 0;
 
         // Spawn Random (Asegurando que no sea NaN)
         const safeWidth = canvas.width || 800;
@@ -614,50 +859,83 @@ class Player {
         // Estado Flash visual por daño
         this.flash = 0;
 
+        // Power-ups
+        this.sawLife = 0;
+        this.sawAngle = 0;
+        this.spinDirection = Math.random() > 0.5 ? 1 : -1;
+        this.engagement = 0;
+
         // Intervalo de reporte de posición al servidor
-        if (this.id === socket.id || this.id.startsWith("bot_")) { // Opcional para bots locales
+        if (this.id === socket.id || this.id.startsWith("bot_")) {
             // No hacemos nada especial aquí, se maneja en el loop principal
         }
     }
 
     update() {
-        // AFK Shrinking & Fading (si pasaron más de 15 segundos)
-        const idleTime = Date.now() - this.lastActive;
-        const scoreScale = Math.min(Math.sqrt(this.score) / 0.8, 200); // Crecimiento aún más agresivo y tope de 200px extra
-        const targetRadius = PLAYER_RADIUS + scoreScale;
+        // --- DINÁMICA DE TAMAÑO ---
+        const scoreScale = Math.min(Math.sqrt(this.score) * 1.15, 82);
 
-        if (idleTime > 30000) {
-            const decayFactor = Math.min((idleTime - 30000) / 15000, 1);
+        // REQUERIMIENTO: "Dejarlos bien chiquitos si pierden vida"
+        const hpMultiplier = 0.5 + (Math.max(this.hp, 0) / MAX_HP) * 0.5; // Escala entre 50% y 100% según HP
+        const baseTargetRadius = PLAYER_RADIUS + scoreScale;
+        const targetRadius = baseTargetRadius * hpMultiplier;
 
-            // SPECTATOR MODE: No desaparecen del todo hasta que el servidor los borre
-            const minRadius = PLAYER_RADIUS * 0.8;
-            const minOpacity = 0.35;
-
-            // Limitar encogimiento y transparencia
-            this.currentRadius = Math.max(targetRadius * (1 - decayFactor * 0.6), minRadius);
-            this.opacity = Math.max(1 - decayFactor, minOpacity);
-
-            // Flotar suavemente en el fondo
-            this.vx *= 0.98;
-            this.vy *= 0.98;
+        if (this.state === "ELIMINATED") {
+            this.opacity = 0.32;
+            this.currentRadius += ((PLAYER_RADIUS * 0.55) - this.currentRadius) * 0.14;
+            this.vx *= 0.96;
+            this.vy *= 0.96;
+        } else if (this.state === "IDLE") {
+            this.opacity = Math.max(this.opacity - 0.015, 0.28);
+            this.currentRadius += ((targetRadius * 0.88) - this.currentRadius) * 0.08;
+            this.vx *= 0.99;
+            this.vy *= 0.99;
         } else {
-            // Suavizar el crecimiento
             this.currentRadius += (targetRadius - this.currentRadius) * 0.1;
             this.opacity = 1.0;
+        }
 
-            // Restaurar velocidad si estaban lentos (Wandering activo)
-            const currentSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
-            if (currentSpeed < (BASE_SPEED * 0.5)) {
-                const angle = Math.atan2(this.vy, this.vx) || (Math.random() * Math.PI * 2);
-                this.vx = Math.cos(angle) * BASE_SPEED;
-                this.vy = Math.sin(angle) * BASE_SPEED;
-            }
+        // Restaurar velocidad si estaban lentos (Wandering activo)
+        const currentSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        if (currentSpeed < (BASE_SPEED * 0.5)) {
+            const angle = Math.atan2(this.vy, this.vx) || (Math.random() * Math.PI * 2);
+            this.vx = Math.cos(angle) * BASE_SPEED;
+            this.vy = Math.sin(angle) * BASE_SPEED;
+        }
 
-            // --- MOVIMIENTO DINÁMICO (WANDERING) ---
-            // Añadir pequeña fuerza aleatoria para que no se queden quietos
-            if (Math.random() < 0.05) {
-                this.vx += (Math.random() - 0.5) * 0.5;
-                this.vy += (Math.random() - 0.5) * 0.5;
+        // --- MOVIMIENTO DINÁMICO (WANDERING) ---
+        // Añadir pequeña fuerza aleatoria para que no se queden quietos
+        if (Math.random() < 0.05) {
+            this.vx += (Math.random() - 0.5) * 0.5;
+            this.vy += (Math.random() - 0.5) * 0.5;
+        }
+
+        // --- LÓGICA DE SIERRA (POWER-UP) ---
+        if (this.sawLife > 0) {
+            this.sawLife--;
+            this.sawAngle += 0.4 * this.spinDirection;
+            this.engagement = Math.max(this.engagement - 0.01, 0);
+
+            // Daño en área (Aura de Sierra)
+            if (Date.now() % 200 < 50) { // Throttled damage
+                for (const otherId in players) {
+                    if (otherId === this.id) continue;
+                    const other = players[otherId];
+                    if (!other || other.opacity < 0.5 || other.hp <= 0 || other.state === "ELIMINATED") continue;
+
+                    const dx = this.x - other.x;
+                    const dy = this.y - other.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const auraRadius = this.currentRadius + 25; // El aura es un poco más grande
+
+                    if (dist < auraRadius + other.currentRadius) {
+                        // REQUERIMIENTO: "quita puntos y achica al otro"
+                        other.takeDamage(10, this.id);
+
+                        createExplosion(other.x, other.y, "#999");
+                        if (Math.random() > 0.8) playSound("hit");
+                    }
+                }
             }
         }
 
@@ -674,9 +952,7 @@ class Player {
         this.y += this.vy;
 
         // Rebote Jaula Circular
-        const cx = canvas.width / 2;
-        const cy = canvas.height / 2;
-        const arenaRadius = Math.min(canvas.width, canvas.height) / 2 - 10;
+        const { cx, cy, radius: arenaRadius } = getArenaBounds();
         const dx = this.x - cx;
         const dy = this.y - cy;
         const distToCenter = Math.sqrt(dx * dx + dy * dy);
@@ -684,14 +960,9 @@ class Player {
         // --- MOTIVACIÓN: ZONA REY ---
         const coreRadius = 120;
         if (this.opacity > 0.5 && distToCenter < coreRadius) {
-            this.score += 0.1; // Crece más lento en el centro (ajustado de 0.3 a 0.1)
             if (Math.random() < 0.02) {
                 spawnFloatingText("👑 +Poder", this.x, this.y - this.currentRadius, "#ffd700");
                 this.flash = Math.max(this.flash, 0.5);
-            }
-            // Sincronizar periódicamente el score pasivo
-            if (Math.random() < 0.02) {
-                syncStateToServer(this);
             }
         }
         // ----------------------------
@@ -718,11 +989,15 @@ class Player {
             this.vy += ny * pushForce;
         }
 
+        const clamped = clampToArena(this.x, this.y, this.currentRadius + 6);
+        this.x = clamped.x;
+        this.y = clamped.y;
+
         // CHOCAR CONTRA OTROS JUGADORES (MOSH PIT DOPAMÍNICO)
         for (const otherId in players) {
             if (otherId === this.id) continue;
             const other = players[otherId];
-            if (!other || this.opacity < 0.5 || other.opacity < 0.5) continue; // Solo chocan activos
+            if (!other || this.opacity < 0.5 || other.opacity < 0.5 || this.state === "ELIMINATED" || other.state === "ELIMINATED") continue;
 
             const pdx = this.x - other.x;
             const pdy = this.y - other.y;
@@ -824,10 +1099,35 @@ class Player {
             ctx.fill();
             // Dibujar inicial o icono
             ctx.fillStyle = "white";
-            ctx.font = `bold ${this.currentRadius}px Arial`;
+            ctx.font = `bold ${this.currentRadius}px Rajdhani`;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             ctx.fillText(this.name[0].toUpperCase(), this.x, this.y);
+        }
+
+        // --- PUNTOS / SCORE DENTRO DEL GLOBO ---
+        ctx.restore();
+        ctx.save();
+        ctx.globalAlpha = this.opacity;
+
+        // Badge de Score (Central)
+        ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+        const badgeSize = Math.max(this.currentRadius * 0.7, 18);
+        ctx.beginPath();
+        ctx.arc(this.x, this.y + (this.currentRadius * 0.3), badgeSize / 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "white";
+        ctx.font = `bold ${Math.floor(badgeSize * 0.55)}px Rajdhani`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(Math.floor(this.score), this.x, this.y + (this.currentRadius * 0.3));
+
+        // Rango HOF (Si existe)
+        if (!!arenaHallOfFame[this.id]) {
+            ctx.fillStyle = "#ffd700";
+            ctx.font = `bold ${Math.floor(badgeSize * 0.4)}px Rajdhani`;
+            ctx.fillText("RANK 👑", this.x, this.y - (this.currentRadius * 0.4));
         }
 
         // --- PRESTIGE AURAS (Tiered Glow) ---
@@ -876,31 +1176,37 @@ class Player {
         ctx.stroke();
         ctx.shadowBlur = 0; // reset
 
-        // NOMBRE SIEMPRE VISIBLE
+        // NOMBRE SIEMPRE VISIBLE (Arriba de la burbuja para que no tape nada)
         ctx.fillStyle = "white";
         ctx.font = "bold 14px Rajdhani";
         ctx.textAlign = "center";
         ctx.shadowBlur = 4;
         ctx.shadowColor = "black";
-        ctx.fillText(this.name, this.x, this.y + this.currentRadius + 15);
+        ctx.fillText(this.name, this.x, this.y - this.currentRadius - 10);
         ctx.shadowBlur = 0;
 
         ctx.globalAlpha = 1.0;
 
-        // Si está muy chico, no mostramos texto para evitar choclazo visual
-        if (this.currentRadius < 15) return;
-
-        // Dibujar nombre y HP
-        ctx.fillStyle = "white";
+        // Dibujar HP (Debajo de la burbuja)
+        ctx.fillStyle = "rgba(255,255,255,0.8)";
         ctx.font = "bold 12px Rajdhani";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(`${Math.floor(this.hp)} HP`, this.x, this.y + this.currentRadius + 12);
+        ctx.fillText(`${Math.floor(this.hp)} HP`, this.x, this.y + this.currentRadius + 15);
 
-        // Nombre
-        ctx.fillStyle = "rgba(255,255,255,0.7)";
-        ctx.font = "10px sans-serif";
-        ctx.fillText(this.name.substring(0, 10), this.x, this.y + this.currentRadius + 24);
+        if (this.state === "ELIMINATED") {
+            ctx.fillStyle = "#ff8c42";
+            ctx.font = "bold 13px Rajdhani";
+            ctx.fillText("RESPAWN...", this.x, this.y + this.currentRadius + 30);
+        } else if (this.state === "IDLE") {
+            ctx.fillStyle = "#8ec5ff";
+            ctx.font = "bold 13px Rajdhani";
+            ctx.fillText("IDLE", this.x, this.y + this.currentRadius + 30);
+        } else if (this.invulnerableUntil > Date.now()) {
+            ctx.fillStyle = "#7dd3fc";
+            ctx.font = "bold 13px Rajdhani";
+            ctx.fillText("SHIELD", this.x, this.y + this.currentRadius + 30);
+        }
 
         // --- TEAM SHIELDS (Phase 4) ---
         if (this.shieldActive) {
@@ -917,6 +1223,17 @@ class Player {
             ctx.shadowColor = "#00f";
         }
 
+        if (this.invulnerableUntil > Date.now()) {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.currentRadius + 12, 0, Math.PI * 2);
+            ctx.strokeStyle = "rgba(125, 211, 252, 0.7)";
+            ctx.lineWidth = 3;
+            ctx.setLineDash([8, 6]);
+            ctx.lineDashOffset = -Date.now() / 60;
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
         // --- 👑 CORONA DE CAMPEÓN ---
         if (this.id === lastArenaChampionId) {
             ctx.fillStyle = "#ffd700";
@@ -925,64 +1242,88 @@ class Player {
             ctx.fillText("👑", this.x, this.y - this.currentRadius - 38);
         }
 
+        // --- ⚙️ AURA DE SIERRA (PLAYER POWER) ---
+        if (this.sawLife > 0) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+
+            // RAYOS ELÉCTRICOS (Neuromarketing visual)
+            if (this.sawLife > 0 && Math.random() < 0.3) {
+                ctx.beginPath();
+                ctx.strokeStyle = "#00d2ff";
+                ctx.lineWidth = 2;
+                ctx.moveTo(0, 0);
+                for (let i = 0; i < 3; i++) {
+                    ctx.lineTo((Math.random() - 0.5) * 150, (Math.random() - 0.5) * 150);
+                }
+                ctx.stroke();
+                if (Math.random() > 0.9) sfx.lightning();
+            }
+
+            ctx.rotate(this.sawAngle);
+
+            const sawRadius = this.currentRadius + 15;
+            const teethCount = Math.max(16, Math.min(34, 16 + Math.floor(this.engagement * 1.8)));
+            const toothDepth = 12 + Math.min(24, this.engagement * 0.8);
+            ctx.beginPath();
+            for (let i = 0; i < teethCount * 2; i++) {
+                const angle = (i / (teethCount * 2)) * Math.PI * 2;
+                const r = (i % 2 === 0) ? sawRadius + toothDepth : sawRadius;
+                ctx.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
+            }
+            ctx.closePath();
+
+            // Gradiente metálico
+            const grad = ctx.createRadialGradient(0, 0, sawRadius, 0, 0, sawRadius + toothDepth);
+            grad.addColorStop(0, "#7f8fa6");
+            grad.addColorStop(0.5, "#dcdde1");
+            grad.addColorStop(1, "#353b48");
+
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = grad;
+            ctx.stroke();
+            ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+            ctx.fill();
+
+            // Chispas
+            if (Math.random() < 0.55) {
+                const trailingAngle = this.sawAngle - (Math.PI / 2) * this.spinDirection;
+                createExplosion(
+                    this.x + Math.cos(trailingAngle) * sawRadius,
+                    this.y + Math.sin(trailingAngle) * sawRadius,
+                    "#fbc531",
+                    { count: 6, speed: 6, shake: 0 }
+                );
+            }
+
+            ctx.restore();
+
+            // Hum de sierra (Throttled)
+            if (Date.now() % 500 < 50) sfx.buzzsaw();
+        }
+
         ctx.shadowBlur = 0;
     }
 
     takeDamage(amount, attackerId) {
-        if (this.hp <= 0) return; // ya muerto
-
         // DUPLICAR DAÑO EN MUERTE SÚBITA
         let finalAmt = isSuddenDeath ? amount * 2 : amount;
+        this.hp = Math.max(this.hp - finalAmt, 0);
+        if (this.hp <= 0) {
+            this.state = "ELIMINATED";
+        }
 
-        this.hp -= finalAmt;
         this.flash = 1;
-
         spawnFloatingText(`-${Math.floor(finalAmt)}`, this.x, this.y, isSuddenDeath ? "#ff0000" : "#ff4757");
 
-        // Recompensar al atacante
-        if (attackerId && players[attackerId]) {
-            players[attackerId].score += finalAmt;
-            syncStateToServer(players[attackerId]);
-        }
-
-        if (this.hp <= 0) {
-            // Muerte explosiva masiva
-            createExplosion(this.x, this.y, "#ff4757");
-            screenShake = 20;
-            spawnFloatingText(`💥 K.O.`, this.x, this.y, "#ffeb3b");
-            playSound("explosion");
-
-            // RECOMPENSA DE K.O. (Bono Gladiador + ROBO DE PUNTOS)
-            if (attackerId && players[attackerId]) {
-                const stolenScore = Math.floor(this.score * 0.2); // Roba el 20%
-                this.score -= stolenScore;
-                players[attackerId].score += (500 + stolenScore);
-
-                spawnFloatingText(`+${500 + stolenScore} KILL STEAL! ⚔️`, players[attackerId].x, players[attackerId].y - 40, "#ffd700");
-                syncStateToServer(players[attackerId]);
-            }
-
-            // Respawn después de 2 segs
-            this.hp = 0; // dejar muerto visualmente o mandarlo a volar
-            setTimeout(() => {
-                this.hp = MAX_HP;
-                this.x = Math.random() * (canvas.width - 200) + 100;
-                this.y = Math.random() * (canvas.height - 200) + 100;
-                this.flash = 1;
-                createExplosion(this.x, this.y, "#2ed573"); // Explosion verde spawn
-                syncStateToServer(this);
-            }, 2000);
-        }
-
-        syncStateToServer(this);
+        syncStateToServer(attackerId && players[attackerId] ? players[attackerId] : this);
     }
 
     heal(amount) {
-        if (this.hp <= 0) return;
+        if (this.hp <= 0 && this.state === "ELIMINATED") return;
 
         const wasCritical = this.hp < MAX_HP * 0.15; // Menos del 15%
         this.hp = Math.min(this.hp + amount, MAX_HP);
-        this.score += amount; // Hacemos que los Tap Taps (curación) también sumen para crecer
         this.flash = 1;
 
         // Efecto visual "Salvada Épica" (Near Miss neuromarketing)
@@ -1021,9 +1362,9 @@ class Projectile {
         this.x += (dx / dist) * this.speed;
         this.y += (dy / dist) * this.speed;
 
-        particles.push({ x: this.x, y: this.y, vx: (Math.random() - 0.5) * 2, vy: (Math.random() - 0.5) * 2, life: 0.5, color: this.color });
+        pushParticle({ x: this.x, y: this.y, vx: (Math.random() - 0.5) * 2, vy: (Math.random() - 0.5) * 2, life: 0.5, color: this.color });
 
-        if (dist < PLAYER_RADIUS) {
+        if (dist < target.currentRadius) {
             this.active = false; // Impactó
             playSound("hit");
             target.takeDamage(this.damage, this.attackerId);
@@ -1037,102 +1378,6 @@ class Projectile {
         ctx.shadowColor = this.color;
         ctx.fill();
         ctx.shadowBlur = 0;
-    }
-}
-
-// Clase para Peligros (Buzzsaw / Sierra)
-class Buzzsaw {
-    constructor(x, y, attackerId, duration) {
-        this.x = x; this.y = y;
-        this.radius = 40;
-        this.attackerId = attackerId; // Quien lo tiró (para puntos)
-        this.angle = 0;
-        const moveAngle = Math.random() * Math.PI * 2;
-        this.vx = Math.cos(moveAngle) * 5; // Más rápida
-        this.vy = Math.sin(moveAngle) * 5;
-        this.life = duration; // frames de vida (~600 = 10 segundos)
-        this.active = true;
-    }
-
-    update() {
-        this.x += this.vx;
-        this.y += this.vy;
-        this.angle += 0.3; // Rota muy rápido
-        this.life--;
-
-        if (this.life <= 0) this.active = false;
-
-        // Rebote furioso en Jaula Circular
-        const cx = canvas.width / 2;
-        const cy = canvas.height / 2;
-        const arenaRadius = Math.min(canvas.width, canvas.height) / 2 - 10;
-        const dx = this.x - cx;
-        const dy = this.y - cy;
-        const distToCenter = Math.sqrt(dx * dx + dy * dy);
-
-        if (distToCenter + this.radius > arenaRadius) {
-            playSound("hit");
-            const overlap = (distToCenter + this.radius) - arenaRadius;
-            const nx = dx / distToCenter;
-            const ny = dy / distToCenter;
-            this.x -= nx * overlap;
-            this.y -= ny * overlap;
-
-            const dotProd = this.vx * nx + this.vy * ny;
-            if (dotProd > 0) {
-                this.vx -= 2 * dotProd * nx;
-                this.vy -= 2 * dotProd * ny;
-            }
-        }
-
-        // Colisión con jugadores (Daño en área constante)
-        if (this.life % 5 === 0) { // Check collision every 5 frames to prevent instakill
-            for (const id in players) {
-                const p = players[id];
-                if (p.hp > 0 && p.opacity > 0.5) { // Solo hace daño a activos
-                    const dist = Math.sqrt((this.x - p.x) ** 2 + (this.y - p.y) ** 2);
-                    if (dist < this.radius + p.currentRadius) {
-                        p.takeDamage(20, this.attackerId); // 20 daño contínuo
-                        createExplosion(p.x, p.y, "#999");
-                    }
-                }
-            }
-        }
-    }
-
-    draw() {
-        ctx.save();
-        ctx.translate(this.x, this.y);
-        ctx.rotate(this.angle);
-
-        // Dibujar cuerpo de la sierra
-        ctx.beginPath();
-        ctx.arc(0, 0, this.radius - 5, 0, Math.PI * 2);
-        ctx.fillStyle = "#7f8fa6"; // Metal base
-        ctx.fill();
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = "#353b48";
-        ctx.stroke();
-
-        // Dibujar dientes de la sierra
-        ctx.beginPath();
-        const teeth = 12;
-        for (let i = 0; i < teeth; i++) {
-            const rot = (i * Math.PI * 2) / teeth;
-            ctx.moveTo(Math.cos(rot) * (this.radius - 8), Math.sin(rot) * (this.radius - 8));
-            ctx.lineTo(Math.cos(rot + 0.1) * this.radius, Math.sin(rot + 0.1) * this.radius);
-            ctx.lineTo(Math.cos(rot + 0.2) * (this.radius - 8), Math.sin(rot + 0.2) * (this.radius - 8));
-        }
-        ctx.fillStyle = "#e84118"; // Sangre o rojo furioso
-        ctx.fill();
-
-        // Agujero centro
-        ctx.beginPath();
-        ctx.arc(0, 0, 8, 0, Math.PI * 2);
-        ctx.fillStyle = "#2f3640";
-        ctx.fill();
-
-        ctx.restore();
     }
 }
 
@@ -1166,7 +1411,7 @@ class LaserBeam {
                     const distToLine = Math.abs(dx * Math.sin(this.angle) - dy * Math.cos(this.angle));
 
                     if (distToLine < p.currentRadius + 5) {
-                        p.takeDamage(15, this.attackerId);
+                        p.takeDamage(8, this.attackerId); // Reducido de 15
                         createExplosion(p.x, p.y, this.color);
                     }
                 }
@@ -1209,10 +1454,19 @@ let lastArenaChampionId = null;
 
 socket.on("arena:suddenDeath", (active) => {
     isSuddenDeath = active;
+    const sdOverlay = document.getElementById("x2-alpha-overlay");
     if (active) {
-        spawnFloatingText("🔥 MUERTE SÚBITA: DAÑO x2 🔥", canvas.width / 2, canvas.height / 2 - 200, "#ff0000");
-        screenShake = 30;
+        if (sdOverlay) sdOverlay.style.display = "flex";
+        spawnFloatingText("SUDDEN DEATH", canvas.width / 2, canvas.height / 2 - 200, "#ff8c42");
+        showAnnouncer("SUDDEN DEATH", "#ff8c42");
         playSound("heavyExplosion");
+        triggerOverlayFlash("255, 120, 80", 0.1);
+        screenShake = 8;
+        announce("Sudden Death! Double damage enabled! Fight for your life!");
+    } else {
+        if (sdOverlay) sdOverlay.style.display = "none";
+        showAnnouncer("NORMAL MODE", "#2ed573");
+        announce("Normal mode restored.");
     }
 });
 
@@ -1225,15 +1479,7 @@ socket.on("arena:champion", (id) => {
 // MÉTODOS DE RED (SOCKETS)
 // ==========================================
 function syncStateToServer(p) {
-    // Solo reportamos si somos nosotros mismos (el dueño del socket)
-    // O si queremos que el servidor sepa dónde está este jugador para calcular distancias
-    socket.emit("arena:updatePlayer", {
-        id: p.id,
-        x: Math.round(p.x),
-        y: Math.round(p.y),
-        hp: p.hp,
-        score: p.score
-    });
+    return p;
 }
 
 // --- 🏆 EVENTOS PHASE 2: PRESTIGIO ---
@@ -1256,79 +1502,51 @@ socket.on("arena:champions", (winners) => {
 });
 // ------------------------------------------
 
-let myArenaId = null;
-
-// --- ⚡️ EVENTOS PHASE 1: NEUROMARKETING ---
-socket.on("arena:x2", (active) => {
-    const x2Overlay = document.getElementById("x2-alpha-overlay");
-    if (active) {
-        x2Overlay.style.display = "flex";
-        playSound("heavyExplosion"); // Impacto inicial
-    } else {
-        x2Overlay.style.display = "none";
-    }
-});
-
-socket.on("arena:vengeance", (data) => {
-    const attacker = players[data.attackerId];
-    const target = players[data.targetId];
-    if (attacker && target) {
-        // Efecto visual de rayo o proyectil oscuro
-        lightningBolts.push({
-            sx: attacker.x, sy: attacker.y,
-            tx: target.x, ty: target.y,
-            life: 1.5,
-            color: "#ff00ff" // Color magenta para venganza
-        });
-        showFloatingText("🔨 VENGANZA!!", target.x, target.y - 120, "#ff00ff");
-        playSound("impact");
-    }
-});
-
 socket.on("arena:combo", () => {
-    // Iniciar lluvia de monedas
-    startCoinRain();
+    createComboBurst();
 });
 
-function startCoinRain() {
-    for (let i = 0; i < 100; i++) {
-        setTimeout(() => {
-            const coin = {
-                x: Math.random() * canvas.width,
-                y: -50,
-                vy: Math.random() * 5 + 5,
-                vx: (Math.random() - 0.5) * 2,
-                size: Math.random() * 15 + 10,
-                rot: Math.random() * Math.PI * 2,
-                rotV: (Math.random() - 0.5) * 0.2
-            };
-            ambientParticles.push({
-                ...coin,
-                isCoin: true
-            });
-        }, i * 50);
+function createComboBurst() {
+    const activePlayers = Object.values(players).filter((player) => player.opacity > 0.5);
+    if (activePlayers.length === 0) return;
+
+    const source = activePlayers[Math.floor(Math.random() * activePlayers.length)];
+    for (let i = 0; i < 26; i++) {
+        const angle = (i / 26) * Math.PI * 2;
+        pushParticle({
+            x: source.x,
+            y: source.y,
+            vx: Math.cos(angle) * (2 + Math.random() * 5),
+            vy: Math.sin(angle) * (2 + Math.random() * 5),
+            life: 0.8,
+            size: Math.random() * 4 + 2,
+            color: i % 2 === 0 ? "#ffd700" : "#ffffff"
+        });
     }
+    playSound("jackpot");
 }
 // ------------------------------------------
 
 // --- 🎭 EVENTOS PHASE 3: VISUALES Y SONIDO ---
-const announcerOverlay = document.getElementById("visual-announcer");
+const announcerOverlay = document.getElementById("announcer-container");
 function showAnnouncer(text, color) {
     if (!announcerOverlay) return;
-    announcerOverlay.innerText = text;
-    announcerOverlay.style.color = color;
-    announcerOverlay.classList.remove("active");
-    void announcerOverlay.offsetWidth; // trigger reflow
-    announcerOverlay.classList.add("active");
+    const now = Date.now();
+    if (now - lastAnnouncerAt < ANNOUNCER_INTERVAL_MS) return;
+    lastAnnouncerAt = now;
+    announcerOverlay.innerHTML = "";
+    const line = document.createElement("div");
+    line.className = "announcement-text";
+    line.textContent = text;
+    line.style.setProperty("--accent", color);
+    line.style.color = color;
+    announcerOverlay.appendChild(line);
 
     // Voces de locutor (Sintetizadas o sounds)
-    if (text.includes("LEGENDARIO")) playSound("jackpot");
+    if (text.includes("LEGENDARIO")) {
+        playSound("heavyExplosion"); // Más fuerte que jackpot
+    }
 }
-
-socket.on("arena:ko", (data) => {
-    showAnnouncer(`K.O. - @${data.victimName} ELIMINADO!!`, "#ff4757");
-});
-// ------------------------------------------
 
 socket.on("arena:sync", (serverPlayers) => {
     for (const id in serverPlayers) {
@@ -1337,23 +1555,41 @@ socket.on("arena:sync", (serverPlayers) => {
             players[id] = new Player(sp);
         } else {
             // Sincronizar stats vitales desde el servidor (Autoridad)
-            players[id].hp = sp.hp;
             players[id].score = sp.score;
+            players[id].hp = sp.hp;
             players[id].name = sp.name;
+            players[id].state = sp.state || players[id].state;
+            players[id].lastActive = sp.lastActive || players[id].lastActive;
+            players[id].invulnerableUntil = sp.invulnerableUntil || 0;
             if (sp.avatar) players[id].avatar = sp.avatar;
 
             // Solo sincronizamos X/Y si NO es nuestro propio jugador (para evitar jitter)
-            if (id !== myArenaId && !id.startsWith("bot_")) {
+            if (!id.startsWith("bot_")) {
                 players[id].x = sp.x;
                 players[id].y = sp.y;
             }
         }
+
+        players[id].hp = sp.hp;
+        players[id].state = sp.state || players[id].state;
+        players[id].invulnerableUntil = sp.invulnerableUntil || 0;
+
+        // REQUERIMIENTO: Sincronizar Power-ups (Sierra)
+        if (sp.sawActiveUntil > Date.now()) {
+            const remainingFrames = Math.floor((sp.sawActiveUntil - Date.now()) / (1000 / 60));
+            // Solo actualizamos si es significativamente diferente para evitar saltos visuales
+            if (Math.abs(players[id].sawLife - remainingFrames) > 60) {
+                players[id].sawLife = remainingFrames;
+            }
+        } else {
+            players[id].sawLife = 0;
+        }
     }
-    // Remover juagadores que ya no están en el servidor
+
+    // Remover jugadores que ya no están en el servidor
     for (const id in players) {
         if (!serverPlayers[id]) delete players[id];
     }
-    // throttling: updateRankingDOM() ya no se llama aquí, se llama en loop o vía su evento específico
 });
 
 // --- CAPA TOP SHOWCASE (Podio Superior) ---
@@ -1368,18 +1604,13 @@ function updatePowersGuide() {
     const guideEl = document.getElementById("powers-guide");
     if (!guideEl) return;
 
-    const basicGifts = [
-        { name: "ROSA", effect: "DISPARO 🔫", icon: "🌹" },
-        { name: "CORAZÓN", effect: "REGEN 💖", icon: "💖" },
-        { name: "PESAS", effect: "GOLPE X3 🥊", icon: "🏋️" },
-        { name: "DORMIR", effect: "CONGELAR 🧊", icon: "" }
-    ];
-
-    const legendaryGifts = [
-        { name: "GALAXIA", effect: "⚡ RAYO", icon: "🌌" },
-        { name: "FUEGO", effect: "¡ INCENDIO ! 🔥", icon: "🔥" },
-        { name: "UNIVERSO", effect: "💥 K.O. TOTAL", icon: "🪐" },
-        { name: "LEÓN", effect: "⚙️ SIERRA", icon: "🦁" }
+    const giftRules = [
+        { name: "ROSE / ICE CREAM", effect: "DISPARO RAPIDO", icon: "🌹" },
+        { name: "DONUT / PERFUME", effect: "CHOQUE Y EMPUJE", icon: "🍩" },
+        { name: "FIREWORKS / DRAGON", effect: "ANILLO DE FUEGO", icon: "🔥" },
+        { name: "GALAXY / PLANET", effect: "RAYO PREMIUM", icon: "🌌" },
+        { name: "LION / UNIVERSE", effect: "MEGABLAST + KO", icon: "🦁" },
+        { name: "LIKES / YO", effect: "CURA Y RESPAWN", icon: "💖" }
     ];
 
     const renderList = (list) => `<ul>${list.map(g => `
@@ -1390,20 +1621,19 @@ function updatePowersGuide() {
     `).join('')}</ul>`;
 
     guideEl.innerHTML = `
-        <div class="powers-row">
-            <div class="powers-category">⚡ BÁSICOS</div>
-            ${renderList(basicGifts)}
-        </div>
-        <div class="powers-row">
-            <div class="powers-category">🔥 LEGENDARIOS</div>
-            ${renderList(legendaryGifts)}
+        <div class="powers-row full-guide">
+            ${renderList(giftRules)}
         </div>
     `;
 }
 // Escuchamos el Hall of Fame persistente del servidor (Top 10 real de 12 horas)
 socket.on("arena:hallOfFameUpdate", (list) => {
     console.log("🏆 Recibido Hall of Fame:", list);
-    persistentHOF = list;
+    persistentHOF = Array.isArray(list) ? list : [];
+    arenaHallOfFame = persistentHOF.reduce((acc, player) => {
+        if (player?.id) acc[player.id] = player;
+        return acc;
+    }, {});
     updateTopShowcase(); // Actualizar el podio de gala superior
 });
 
@@ -1438,6 +1668,7 @@ function updateTopShowcase() {
             <div class="top-rank-badge">${rank}</div>
             <div class="top-player-name">${p.name}</div>
             ${p.victories > 0 ? `<div class="top-player-victories">🏆 ${p.victories}</div>` : ''}
+            ${!p.isPlaceholder ? `<div class="top-player-score">BEST ${Math.floor(p.bestScore || p.score || 0)}</div>` : ''}
             ${p.isPlaceholder ? '' : '<div class="follow-arrow">⬆️</div>'}
         `;
         topShowcaseEl.appendChild(item);
@@ -1445,18 +1676,13 @@ function updateTopShowcase() {
 }
 
 
-// Sincronización de identidad
-socket.on("arena:you", (data) => {
-    myArenaId = data.uniqueId;
-    console.log("👤 Identidad en Arena:", myArenaId);
-});
-
 // --- CAPA CUENTA REGRESIVA ---
 const countdownOverlay = document.createElement("div");
 countdownOverlay.className = "countdown-overlay";
 document.body.appendChild(countdownOverlay);
 
 socket.on("timerUpdate", (seconds) => {
+    // REQUERIMIENTO: La sierra ahora es un poder de jugador, no un peligro global
     if (seconds <= 10 && seconds > 0) {
         countdownOverlay.textContent = seconds;
         countdownOverlay.classList.add("active");
@@ -1465,6 +1691,7 @@ socket.on("timerUpdate", (seconds) => {
         if (seconds <= 5) {
             countdownOverlay.classList.remove("normal");
             countdownOverlay.classList.add("warning");
+            speakCountdownNumber(seconds);
         } else {
             countdownOverlay.classList.remove("warning");
             countdownOverlay.classList.add("normal");
@@ -1477,35 +1704,26 @@ socket.on("timerUpdate", (seconds) => {
     }
 });
 
-// Listener para el botón de sonido (usando delegación o buscando el elemento)
-document.addEventListener("click", (e) => {
-    if (e.target && e.target.id === "toggle-sound") {
-        soundEnabled = !soundEnabled;
-        const btn = e.target;
-        if (soundEnabled) {
-            btn.textContent = "🔊 SONIDO ON";
-            btn.classList.add("active");
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            playBackgroundMusic();
-        } else {
-            btn.textContent = "🔇 SONIDO OFF";
-            btn.classList.remove("active");
-        }
-    }
-});
-
 socket.on("arena:roundEnd", (data) => {
     countdownOverlay.classList.remove("active");
+    Object.values(players).forEach((player) => {
+        player.hp = MAX_HP;
+        player.sawLife = 0;
+        player.flash = 0;
+        player.engagement = 0;
+    });
+
     if (!data || !data.winner) {
-        spawnFloatingText("⚔️ FIN DE RONDA - EMPATE ⚔️", canvas.width / 2, canvas.height / 2 - 100, "#fff");
+        spawnFloatingText("FIN DE RONDA", canvas.width / 2, canvas.height / 2 - 100, "#fff");
         return;
     }
 
     const w = data.winner;
     console.log("🏆 GANADOR DE LA ARENA:", w.name);
+    announce("Round over. Arena champion.");
 
     // Efecto visual masivo de Victoria (Volumen reducido)
-    screenShake = 50;
+    screenShake = 18;
     playSound("jackpot", 0.8);
     setTimeout(() => playSound("heavyExplosion", 0.7), 500);
 
@@ -1539,36 +1757,27 @@ socket.on("arena:roundEnd", (data) => {
     }, 8000);
 });
 
-socket.on("arena:join", (p) => {
-    if (!players[p.id]) {
-        players[p.id] = new Player(p);
-        createExplosion(players[p.id].x, players[p.id].y, "#00f0ff");
-        playSound("heal", 1.5);
+socket.on("arena:powerup", (data) => {
+    const target = players[data.userId];
+    if (target) {
+        if (data.type === "buzzsaw") {
+            target.sawLife = data.duration || 600;
+            target.engagement = Math.min((target.engagement || 0) + 12, 40);
+            playSound("buzzsaw");
+            spawnFloatingText("SIERRA ACTIVA", target.x, target.y - 40, "#ff9f43");
+        }
     }
-    updateRankingDOM();
 });
 
-socket.on("arena:jackpot", (data) => {
-    const attacker = players[data.attackerId];
-    if (!attacker) return;
-
-    playSound("jackpot");
-    spawnFloatingText(`🎰 JACKPOT x${data.multiplier}! 🎰`, attacker.x, attacker.y - 60, "#fbbf24");
-    screenShake = Math.max(screenShake, 20);
-
-    // Efecto visual de destello en el atacante
-    attacker.flash = 1;
-
-    // Crear muchas chispas doradas
-    for (let i = 0; i < 20; i++) {
-        particles.push({
-            x: attacker.x,
-            y: attacker.y,
-            vx: (Math.random() - 0.5) * 15,
-            vy: (Math.random() - 0.5) * 15,
-            life: 1.0,
-            color: "#fbbf24"
-        });
+socket.on("arena:burst", (data) => {
+    const burstCount = Math.max(1, Math.min(data.count || 3, 6));
+    for (let i = 0; i < burstCount; i++) {
+        setTimeout(() => {
+            const offsetX = (Math.random() - 0.5) * 180;
+            const offsetY = (Math.random() - 0.5) * 180;
+            createExplosion(data.x + offsetX, data.y + offsetY, data.color || "#ffd700", { count: 18, speed: 9, shake: 6 });
+            playSound(i % 2 === 0 ? "explosion" : "heavyExplosion");
+        }, i * 80);
     }
 });
 
@@ -1582,6 +1791,15 @@ socket.on("arena:leave", (data) => {
     }
 });
 
+socket.on("arena:respawn", (data) => {
+    const player = players[data.userId];
+    if (!player) return;
+    player.state = "ACTIVE";
+    player.flash = 1;
+    spawnFloatingText("RESPAWN", player.x, player.y - 40, "#7dd3fc");
+    playSound("heal");
+});
+
 // Variables para combo de Likes
 const recentHeals = {};
 
@@ -1590,16 +1808,15 @@ socket.on("arena:like", (data) => {
     const p = players[data.userId];
     if (p) {
         p.lastActive = Date.now(); // Despierta de AFK inmediatamente
-        p.heal(data.likeCount * 5); // Aumentado de 1 para crecimiento más visible
+        p.heal(data.heal || data.likeCount);
+        p.engagement = Math.min((p.engagement || 0) + Math.max(1, data.likeCount * 0.4), 40);
         p.flash = 1;
 
-        // Crecimiento físico real
-        p.radius = Math.min(p.radius + (data.likeCount * 0.1), 120);
         screenShake = Math.max(screenShake, 2); // Micro-temblor por cada like activo
 
-        // Dopamina física: El jugador "salta" o se empuja al recibir likes
-        p.vx += (Math.random() - 0.5) * 6;
-        p.vy += (Math.random() - 0.5) * 6;
+        // Dopamina física: El jugador "salta" o se empuja al recibir likes (MÁS INTENSO)
+        p.vx += (Math.random() - 0.5) * 15;
+        p.vy += (Math.random() - 0.5) * 15;
 
         // Calcular combo de curación para Pitch Shifting
         const now = Date.now();
@@ -1613,15 +1830,16 @@ socket.on("arena:like", (data) => {
         const pitchMod = Math.min(1 + (recentHeals[data.userId].strikes * 0.05), 2.0);
 
         playSound("heal", pitchMod);
+        playSound("hit", 1.2); // Ruidito extra "pop" para los taps
 
         // Mostrar texto de apoyo adictivo (Combos épicos)
         const strikes = recentHeals[data.userId].strikes;
         if (strikes > 0 && strikes % 50 === 0) {
-            spawnFloatingText(`🔥 COMBO x${strikes}! 🔥`, p.x, p.y - 40, "#ff4757");
-            screenShake = Math.max(screenShake, 15);
+            spawnFloatingText(`COMBO x${strikes}`, p.x, p.y - 40, "#ff9f43");
+            screenShake = Math.max(screenShake, 6);
             playSound("heavyExplosion"); // Boom para celebrar el combo
         } else if (data.likeCount >= 5 || strikes % 10 === 0) {
-            spawnFloatingText(`TAP TAP x${strikes}! ✨`, p.x, p.y, "#2ed573");
+            spawnFloatingText(`TAP x${strikes}`, p.x, p.y, "#2ed573");
         }
     }
 });
@@ -1632,7 +1850,7 @@ socket.on("arena:chatPower", (data) => {
     if (p) {
         // Efecto visual de "Aura"
         p.flash = 1;
-        spawnFloatingText(`✨ ${data.keyword}! ✨`, p.x, p.y - 40, "#00f0ff");
+        spawnFloatingText(`${data.keyword}`, p.x, p.y - 40, "#00f0ff");
 
         // Pequeño impulso físico
         p.vx += (Math.random() - 0.5) * 4;
@@ -1641,9 +1859,9 @@ socket.on("arena:chatPower", (data) => {
         // Partículas circulares tipo Aura
         for (let i = 0; i < 12; i++) {
             const angle = (i / 12) * Math.PI * 2;
-            particles.push({
-                x: p.x + Math.cos(angle) * p.radius,
-                y: p.y + Math.sin(angle) * p.radius,
+            pushParticle({
+                x: p.x + Math.cos(angle) * p.currentRadius,
+                y: p.y + Math.sin(angle) * p.currentRadius,
                 vx: Math.cos(angle) * 3,
                 vy: Math.sin(angle) * 3,
                 life: 0.8,
@@ -1658,46 +1876,39 @@ socket.on("arena:chatPower", (data) => {
 
 // EVENTO DE ATAQUE (REGALOS)
 socket.on("arena:gift", (data) => {
-    const attacker = players[data.userId];
+    const attackerId = data.attacker?.id;
+    const attacker = players[attackerId];
     if (!attacker) return;
 
     attacker.lastActive = Date.now(); // Despierta de AFK inmediatamente
-
-    attacker.lastActive = Date.now(); // Reset AFK timer on attack
-
-    const diamonds = data.diamondCount * data.count;
-    console.log(`🎁 GIFT RECEIVED: ${data.giftName} x${data.count} (${diamonds} 💎) from ${data.userId}`);
+    attacker.engagement = Math.min((attacker.engagement || 0) + Math.max(2, Math.log2((data.diamondCount || 1) * (data.repeatCount || 1) + 1) * 4), 40);
+    const count = data.repeatCount || 1;
+    const giftValue = data.diamondCount || 1;
+    const diamondsTotal = giftValue * count;
 
     // Feedback visual inmediato para TODOS los regalos
-    spawnFloatingText(`${data.giftName} x${data.count} ✨`, attacker.x, attacker.y, "#fdcb6e");
+    spawnFloatingText(`${data.giftName} x${count}`, attacker.x, attacker.y, "#fdcb6e");
 
     // Zoom automático si es un regalo grande
-    if (data.diamondCount >= 500) {
-        camera.targetX = attacker.x;
-        camera.targetY = attacker.y;
-        camera.targetScale = 1.8;
-        camera.zoomTimer = 120; // 2 segundos a 60fps
-        showAnnouncer("MOMENTO LEGENDARIO!!!", "#ffd700");
+    if (giftValue >= 100) {
+        focusCamera(attacker.x, attacker.y, 1.22, 60);
+
+        if (giftValue >= 500) {
+            focusCamera(attacker.x, attacker.y, 1.4, 110);
+            showAnnouncer("MOMENTO LEGENDARIO!!! 🔥", "#ffd700");
+            announce("Legendary Gift! You are a God!");
+        } else {
+            showAnnouncer("GRAN REGALO! ✨", "#00d2ff");
+            announce("Extreme Power! Amazing!");
+        }
     }
 
-    // --- DUEL BEAMS (Phase 4) ---
-    if (target && target.hp > 0) {
-        duelBeams.push({
-            sx: attacker.x, sy: attacker.y,
-            tx: target.x, ty: target.y,
-            life: 30, // 0.5 seg a 60fps
-            color: data.diamondCount >= 100 ? "#f0f" : "#0ff"
-        });
-    }
-
-    // Usar el objetivo dictado por el servidor para consistencia
+    // Buscar el objetivo más cercano
     let target = players[data.targetId];
-
-    // Fallback por si el objetivo no existe localmente aún
     if (!target) {
         let minDist = Infinity;
         for (const id in players) {
-            if (id === attacker.id || players[id].hp <= 0) continue;
+            if (id === attacker.id || players[id].hp <= 0 || players[id].opacity < 0.5) continue;
             const enemy = players[id];
             const dist = Math.sqrt((attacker.x - enemy.x) ** 2 + (attacker.y - enemy.y) ** 2);
             if (dist < minDist) { minDist = dist; target = enemy; }
@@ -1706,118 +1917,101 @@ socket.on("arena:gift", (data) => {
 
     if (!target) return; // No hay a quien atacar
 
-    // Logica por regalo (Daño base)
-    let damage = diamonds * 100; // Daño duplicado de 50 a 100
+    // --- DUEL BEAMS (Visual effect) ---
+    duelBeams.push({
+        sx: attacker.x, sy: attacker.y,
+        tx: target.x, ty: target.y,
+        life: 30, // 0.5 seg a 60fps
+        color: giftValue >= 100 ? "#f0f" : "#0ff"
+    });
 
-    // Crecimiento agresivo por regalo
-    attacker.radius = Math.min(attacker.radius + (diamonds * 0.5), 180);
-    screenShake = Math.max(screenShake, 10 + (diamonds * 0.1)); // Temblor dinámico
+    // Logica por regalo (Daño base)
+    let damage = diamondsTotal * 100;
+
     attacker.flash = 1;
+    screenShake = Math.max(screenShake, Math.min(18, 6 + Math.log2(diamondsTotal + 1) * 2));
+
     let atkType = "projectile";
     let color = "#00f0ff";
+    const gName = (data.giftName || "").toLowerCase();
 
-    // Efectos visuales según nombre del regalo (Detección bilingüe avanzada)
-    const gName = data.giftName.toLowerCase();
-
-    // 1. NIVEL DIOS (Universe, León, Interstellar)
-    if (gName.includes("universe") || gName.includes("universo") || gName.includes("lion") || gName.includes("león") || diamonds >= 20000) {
-        playSound("heavyExplosion"); // Sonido pesado
-        screenShake = 100; // Sacudida extrema
-        hitStopFrames = 15; // Congela el juego durante 15 frames (cuarto de segundo) para impacto brutal
-        ctx.fillStyle = "rgba(255, 255, 255, 0.8)"; // DESTELO BLANCO
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        spawnFloatingText("🌌 UNIVERSO !", target.x, target.y, "#ff00ff");
-        createExplosion(target.x, target.y, "#fff"); // Explosión blanca cegadora
-        shockwaves.push({ x: target.x, y: target.y, r: 10, opacity: 1.0, color: "#fff" });
-
-        // Daño devastador inmediato
-        target.takeDamage(diamonds * 15, attacker.id);
+    // Detección de tipos de ataque
+    if (gName.includes("universe") || gName.includes("universo") || gName.includes("lion") || gName.includes("león") || giftValue >= 20000) {
+        playSound("heavyExplosion");
+        screenShake = 14;
+        hitStopFrames = 12;
+        triggerOverlayFlash("255, 240, 200", 0.16);
+        spawnFloatingText("UNIVERSO", target.x, target.y, "#ffd166");
+        announce("UNBELIEVABLE! A Universe has arrived! You are the King of TikTok!");
+        createExplosion(target.x, target.y, "#fff", { count: 26, speed: 10, shake: 10 });
+        createExplosion(target.x + 40, target.y - 30, "#fbbf24", { count: 18, speed: 8, shake: 6 });
+        createExplosion(target.x - 50, target.y + 20, "#ff8c42", { count: 18, speed: 8, shake: 6 });
+        pushShockwave({ x: target.x, y: target.y, r: 10, opacity: 0.9, color: "#fff7d6" });
+        target.takeDamage(diamondsTotal * 20, attacker.id);
         atkType = "none";
-    }
-    // 2. NIVEL LEYENDA (Galaxia, Planeta, Interstellar, etc)
-    else if (gName.includes("galaxy") || gName.includes("galaxia") || gName.includes("planet") || gName.includes("planeta") || diamonds >= 5000) {
+    } else if (gName.includes("galaxy") || gName.includes("galaxia") || gName.includes("planet") || gName.includes("planeta") || giftValue >= 1000) {
         playSound("lightning");
-        screenShake = 30;
-        spawnFloatingText("✨ GALAXIA !", target.x, target.y, "#0abde3");
-
-        // Múltiples rayos secuenciales
+        screenShake = 8;
+        triggerOverlayFlash("90, 200, 255", 0.08);
+        spawnFloatingText("GALAXIA", target.x, target.y, "#7dd3fc");
+        announce("Amazing Galaxy! Extreme power unleashed!");
         for (let i = 0; i < 3; i++) {
             setTimeout(() => {
-                lightningBolts.push({
+                pushLightningBolt({
                     sx: attacker.x, sy: attacker.y,
                     tx: target.x + (Math.random() - 0.5) * 100,
                     ty: target.y + (Math.random() - 0.5) * 100,
                     life: 1.0, color: "#0abde3"
                 });
-                target.takeDamage(diamonds * 5, attacker.id);
+                target.takeDamage(diamondsTotal * 5, attacker.id);
             }, i * 150);
         }
         atkType = "none";
-    }
-    // 3. NIVEL ESPECIAL (Sierra)
-    else if (diamonds > 900) {
-        atkType = "buzzsaw";
-    }
-    // 4. NIVEL ATAQUE (Star, Zapato, etc)
-    else if (gName.includes("star") || gName.includes("estrella") || gName.includes("zapato") || gName.includes("hat") || gName.includes("gorra")) {
+    } else if (giftValue >= 500 || gName.includes("sierra") || gName.includes("buzzsaw")) {
+        // Power-up de Sierra (Aura)
+        playSound("buzzsaw");
+        attacker.sawLife = Math.max(attacker.sawLife, 900); // 15s de aura
+        spawnFloatingText("SIERRA ACTIVA", attacker.x, attacker.y - 40, "#ff9f43");
+        atkType = "none";
+    } else if (gName.includes("star") || gName.includes("estrella") || gName.includes("zapato") || gName.includes("hat")) {
         atkType = "laser";
-    }
-    // 5. NIVEL BÁSICO (Rosita, Donut, etc)
-    else if (gName.includes("rose") || gName.includes("rosa")) {
+    } else if (gName.includes("rose") || gName.includes("rosa")) {
+        playSound("roseShot");
         atkType = "projectile"; color = "#ff4757";
+    } else if (gName.includes("fire") || gName.includes("fuego") || gName.includes("flame") || gName.includes("fireworks")) {
+        playSound("fire");
+        createFireBurst(target.x, target.y, attacker.currentRadius + 50);
+        atkType = "lightning"; color = "#ff6b00";
     } else if (gName.includes("donut") || gName.includes("dona") || gName.includes("ray") || gName.includes("relámpago")) {
         atkType = "lightning"; color = "#fbbf24";
-    } else if (gName.includes("perfume") || gName.includes("makeup") || gName.includes("maquillaje")) {
-        atkType = "projectile"; color = "#a855f7";
-    } else {
-        // Regalo genérico o mediano
-        atkType = diamonds > 50 ? "lightning" : "projectile";
-        color = "#00f0ff";
     }
 
-    // Efecto de onda al recibir CUALQUIER regalo moderado
-    if (attacker && diamonds > 10) {
-        shockwaves.push({ x: attacker.x, y: attacker.y, r: 10, opacity: 0.8, color: color });
+    // Shockwave al atacar
+    if (diamondsTotal > 10) {
+        pushShockwave({ x: attacker.x, y: attacker.y, r: 10, opacity: 0.8, color: color });
     }
 
-    // Ejecutar efectos remanentes si no fue daño directo (none)
+    // Ejecución de Proyectiles/Efectos persistentes
     if (atkType === "projectile") {
-        // Daño inicial inmediato para regalos grandes para que se sienta el golpe
-        if (diamonds >= 500) {
-            target.takeDamage(damage * 0.2, attacker.id);
-        }
-
-        for (let i = 0; i < Math.min(data.count, 15); i++) {
+        const pCount = Math.min(count, 10);
+        const damagePerP = damage / pCount;
+        for (let i = 0; i < pCount; i++) {
             setTimeout(() => {
-                playSound("shoot");
-                projectiles.push(new Projectile(attacker.x, attacker.y, target.id, (damage / data.count), attacker.id, color));
-            }, i * 120);
+                if (attacker && target && target.hp > 0) {
+                    playSound("shoot");
+                    pushProjectile(new Projectile(attacker.x, attacker.y, target.id, damagePerP, attacker.id, color));
+                }
+            }, i * 100);
         }
     } else if (atkType === "lightning") {
         playSound("lightning");
-        lightningBolts.push({ sx: attacker.x, sy: attacker.y, tx: target.x, ty: target.y, life: 1.0, color });
+        pushLightningBolt({ sx: attacker.x, sy: attacker.y, tx: target.x, ty: target.y, life: 1.0, color });
         target.takeDamage(damage, attacker.id);
-        const tx = target.x;
-        const ty = target.y;
-        createExplosion(tx, ty, color);
-
-        // Shockwave para rayos
-        shockwaves.push({ x: tx, y: ty, r: 10, opacity: 1.0, color: color });
-
-        // Más partículas
-        for (let i = 0; i < 15; i++) {
-            particles.push({ x: tx, y: ty, vx: (Math.random() - 0.5) * 15, vy: (Math.random() - 0.5) * 15, life: 1.0, color });
-        }
-    } else if (atkType === "buzzsaw") {
-        playSound("buzzsaw");
-        playSound("explosion"); // Sonido de Spawn inicial
-        spawnFloatingText("⚠️ SIERRA !", canvas.width / 2, canvas.height / 2, "#ff0000");
-        hazards.push(new Buzzsaw(canvas.width / 2, canvas.height / 2, attacker.id, 600));
+        createExplosion(target.x, target.y, color);
     } else if (atkType === "laser") {
         playSound("lightning");
-        spawnFloatingText("⚡ LASER !", attacker.x, attacker.y, "#a855f7");
-        hazards.push(new LaserBeam(attacker.x, attacker.y, attacker.id, 400));
+        spawnFloatingText("LASER", attacker.x, attacker.y, "#a855f7");
+        pushHazard(new LaserBeam(attacker.x, attacker.y, attacker.id, 400));
     }
 });
 
@@ -1826,8 +2020,7 @@ socket.on("arena:gift", (data) => {
 // ==========================================
 
 // Registro persistente de los mejores jugadores de la sesión (Hall of Fame) - AHORA MANEJADO POR SERVIDOR
-let arenaHallOfFame = []; // Ranking de la ronda actual
-let persistentHOF = [];   // Top 10 histórico de 12 horas
+let roundRanking = []; // Ranking de la ronda actual
 
 let lastUIUpdate = 0;
 const UI_THROTTLE_MS = 1000; // Máximo 1 actualización de DOM por segundo
@@ -1839,7 +2032,7 @@ function updateRankingDOM(force = false) {
 
     updateTopShowcase(); // Actualizar podio superior
     // Solo mostramos el TOP 5 en el ranking horizontal
-    const top5 = arenaHallOfFame.slice(0, 5);
+    const top5 = roundRanking.slice(0, 5);
     leaderboardEl.innerHTML = "";
 
     top5.forEach((p, idx) => {
@@ -1860,8 +2053,9 @@ function updateRankingDOM(force = false) {
                     ${p.victories > 0 ? `<span class="board-victories">🏆 ${p.victories}</span>` : ''}
                 </div>
                 <div class="board-stats">
-                    <span class="stat-hp">❤️ ${Math.floor(p.hp || 0)}</span>
-                    <span class="stat-score">⚔️ ${Math.floor(p.score || 0)}</span>
+                    <span class="stat-hp">❤️ HP ${Math.floor(p.hp || 0)}</span>
+                    <span class="stat-score">⚔️ PTS ${Math.floor(p.score || 0)}</span>
+                    ${p.state && p.state !== "ACTIVE" ? `<span class="stat-score">${p.state}</span>` : ""}
                 </div>
             </div>
         `;
@@ -1870,7 +2064,7 @@ function updateRankingDOM(force = false) {
 }
 
 socket.on("arena:currentRanking", (data) => {
-    arenaHallOfFame = data; // Reutilizamos variable pero ahora contiene el ranking de la ronda
+    roundRanking = data; // Ranking de la ronda actual
     updateRankingDOM(true); // Forzar actualización cuando cambian los líderes
 });
 
@@ -1883,6 +2077,16 @@ function loop() {
 
     // 1. DIBUJAR FONDO ESTÁTICO (Limpia el canvas sin offsets)
     drawBackground();
+
+    if (overlayFlashAlpha > 0.01) {
+        ctx.save();
+        ctx.fillStyle = `rgba(${overlayFlashColor}, ${overlayFlashAlpha})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+        overlayFlashAlpha *= 0.82;
+    } else {
+        overlayFlashAlpha = 0;
+    }
 
     ctx.save(); // Save para Screen Shake
 
@@ -2002,6 +2206,11 @@ function loop() {
                 let sep = (overlap / 2) + 0.5;
                 p1.x -= nx * sep; p1.y -= ny * sep;
                 p2.x += nx * sep; p2.y += ny * sep;
+
+                const p1Clamped = clampToArena(p1.x, p1.y, p1.currentRadius + 6);
+                const p2Clamped = clampToArena(p2.x, p2.y, p2.currentRadius + 6);
+                p1.x = p1Clamped.x; p1.y = p1Clamped.y;
+                p2.x = p2Clamped.x; p2.y = p2Clamped.y;
             }
         }
     }
@@ -2032,7 +2241,7 @@ function loop() {
             p.draw();
 
             // Recolectar posición (Solo si es nuestro uniqueId o bot)
-            if (p.id === myArenaId || (p.id && p.id.startsWith("bot_"))) {
+            if (p.id && p.id.startsWith("bot_")) {
                 positionBatch[p.id] = { x: Math.round(p.x), y: Math.round(p.y) };
             }
         }
@@ -2042,13 +2251,11 @@ function loop() {
     if (currentClosestToCenter && currentClosestToCenter.id !== currentArenaKingId) {
         currentArenaKingId = currentClosestToCenter.id;
         // Coronación Pública
-        spawnFloatingText(`👑 ¡${currentClosestToCenter.name.toUpperCase()} ES EL NUEVO REY! 👑`, cx, cy - 150, "#ffd700");
-        screenShake = Math.max(screenShake, 25);
+        spawnFloatingText(`${currentClosestToCenter.name.toUpperCase()} REY DEL CENTRO`, cx, cy - 150, "#ffd700");
+        screenShake = Math.max(screenShake, 10);
         playSound("heal", 0.5); // Sonido triunfal pitch grave
 
-        // Destello visual de coronación
-        ctx.fillStyle = "rgba(255, 215, 0, 0.3)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        triggerOverlayFlash("255, 215, 120", 0.08);
     } else if (!currentClosestToCenter) {
         currentArenaKingId = null; // Nadie en el centro
     }
@@ -2080,30 +2287,8 @@ function loop() {
 
     // Rayos (Lightning)
     for (let i = lightningBolts.length - 1; i >= 0; i--) {
-        let l = lightningBolts[i];
-        ctx.beginPath();
-        ctx.moveTo(l.sx, l.sy);
-
-        // Dibujar linea quebrada para efecto rayo
-        let steps = 5;
-        let dx = (l.tx - l.sx) / steps;
-        let dy = (l.ty - l.sy) / steps;
-        let x = l.sx, y = l.sy;
-
-        ctx.lineWidth = l.life * 5;
-        ctx.strokeStyle = l.color;
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = l.color;
-
-        for (let j = 1; j < steps; j++) {
-            x += dx + (Math.random() - 0.5) * 30; // zigzag
-            y += dy + (Math.random() - 0.5) * 30;
-            ctx.lineTo(x, y);
-        }
-        ctx.lineTo(l.tx, l.ty);
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-
+        const l = lightningBolts[i];
+        drawLightningBolt(l);
         l.life -= 0.1;
         if (l.life <= 0) lightningBolts.splice(i, 1);
     }
@@ -2143,3 +2328,35 @@ function loop() {
 
 // Iniciar Motor
 requestAnimationFrame(loop);
+
+// ------------------------------------------
+// --- ⚙️ LÓGICA DE DEBUG (OCULTA POR DEFECTO) ---
+// ------------------------------------------
+if (DEBUG_MODE) {
+    document.getElementById("debug-spawn-bot")?.addEventListener("click", () => {
+        socket.emit("arena:debug:gift", { giftName: "Bot Spawn", diamondCount: 1, uniqueId: "bot_" + Math.floor(Math.random() * 1000) });
+        spawnFloatingText("BOT", canvas.width / 2, canvas.height / 2, "#fff");
+    });
+
+    document.getElementById("debug-gift-rose")?.addEventListener("click", () => {
+        socket.emit("arena:debug:gift", { giftName: "Rosa", diamondCount: 1 });
+        spawnFloatingText("ROSE", canvas.width / 2, canvas.height / 2, "#ff4757");
+    });
+
+    document.getElementById("debug-gift-galaxy")?.addEventListener("click", () => {
+        socket.emit("arena:debug:gift", { giftName: "Galaxia", diamondCount: 1000 });
+    });
+
+    document.getElementById("debug-gift-universe")?.addEventListener("click", () => {
+        socket.emit("arena:debug:gift", { giftName: "Universo", diamondCount: 35000 });
+    });
+
+    document.getElementById("debug-toggle-sd")?.addEventListener("click", () => {
+        socket.emit("arena:debug:toggleSD");
+    });
+}
+
+// Auto-despertar AudioContext si es necesario
+document.addEventListener("mousedown", () => {
+    if (audioCtx?.state === 'suspended') audioCtx.resume();
+});

@@ -17,7 +17,9 @@ module.exports = [
                 window: "readonly",
                 document: "readonly",
                 io: "readonly",
-                Image: "readonly"
+                Image: "readonly",
+                requestAnimationFrame: "readonly",
+                fetch: "readonly"
             }
         },
         rules: {
