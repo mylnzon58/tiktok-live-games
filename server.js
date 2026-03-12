@@ -552,7 +552,6 @@ function bindTikTokListeners(connection) {
         const chatRequestedPower = text.includes(`+ ${GAME_CONFIG.arena.chatPowerKeyword}`) ||
             text.includes(`+${GAME_CONFIG.arena.chatPowerKeyword}`) ||
             text.includes(GAME_CONFIG.arena.chatPowerKeyword);
-        const chatRequestedShout = text.includes("GRITO");
         const power = chatRequestedPower ? arena.applyChatPower(player.id) : null;
         const topArenaLeader = arena.getTopArenaLeader();
         const cleanComment = sanitizeLeaderChatMessage(event.comment);
@@ -578,13 +577,6 @@ function bindTikTokListeners(connection) {
         }
         if (activity?.respawned) {
             io.emit("arena:respawn", { userId: player.id, mode: "basic" });
-        }
-
-        if (chatRequestedShout) {
-            io.emit("arena:shout", {
-                userId: player.id,
-                name: player.name
-            });
         }
 
         if (

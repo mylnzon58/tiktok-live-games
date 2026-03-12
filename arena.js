@@ -510,22 +510,6 @@ const sfx = {
         osc.connect(g).connect(audioCtx.destination);
         osc.start(now);
         osc.stop(now + 0.3);
-    },
-    cheer: () => {
-        if (!soundEnabled) return;
-        const now = audioCtx.currentTime;
-        [660, 880, 990].forEach((freq, index) => {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(freq, now + index * 0.06);
-            osc.frequency.exponentialRampToValueAtTime(freq * 1.18, now + index * 0.06 + 0.12);
-            gain.gain.setValueAtTime(0.09, now + index * 0.06);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + index * 0.06 + 0.16);
-            osc.connect(gain).connect(audioCtx.destination);
-            osc.start(now + index * 0.06);
-            osc.stop(now + index * 0.06 + 0.18);
-        });
     }
 };
 
@@ -2052,13 +2036,9 @@ socket.on("arena:roundEnd", (data) => {
     const w = roundWinner;
     console.log("🏆 GANADOR DE LA RONDA:", w.name);
     if (arenaChampion?.name) {
-        setTimeout(() => {
-            announce(`Ganador numero uno de la arena. ${arenaChampion.name}.`, { gapMs: 650 });
-        }, 600);
+        announce(`Ganador numero uno de la arena. ${arenaChampion.name}.`, { gapMs: 650 });
     }
-    setTimeout(() => {
-        announce(`Ganador de la ronda actual. ${w.name}.`, { gapMs: 650 });
-    }, 1700);
+    announce(`Ganador de la ronda actual. ${w.name}.`, { gapMs: 650 });
 
     // Efecto visual masivo de Victoria (Volumen reducido)
     screenShake = 24;
@@ -2308,17 +2288,6 @@ socket.on("arena:leaderChat", (data) => {
     screenShake = Math.max(screenShake, 3);
 });
 
-socket.on("arena:shout", (data) => {
-    const source = players[data.userId];
-    const x = source?.x || (canvas.width / 2);
-    const y = source?.y || (canvas.height / 2);
-    spawnFloatingText("GRITO", x, y - 50, "#fef08a");
-    createExplosion(x, y, "#fde68a", { count: 20, speed: 8, shake: 6 });
-    triggerOverlayFlash("255, 240, 170", 0.08);
-    playSound("cheer");
-    screenShake = Math.max(screenShake, 7);
-});
-
 function resolveArenaGiftEffect(data, attacker, target, diamondsTotal, giftValue, giftName) {
     const effectKey = data.effectKey || "";
     const category = data.category || "";
@@ -2411,11 +2380,6 @@ socket.on("arena:gift", (data) => {
     spawnFloatingText(`${data.giftName} x${count}`, attacker.x, attacker.y, "#fdcb6e");
     if ((data.scoreGain || 0) > 0) {
         spawnFloatingText(`+${Math.floor(data.scoreGain)} PTS`, attacker.x, attacker.y - 28, "#fff3b0");
-    }
-    if (giftValue <= 10 && Math.random() < 0.35) {
-        playSound("cheer");
-        triggerOverlayFlash("255, 230, 140", 0.05);
-        screenShake = Math.max(screenShake, 5);
     }
     createExplosion(attacker.x, attacker.y, "#ffd166", {
         count: fxProfile.burstCount,
