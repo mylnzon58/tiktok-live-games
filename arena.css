@@ -255,20 +255,7 @@ html {
 }
 
 .ranking-header {
-    background: linear-gradient(90deg, #d4af37, #f3e5ab, #d4af37);
-    color: #000;
-    font-family: 'Bungee', cursive;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 20px;
-    font-size: 18px;
-    min-height: 84px;
-    white-space: nowrap;
-    border-right: 1px solid rgba(0, 0, 0, 0.2);
-    min-width: 178px;
-    text-align: center;
-    flex: 0 0 178px;
+    display: none;
 }
 
 .ranking-header small {
@@ -280,8 +267,8 @@ html {
 
 .round-winner-slot {
     min-width: 0;
-    flex: 1 1 280px;
-    padding: 10px 14px;
+    flex: 1 1 100%;
+    padding: 12px 18px;
     display: flex;
     align-items: center;
     justify-content: flex-start;
@@ -291,10 +278,11 @@ html {
 .round-winner-empty {
     width: 100%;
     text-align: center;
-    color: rgba(255, 255, 255, 0.74);
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: 0.8px;
+    color: #fff7d6;
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.55);
 }
 
 .round-winner-card {
@@ -632,7 +620,7 @@ html {
 
 /* Follow Incentive integration */
 #top-arena-showcase::after {
-    content: "VICTORIAS MANDAN";
+    content: "GANADOR DE LA RONDA ACTUAL";
     position: absolute;
     bottom: -35px;
     left: 50%;
