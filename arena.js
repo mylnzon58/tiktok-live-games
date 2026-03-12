@@ -237,6 +237,7 @@ function playArenaIntroAnnouncement(force = false) {
     if (introAnnouncementDone && !force) return;
     introAnnouncementDone = true;
     announce("Arena activa. El numero uno del arena sera el unico con lectura de chats.", { gapMs: 650 });
+    announce("Prueben regalos baratos como rosa, capibara, helado o dona para activar poderes.", { gapMs: 700 });
 }
 
 function promptReturnToArena(force = false) {
@@ -254,6 +255,8 @@ function announceGiftTip() {
     lastGiftTipAt = now;
     const tips = [
         "La rosa activa disparo rápido y baja puntos del oponente.",
+        "Prueben rosa, capibara o helado. Los regalos baratos tambien activan poderes.",
+        "La capibara y los regalos baratos meten presion y ayudan a pelear la ronda.",
         "La dona empuja al rival y activa una onda especial.",
         "Fuegos artificiales activan una ráfaga especial sobre el oponente.",
         "Galaxia activa rayos premium y baja muchos puntos del rival.",
@@ -267,6 +270,7 @@ function announcePromoTip() {
     if (now - lastPromoTipAt < 98000) return;
     lastPromoTipAt = now;
     const promos = [
+        "Prueben regalos baratos para ver sus poderes. Rosa, capibara, helado o dona ya mueven la arena.",
         "Compartir y apoyarnos entre todos ayuda a viralizar este live y sumar seguidores.",
         "Apoyen siguiendo al creador del juego para impulsar esta arena en TikTok.",
         "Quien gane el numero uno del arena tendra lectura de chats en voz.",
