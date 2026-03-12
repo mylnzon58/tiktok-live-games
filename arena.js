@@ -874,7 +874,7 @@ class Player {
     update() {
         // --- DINÁMICA DE TAMAÑO ---
         const scoreScale = Math.min(Math.sqrt(this.score) * 1.15, 82);
-        const engagementScale = Math.min(this.engagement * 0.55, 18);
+        const engagementScale = Math.min(this.engagement * 0.95, 34);
 
         // REQUERIMIENTO: "Dejarlos bien chiquitos si pierden vida"
         const hpMultiplier = 0.5 + (Math.max(this.hp, 0) / MAX_HP) * 0.5; // Escala entre 50% y 100% según HP
@@ -1822,7 +1822,7 @@ socket.on("arena:like", (data) => {
     if (p) {
         p.lastActive = Date.now(); // Despierta de AFK inmediatamente
         p.heal(data.heal || data.likeCount);
-        p.engagement = Math.min((p.engagement || 0) + Math.max(1, data.likeCount * 0.4), 40);
+        p.engagement = Math.min((p.engagement || 0) + Math.max(3, data.likeCount * 1.35), 40);
         p.flash = 1;
 
         screenShake = Math.max(screenShake, 2); // Micro-temblor por cada like activo
@@ -1923,7 +1923,7 @@ socket.on("arena:gift", (data) => {
     if (!attacker) return;
 
     attacker.lastActive = Date.now(); // Despierta de AFK inmediatamente
-    attacker.engagement = Math.min((attacker.engagement || 0) + Math.max(2, Math.log2((data.diamondCount || 1) * (data.repeatCount || 1) + 1) * 4), 40);
+    attacker.engagement = Math.min((attacker.engagement || 0) + Math.max(4, Math.log2((data.diamondCount || 1) * (data.repeatCount || 1) + 1) * 5), 40);
     const count = data.repeatCount || 1;
     const giftValue = data.diamondCount || 1;
     const diamondsTotal = giftValue * count;
