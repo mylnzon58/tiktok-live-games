@@ -864,6 +864,7 @@ class Player {
         this.sawAngle = 0;
         this.spinDirection = Math.random() > 0.5 ? 1 : -1;
         this.engagement = 0;
+        this.lastTapBoostAt = 0;
 
         // Intervalo de reporte de posición al servidor
         if (this.id === socket.id || this.id.startsWith("bot_")) {
@@ -873,27 +874,37 @@ class Player {
 
     update() {
         // --- DINÁMICA DE TAMAÑO ---
-        const scoreScale = Math.min(Math.sqrt(this.score) * 1.15, 82);
+        const safeScore = Math.max(this.score || 0, 0);
+        const scoreScale = Math.min(
+            (Math.sqrt(safeScore) * 1.45) + (Math.log2(safeScore + 1) * 3.5),
+            118
+        );
         const engagementScale = Math.min(this.engagement * 0.95, 34);
 
-        // REQUERIMIENTO: "Dejarlos bien chiquitos si pierden vida"
-        const hpMultiplier = 0.5 + (Math.max(this.hp, 0) / MAX_HP) * 0.5; // Escala entre 50% y 100% según HP
+        // El HP puede afectar presencia visual, pero nunca por debajo del tamano inicial.
+        const hpMultiplier = 0.82 + (Math.max(this.hp, 0) / MAX_HP) * 0.18;
         const baseTargetRadius = PLAYER_RADIUS + scoreScale + engagementScale;
-        const targetRadius = baseTargetRadius * hpMultiplier;
+        const targetRadius = Math.max(PLAYER_RADIUS, baseTargetRadius * hpMultiplier);
 
         if (this.state === "ELIMINATED") {
             this.opacity = 0.32;
-            this.currentRadius += ((PLAYER_RADIUS * 0.55) - this.currentRadius) * 0.14;
+            this.currentRadius += ((PLAYER_RADIUS * 0.82) - this.currentRadius) * 0.14;
             this.vx *= 0.96;
             this.vy *= 0.96;
         } else if (this.state === "IDLE") {
             this.opacity = Math.max(this.opacity - 0.015, 0.28);
-            this.currentRadius += ((targetRadius * 0.88) - this.currentRadius) * 0.08;
+            this.currentRadius += ((Math.max(PLAYER_RADIUS, targetRadius * 0.94)) - this.currentRadius) * 0.08;
             this.vx *= 0.99;
             this.vy *= 0.99;
         } else {
             this.currentRadius += (targetRadius - this.currentRadius) * 0.1;
             this.opacity = 1.0;
+        }
+
+        const timeSinceTapBoost = Date.now() - (this.lastTapBoostAt || 0);
+        if (this.sawLife <= 0) {
+            const passiveDecay = timeSinceTapBoost < 900 ? 0.08 : 0.42;
+            this.engagement = Math.max(this.engagement - passiveDecay, 0);
         }
 
         // Restaurar velocidad si estaban lentos (Wandering activo)
@@ -1139,10 +1150,11 @@ class Player {
         else if (this.score >= 100) auraColor = "#d97706"; // Bronze
 
         if (auraColor) {
-            ctx.shadowBlur = 30 + Math.sin(Date.now() / 200) * 10;
+            const pulse = 0.65 + ((Math.sin(Date.now() / 180) + 1) * 0.35);
+            ctx.shadowBlur = 32 + Math.sin(Date.now() / 200) * 12;
             ctx.shadowColor = auraColor;
             ctx.strokeStyle = auraColor;
-            ctx.lineWidth = 4;
+            ctx.lineWidth = 4 + (pulse * 2.5);
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.currentRadius + 5, 0, Math.PI * 2);
             ctx.stroke();
@@ -1160,6 +1172,7 @@ class Player {
             ctx.strokeStyle = "white";
         } else {
             const hpPercent = (this.hp || 500) / MAX_HP; // Fallback para HP
+            const latentPulse = 0.55 + ((Math.sin(Date.now() / 160) + 1) * 0.3);
             if (hpPercent > 0.6) {
                 ctx.strokeStyle = "#2ed573";
             } else if (hpPercent > 0.3) {
@@ -1173,6 +1186,9 @@ class Player {
                     ctx.shadowColor = "#ff4757";
                 }
             }
+            ctx.shadowBlur = Math.max(ctx.shadowBlur || 0, 10 + (this.engagement * 0.28));
+            ctx.shadowColor = ctx.strokeStyle;
+            ctx.lineWidth += latentPulse * 1.8;
         }
         ctx.stroke();
         ctx.shadowBlur = 0; // reset
@@ -1341,27 +1357,38 @@ class Player {
 }
 
 class Projectile {
-    constructor(sx, sy, targetId, damage, attackerId, color) {
-        this.x = sx; this.y = sy;
+    constructor(sx, sy, targetId, damage, attackerId, color, options = {}) {
+        this.x = sx;
+        this.y = sy;
         this.targetId = targetId;
         this.damage = damage;
         this.attackerId = attackerId;
         this.color = color || "#00f0ff";
-        this.speed = 10;
+        this.speed = options.speed || 10;
+        this.targetOffsetX = options.targetOffsetX || 0;
+        this.targetOffsetY = options.targetOffsetY || 0;
+        this.wobble = options.wobble || 0;
+        this.wobblePhase = options.wobblePhase || 0;
+        this.life = options.life || 120;
         this.active = true;
     }
     update() {
         const target = players[this.targetId];
-        if (!target || target.hp <= 0) {
+        if (!target || target.hp <= 0 || this.life <= 0) {
             this.active = false; // Objetivo murió en camino
             return;
         }
 
         // Homming missile (sigue al objetivo en movimiento)
-        const dx = target.x - this.x; const dy = target.y - this.y;
+        const aimX = target.x + this.targetOffsetX + Math.sin(this.wobblePhase) * this.wobble;
+        const aimY = target.y + this.targetOffsetY + Math.cos(this.wobblePhase) * this.wobble;
+        const dx = aimX - this.x;
+        const dy = aimY - this.y;
         const dist = Math.sqrt(dx * dx + dy * dy) || 1;
         this.x += (dx / dist) * this.speed;
         this.y += (dy / dist) * this.speed;
+        this.wobblePhase += 0.22;
+        this.life -= 1;
 
         pushParticle({ x: this.x, y: this.y, vx: (Math.random() - 0.5) * 2, vy: (Math.random() - 0.5) * 2, life: 0.5, color: this.color });
 
@@ -1379,6 +1406,38 @@ class Projectile {
         ctx.shadowColor = this.color;
         ctx.fill();
         ctx.shadowBlur = 0;
+    }
+}
+
+function spawnProjectileBurst(attacker, target, count, totalDamage, color, options = {}) {
+    const burstCount = Math.max(1, count);
+    const damagePerProjectile = totalDamage / burstCount;
+
+    for (let i = 0; i < burstCount; i++) {
+        const angle = (i / burstCount) * Math.PI * 2;
+        const spawnRadius = Math.min(attacker.currentRadius * 0.35, 22);
+        const spawnX = attacker.x + Math.cos(angle) * spawnRadius;
+        const spawnY = attacker.y + Math.sin(angle) * spawnRadius;
+        const spreadRadius = Math.min(target.currentRadius * 0.45, 34);
+        const targetOffsetX = Math.cos(angle) * spreadRadius;
+        const targetOffsetY = Math.sin(angle) * spreadRadius;
+
+        pushProjectile(new Projectile(
+            spawnX,
+            spawnY,
+            target.id,
+            damagePerProjectile,
+            attacker.id,
+            color,
+            {
+                speed: 9 + (i % 3),
+                targetOffsetX,
+                targetOffsetY,
+                wobble: options.wobble || 0,
+                wobblePhase: angle,
+                life: options.life || 120
+            }
+        ));
     }
 }
 
@@ -1564,7 +1623,10 @@ socket.on("arena:sync", (serverPlayers) => {
 function syncPlayerFromServer(sp) {
     if (!sp?.id) return null;
 
-    if (!players[sp.id]) {
+    const existingPlayer = players[sp.id];
+    const previousState = existingPlayer?.state || null;
+
+    if (!existingPlayer) {
         players[sp.id] = new Player(sp);
     } else {
         players[sp.id].score = sp.score ?? players[sp.id].score;
@@ -1577,7 +1639,13 @@ function syncPlayerFromServer(sp) {
         players[sp.id].totalLikes = sp.totalLikes || players[sp.id].totalLikes || 0;
         if (sp.avatar) players[sp.id].avatar = sp.avatar;
 
-        if (!sp.id.startsWith("bot_")) {
+        // El servidor solo es autoritativo en posicion para spawn/respawn o jugadores sinteticos.
+        const shouldSyncPosition =
+            sp.id.startsWith("bot_") ||
+            previousState === "ELIMINATED" ||
+            (previousState && previousState !== sp.state);
+
+        if (shouldSyncPosition) {
             players[sp.id].x = sp.x ?? players[sp.id].x;
             players[sp.id].y = sp.y ?? players[sp.id].y;
         }
@@ -1775,9 +1843,11 @@ socket.on("arena:powerup", (data) => {
     if (target) {
         if (data.type === "buzzsaw") {
             target.sawLife = data.duration || 600;
-            target.engagement = Math.min((target.engagement || 0) + 12, 40);
+            target.engagement = Math.min((target.engagement || 0) + 16, 40);
             playSound("buzzsaw");
+            setTimeout(() => playSound("buzzsaw", 0.92), 120);
             spawnFloatingText("SIERRA ACTIVA", target.x, target.y - 40, "#ff9f43");
+            triggerOverlayFlash("255, 180, 90", 0.06);
         }
     }
 });
@@ -1822,7 +1892,8 @@ socket.on("arena:like", (data) => {
     if (p) {
         p.lastActive = Date.now(); // Despierta de AFK inmediatamente
         p.heal(data.heal || data.likeCount);
-        p.engagement = Math.min((p.engagement || 0) + Math.max(3, data.likeCount * 1.35), 40);
+        p.engagement = Math.min((p.engagement || 0) + Math.max(5, data.likeCount * 1.75), 40);
+        p.lastTapBoostAt = Date.now();
         p.flash = 1;
 
         screenShake = Math.max(screenShake, 2); // Micro-temblor por cada like activo
@@ -1844,6 +1915,13 @@ socket.on("arena:like", (data) => {
 
         playSound("heal", pitchMod);
         playSound("hit", 1.2); // Ruidito extra "pop" para los taps
+        if (data.scoreGain > 0) {
+            spawnFloatingText(`+${data.scoreGain} PTS`, p.x, p.y - 28, "#fff3b0");
+        }
+        if (data.comboLikes >= 25 && data.comboLikes % 25 === 0) {
+            spawnFloatingText(`RUSH x${data.comboLikes}`, p.x, p.y - 54, "#7dd3fc");
+            triggerOverlayFlash("120, 255, 210", 0.04);
+        }
 
         // Mostrar texto de apoyo adictivo (Combos épicos)
         const strikes = recentHeals[data.userId].strikes;
@@ -1857,13 +1935,52 @@ socket.on("arena:like", (data) => {
     }
 });
 
+socket.on("arena:likeStrike", (data) => {
+    const attacker = syncPlayerFromServer(data.attacker) || players[data.attacker?.id];
+    const target = syncPlayerFromServer(data.target) || players[data.target?.id];
+    if (!attacker || !target) return;
+
+    const comboLikes = data.comboLikes || data.likeCount || 0;
+    if (comboLikes >= 25) {
+        const burstShots = Math.min(4, Math.max(2, Math.floor(comboLikes / 25)));
+        setTimeout(() => {
+            spawnProjectileBurst(attacker, target, burstShots, Math.max(6, data.damage || 0), "#bbf7d0", { wobble: 10, life: 90 });
+            playSound("shoot", 1.18);
+        }, 0);
+        playSound("heavyExplosion", 0.78);
+    } else {
+        pushLightningBolt({
+            sx: attacker.x,
+            sy: attacker.y,
+            tx: target.x,
+            ty: target.y,
+            life: 0.7,
+            color: "#bbf7d0"
+        });
+    }
+    pushShockwave({ x: target.x, y: target.y, r: 16, opacity: 0.8, color: "#bbf7d0" });
+    target.flash = 1;
+    spawnFloatingText(`-${Math.floor(data.damage || 0)}`, target.x, target.y - 24, "#bbf7d0");
+    if (comboLikes >= 20) {
+        spawnFloatingText("TAP STRIKE", attacker.x, attacker.y - 34, "#bbf7d0");
+    }
+    screenShake = Math.max(screenShake, Math.min(10, 2 + (comboLikes / 10)));
+    playSound("hit", 1.08);
+});
+
 // EVENTO DE PODER POR CHAT (Aura Visual)
 socket.on("arena:chatPower", (data) => {
-    const p = players[data.userId];
+    const p = syncPlayerFromServer(data.player) || players[data.userId];
     if (p) {
         // Efecto visual de "Aura"
         p.flash = 1;
+        if (data.heal > 0) {
+            p.heal(data.heal);
+        }
         spawnFloatingText(`${data.keyword}`, p.x, p.y - 40, "#00f0ff");
+        if (data.scoreGain > 0) {
+            spawnFloatingText(`+${data.scoreGain} PTS`, p.x, p.y - 62, "#fef08a");
+        }
 
         // Pequeño impulso físico
         p.vx += (Math.random() - 0.5) * 4;
@@ -2041,12 +2158,11 @@ socket.on("arena:gift", (data) => {
     // Ejecución de Proyectiles/Efectos persistentes
     if (atkType === "projectile") {
         const pCount = Math.min(count, 10);
-        const damagePerP = damage / pCount;
         for (let i = 0; i < pCount; i++) {
             setTimeout(() => {
                 if (attacker && target && target.hp > 0) {
                     playSound("shoot");
-                    pushProjectile(new Projectile(attacker.x, attacker.y, target.id, damagePerP, attacker.id, color));
+                    spawnProjectileBurst(attacker, target, 1, damage / pCount, color, { wobble: 4, life: 100 });
                 }
             }, i * 100);
         }

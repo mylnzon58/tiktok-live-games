@@ -450,16 +450,57 @@ function bindTikTokListeners(connection) {
         if (!player) return;
 
         const support = arena.applyLikeSupport(player.id, event.likeCount);
+        const comboLikes = support?.likeCombo || event.likeCount;
+        const strike = arena.applyLikeStrike(player.id, comboLikes);
         io.emit("arena:like", {
             userId: player.id,
             player: support?.player || null,
             likeCount: event.likeCount,
+            comboLikes,
             heal: support?.heal || 0,
+            scoreGain: support?.scoreGain || 0,
             respawned: Boolean(support?.respawned)
         });
 
         if (support?.respawned) {
             io.emit("arena:respawn", { userId: player.id, mode: "basic" });
+        }
+
+        if (support?.player && comboLikes >= GAME_CONFIG.arena.likeBurstThreshold) {
+            io.emit("arena:burst", {
+                x: support.player.x,
+                y: support.player.y,
+                count: comboLikes >= GAME_CONFIG.arena.likeMegaPowerThreshold ? 6 : 3,
+                color: comboLikes >= GAME_CONFIG.arena.likeMiniPowerThreshold ? "#7dd3fc" : "#bbf7d0"
+            });
+        }
+
+        if (comboLikes >= GAME_CONFIG.arena.likeMiniPowerThreshold) {
+            const duration = comboLikes >= GAME_CONFIG.arena.likeMegaPowerThreshold
+                ? GAME_CONFIG.arena.likeMegaPowerDurationFrames
+                : GAME_CONFIG.arena.likeMiniPowerDurationFrames;
+            io.emit("arena:powerup", {
+                userId: player.id,
+                type: "buzzsaw",
+                duration
+            });
+        }
+
+        if (strike) {
+            io.emit("arena:likeStrike", {
+                attacker: strike.attacker,
+                target: strike.target,
+                damage: strike.damage,
+                ko: strike.ko,
+                likeCount: event.likeCount,
+                comboLikes
+            });
+            if (strike.ko) {
+                io.emit("arena:ko", {
+                    attackerId: strike.attacker.id,
+                targetId: strike.target.id
+                });
+            }
         }
 
         queueArenaState();
@@ -494,9 +535,26 @@ function bindTikTokListeners(connection) {
         const player = arena.ensurePlayer(event.user, "chat");
         if (!player) return;
         const activity = arena.applyChatActivity(player.id);
+        const chatRequestedPower = text.includes(`+ ${GAME_CONFIG.arena.chatPowerKeyword}`) ||
+            text.includes(`+${GAME_CONFIG.arena.chatPowerKeyword}`) ||
+            text.includes(GAME_CONFIG.arena.chatPowerKeyword);
+        const power = chatRequestedPower ? arena.applyChatPower(player.id) : null;
 
-        if (text.includes(GAME_CONFIG.arena.chatPowerKeyword)) {
-            io.emit("arena:chatPower", { userId: player.id, keyword: GAME_CONFIG.arena.chatPowerKeyword });
+        if (chatRequestedPower) {
+            io.emit("arena:chatPower", {
+                userId: player.id,
+                keyword: GAME_CONFIG.arena.chatPowerKeyword,
+                player: power?.player || null,
+                heal: power?.heal || 0,
+                scoreGain: power?.scoreGain || 0
+            });
+            if (power?.duration) {
+                io.emit("arena:powerup", {
+                    userId: player.id,
+                    type: "buzzsaw",
+                    duration: power.duration
+                });
+            }
         }
         if (text.includes(GAME_CONFIG.arena.chatWakeKeyword) || activity?.respawned) {
             queueArenaState();
