@@ -2040,7 +2040,7 @@ function renderLastRoundWinner() {
         <div class="round-winner-card">
             <img class="round-winner-avatar" src="${winner.avatar || 'https://www.tiktok.com/favicon.ico'}" onerror="this.src='https://www.tiktok.com/favicon.ico'" />
             <div class="round-winner-info">
-                <div class="round-winner-label">ULTIMO GANADOR REAL</div>
+                <div class="round-winner-label">GANADOR ACTUAL</div>
                 <div class="round-winner-name">${winner.name}</div>
                 <div class="round-winner-meta">
                     <span>⚔️ ${Math.floor(winner.standingScore || winner.score || 0)}</span>
