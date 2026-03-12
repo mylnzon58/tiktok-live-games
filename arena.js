@@ -510,6 +510,22 @@ const sfx = {
         osc.connect(g).connect(audioCtx.destination);
         osc.start(now);
         osc.stop(now + 0.3);
+    },
+    cheer: () => {
+        if (!soundEnabled) return;
+        const now = audioCtx.currentTime;
+        [660, 880, 990].forEach((freq, index) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, now + index * 0.06);
+            osc.frequency.exponentialRampToValueAtTime(freq * 1.18, now + index * 0.06 + 0.12);
+            gain.gain.setValueAtTime(0.09, now + index * 0.06);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + index * 0.06 + 0.16);
+            osc.connect(gain).connect(audioCtx.destination);
+            osc.start(now + index * 0.06);
+            osc.stop(now + index * 0.06 + 0.18);
+        });
     }
 };
 
@@ -846,6 +862,38 @@ function createExplosion(x, y, color, options = {}) {
             size: Math.random() * 4 + 2,
             color: color || "#fff"
         });
+    }
+}
+
+function createDirectedBurst(source, target, options = {}) {
+    if (!source || !target) return;
+    const bursts = Math.max(1, Math.min(options.count || 4, 10));
+    const color = options.color || "#ffd700";
+    const dx = target.x - source.x;
+    const dy = target.y - source.y;
+
+    for (let i = 0; i < bursts; i++) {
+        const t = bursts === 1 ? 1 : i / (bursts - 1);
+        const arc = Math.sin(t * Math.PI) * (options.arcHeight || 36);
+        const px = source.x + dx * t + (Math.random() - 0.5) * 18;
+        const py = source.y + dy * t - arc + (Math.random() - 0.5) * 18;
+        setTimeout(() => {
+            createExplosion(px, py, color, {
+                count: options.particleCount || 16,
+                speed: options.speed || 8,
+                shake: options.shake || 4
+            });
+            if (t >= 0.85) {
+                pushShockwave({
+                    x: target.x,
+                    y: target.y,
+                    r: options.impactRadius || 18,
+                    opacity: 0.78,
+                    color
+                });
+            }
+            playSound(i % 2 === 0 ? "explosion" : "heavyExplosion");
+        }, i * (options.delayMs || 70));
     }
 }
 
@@ -2004,9 +2052,13 @@ socket.on("arena:roundEnd", (data) => {
     const w = roundWinner;
     console.log("🏆 GANADOR DE LA RONDA:", w.name);
     if (arenaChampion?.name) {
-        announce(`Ganador numero uno de la arena. ${arenaChampion.name}.`, { gapMs: 650 });
+        setTimeout(() => {
+            announce(`Ganador numero uno de la arena. ${arenaChampion.name}.`, { gapMs: 650 });
+        }, 600);
     }
-    announce(`Ganador de la ronda actual. ${w.name}.`, { gapMs: 650 });
+    setTimeout(() => {
+        announce(`Ganador de la ronda actual. ${w.name}.`, { gapMs: 650 });
+    }, 1700);
 
     // Efecto visual masivo de Victoria (Volumen reducido)
     screenShake = 24;
@@ -2059,11 +2111,36 @@ socket.on("arena:powerup", (data) => {
 });
 
 socket.on("arena:burst", (data) => {
-    const burstCount = Math.max(1, Math.min(data.count || 3, 6));
+    const burstCount = Math.max(1, Math.min(data.count || 3, 8));
+    const source = (data.sourceId && players[data.sourceId]) || (
+        Number.isFinite(data.sourceX) && Number.isFinite(data.sourceY)
+            ? { x: data.sourceX, y: data.sourceY }
+            : null
+    );
+    const target = (data.targetId && players[data.targetId]) || (
+        Number.isFinite(data.targetX) && Number.isFinite(data.targetY)
+            ? { x: data.targetX, y: data.targetY }
+            : null
+    );
+
+    if (source && target) {
+        createDirectedBurst(source, target, {
+            count: burstCount,
+            color: data.color || "#ffd700",
+            particleCount: 20,
+            speed: 9,
+            shake: 6,
+            impactRadius: 20,
+            arcHeight: 44,
+            delayMs: 75
+        });
+        return;
+    }
+
     for (let i = 0; i < burstCount; i++) {
         setTimeout(() => {
-            const offsetX = (Math.random() - 0.5) * 180;
-            const offsetY = (Math.random() - 0.5) * 180;
+            const offsetX = (Math.random() - 0.5) * 80;
+            const offsetY = (Math.random() - 0.5) * 80;
             createExplosion(data.x + offsetX, data.y + offsetY, data.color || "#ffd700", { count: 18, speed: 9, shake: 6 });
             playSound(i % 2 === 0 ? "explosion" : "heavyExplosion");
         }, i * 80);
@@ -2231,6 +2308,17 @@ socket.on("arena:leaderChat", (data) => {
     screenShake = Math.max(screenShake, 3);
 });
 
+socket.on("arena:shout", (data) => {
+    const source = players[data.userId];
+    const x = source?.x || (canvas.width / 2);
+    const y = source?.y || (canvas.height / 2);
+    spawnFloatingText("GRITO", x, y - 50, "#fef08a");
+    createExplosion(x, y, "#fde68a", { count: 20, speed: 8, shake: 6 });
+    triggerOverlayFlash("255, 240, 170", 0.08);
+    playSound("cheer");
+    screenShake = Math.max(screenShake, 7);
+});
+
 function resolveArenaGiftEffect(data, attacker, target, diamondsTotal, giftValue, giftName) {
     const effectKey = data.effectKey || "";
     const category = data.category || "";
@@ -2323,6 +2411,11 @@ socket.on("arena:gift", (data) => {
     spawnFloatingText(`${data.giftName} x${count}`, attacker.x, attacker.y, "#fdcb6e");
     if ((data.scoreGain || 0) > 0) {
         spawnFloatingText(`+${Math.floor(data.scoreGain)} PTS`, attacker.x, attacker.y - 28, "#fff3b0");
+    }
+    if (giftValue <= 10 && Math.random() < 0.35) {
+        playSound("cheer");
+        triggerOverlayFlash("255, 230, 140", 0.05);
+        screenShake = Math.max(screenShake, 5);
     }
     createExplosion(attacker.x, attacker.y, "#ffd166", {
         count: fxProfile.burstCount,

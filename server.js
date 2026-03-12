@@ -372,8 +372,14 @@ function handleArenaGift(event) {
 
     if (event.gift.totalDiamonds >= GAME_CONFIG.countries.bigGiftThreshold) {
         io.emit("arena:burst", {
+            sourceId: result.attacker.id,
+            targetId: result.target.id,
+            sourceX: result.attacker.x,
+            sourceY: result.attacker.y,
             x: result.target.x,
             y: result.target.y,
+            targetX: result.target.x,
+            targetY: result.target.y,
             count: event.gift.totalDiamonds >= 20000 ? 8 : 4,
             color: event.gift.tier === "legendary" ? "#fff7d6" : "#fbbf24"
         });
@@ -546,6 +552,7 @@ function bindTikTokListeners(connection) {
         const chatRequestedPower = text.includes(`+ ${GAME_CONFIG.arena.chatPowerKeyword}`) ||
             text.includes(`+${GAME_CONFIG.arena.chatPowerKeyword}`) ||
             text.includes(GAME_CONFIG.arena.chatPowerKeyword);
+        const chatRequestedShout = text.includes("GRITO");
         const power = chatRequestedPower ? arena.applyChatPower(player.id) : null;
         const topArenaLeader = arena.getTopArenaLeader();
         const cleanComment = sanitizeLeaderChatMessage(event.comment);
@@ -571,6 +578,13 @@ function bindTikTokListeners(connection) {
         }
         if (activity?.respawned) {
             io.emit("arena:respawn", { userId: player.id, mode: "basic" });
+        }
+
+        if (chatRequestedShout) {
+            io.emit("arena:shout", {
+                userId: player.id,
+                name: player.name
+            });
         }
 
         if (
