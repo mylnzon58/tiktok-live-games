@@ -323,6 +323,9 @@ html {
     justify-content: center;
     background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.24), rgba(15,23,42,0.95));
     font-size: 30px;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
 }
 
 .round-winner-info {
@@ -498,6 +501,9 @@ html {
     justify-content: center;
     background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.24), rgba(15,23,42,0.96));
     font-size: 86px;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
 }
 
 .victory-name {
@@ -670,6 +676,13 @@ html {
     font-size: 42px;
     background: radial-gradient(circle at 50% 50%, rgba(0,0,0,0.08), rgba(0,0,0,0.42));
     border-radius: 50%;
+}
+
+.top-player-flag-image {
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    font-size: 0;
 }
 
 .top-player-score {

@@ -6,7 +6,7 @@ const { WebcastPushConnection } = require("tiktok-live-connector");
 
 const { loadEnvFile } = require("./lib/env");
 const { syncTikTokEnvFromChrome } = require("./lib/chrome-cookie-sync");
-const { DEFAULT_COUNTRIES, NAME_TO_CODE } = require("./lib/constants");
+const { DEFAULT_COUNTRIES, resolveCountryCodeFromText } = require("./lib/constants");
 const { createStorage } = require("./lib/storage");
 const { createRankingManager } = require("./lib/ranking-manager");
 const { createArenaManager } = require("./lib/arena-manager");
@@ -45,6 +45,7 @@ function normalizeChampionStandings(entries = []) {
             name: entry.name || previous?.name || "ESPERANDO...",
             avatar: entry.avatar || previous?.avatar || "",
             flag: entry.flag || previous?.flag || "",
+            flagUrl: entry.flagUrl || previous?.flagUrl || "",
             victories: Math.max(0, Number(entry.victories) || 0),
             time: entry.time || previous?.time || "",
             timestamp
@@ -169,33 +170,19 @@ function resolveCountry(rawData) {
         return userCountryOverrides[uniqueId];
     }
 
-    const normalizedName = String(rawData.nickname || rawData.user?.nickname || uniqueId || "").toUpperCase();
-    const emojiMap = {
-        "🇦🇷": "AR",
-        "🇲🇽": "MX",
-        "🇧🇷": "BR",
-        "🇨🇴": "CO",
-        "🇺🇸": "US",
-        "🇪🇸": "ES",
-        "🇻🇪": "VE",
-        "🇵🇪": "PE"
-    };
-
-    for (const [emoji, code] of Object.entries(emojiMap)) {
-        if (normalizedName.includes(emoji)) return code;
-    }
-
     const explicitCountryCode = String(rawData.user?.countryCode || rawData.countryCode || "").toUpperCase();
-    if (explicitCountryCode.length === 2 && explicitCountryCode !== "XX") {
+    if (DEFAULT_COUNTRIES[explicitCountryCode] && explicitCountryCode !== "GLOBAL") {
         return explicitCountryCode;
     }
 
-    for (const word of normalizedName.split(/\s+/)) {
-        if (DEFAULT_COUNTRIES[word]) return word;
-        if (NAME_TO_CODE[word]) return NAME_TO_CODE[word];
-    }
-
-    return "GLOBAL";
+    return resolveCountryCodeFromText(
+        rawData.comment ||
+        rawData.nickname ||
+        rawData.user?.nickname ||
+        rawData.user?.uniqueId ||
+        rawData.uniqueId ||
+        ""
+    );
 }
 
 function updateRankingChampion(countryWinner) {
@@ -234,6 +221,7 @@ function resetRound() {
                     name: persistedArenaWinner.name,
                     avatar: persistedArenaWinner.avatar,
                     flag: persistedArenaWinner.flag,
+                    flagUrl: persistedArenaWinner.flagUrl,
                     victories: persistedArenaWinner.victories,
                     time: new Date().toLocaleTimeString(),
                     timestamp: Date.now()
@@ -403,6 +391,7 @@ async function connectToTikTok() {
 
 function handleArenaGift(event, rawData) {
     const attackerCountryCode = resolveCountry(rawData);
+    if (!attackerCountryCode) return;
     const attacker = arena.ensurePlayer(event.user, "gift", { countryCode: attackerCountryCode });
     if (!attacker) return;
 
@@ -537,6 +526,7 @@ function bindTikTokListeners(connection) {
         if (!event.user) return;
 
         const country = resolveCountry(rawData);
+        if (!country) return;
         const rankingAdvanced = ranking.addLikes(country, event.likeCount, GAME_CONFIG.countries.likesPerPoint);
         if (rankingAdvanced) {
             queueRankingState();
@@ -619,16 +609,7 @@ function bindTikTokListeners(connection) {
 
         const text = event.comment.toUpperCase();
         let detectedCountry = null;
-        for (const word of text.split(/\s+/)) {
-            if (word.length === 2 && DEFAULT_COUNTRIES[word]) {
-                detectedCountry = word;
-                break;
-            }
-            if (NAME_TO_CODE[word]) {
-                detectedCountry = NAME_TO_CODE[word];
-                break;
-            }
-        }
+        detectedCountry = resolveCountryCodeFromText(text);
 
         if (detectedCountry) {
             userCountryOverrides[event.user.id.toLowerCase()] = detectedCountry;
@@ -640,7 +621,7 @@ function bindTikTokListeners(connection) {
         }
 
         const arenaCountry = detectedCountry || resolveArenaCountry(rawData, event.user);
-        const player = arena.ensurePlayer(event.user, "chat", { countryCode: arenaCountry });
+        const player = arena.ensurePlayer(event.user, "chat", { countryCode: arenaCountry || null });
         if (!player) return;
         if (detectedCountry) {
             arena.setPlayerCountry(player.id, detectedCountry);

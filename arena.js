@@ -1126,6 +1126,7 @@ class Player {
         this.name = data.name || "Guerrero";
         this.avatar = data.avatar || "";
         this.flag = data.flag || data.countryFlag || "";
+        this.flagUrl = data.flagUrl || "";
         this.countryCode = data.countryCode || this.id;
         this.memberAvatars = Array.isArray(data.memberAvatars) ? data.memberAvatars.slice(0, 4) : [];
         this.memberCount = data.memberCount || 1;
@@ -1425,6 +1426,7 @@ class Player {
         ctx.clip(); // Cortar a círculo
 
         const img = getAvatarImage(this.avatar);
+        const flagImg = getAvatarImage(this.flagUrl);
         const gradient = ctx.createRadialGradient(this.x, this.y, this.currentRadius * 0.15, this.x, this.y, this.currentRadius);
         gradient.addColorStop(0, "rgba(255,255,255,0.28)");
         gradient.addColorStop(1, "rgba(15,23,42,0.92)");
@@ -1442,11 +1444,21 @@ class Player {
         ctx.arc(this.x, this.y, this.currentRadius * 0.52, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.fillStyle = "white";
-        ctx.font = `bold ${Math.max(26, Math.floor(this.currentRadius * 0.9))}px Arial`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(this.flag || this.name[0].toUpperCase(), this.x, this.y - 2);
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.currentRadius * 0.42, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+        if (flagImg && flagImg.complete && flagImg.naturalWidth > 0) {
+            ctx.drawImage(flagImg, this.x - (this.currentRadius * 0.5), this.y - (this.currentRadius * 0.34), this.currentRadius, this.currentRadius * 0.68);
+        } else {
+            ctx.fillStyle = "white";
+            ctx.font = `bold ${Math.max(26, Math.floor(this.currentRadius * 0.9))}px Arial`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(this.flag || this.name[0].toUpperCase(), this.x, this.y - 2);
+        }
+        ctx.restore();
 
         // --- PUNTOS / SCORE DENTRO DEL GLOBO ---
         ctx.restore();
@@ -2053,6 +2065,7 @@ function syncPlayerFromServer(sp) {
         players[sp.id].totalGiftDiamonds = sp.totalGiftDiamonds || players[sp.id].totalGiftDiamonds || 0;
         players[sp.id].totalLikes = sp.totalLikes || players[sp.id].totalLikes || 0;
         players[sp.id].flag = sp.flag || sp.countryFlag || players[sp.id].flag || "";
+        players[sp.id].flagUrl = sp.flagUrl || players[sp.id].flagUrl || "";
         players[sp.id].countryCode = sp.countryCode || players[sp.id].countryCode || sp.id;
         players[sp.id].memberAvatars = Array.isArray(sp.memberAvatars) ? sp.memberAvatars.slice(0, 4) : (players[sp.id].memberAvatars || []);
         players[sp.id].memberCount = sp.memberCount ?? players[sp.id].memberCount ?? 1;
@@ -2075,6 +2088,7 @@ function syncPlayerFromServer(sp) {
     players[sp.id].state = sp.state || players[sp.id].state;
     players[sp.id].invulnerableUntil = sp.invulnerableUntil || 0;
     players[sp.id].flag = sp.flag || sp.countryFlag || players[sp.id].flag || "";
+    players[sp.id].flagUrl = sp.flagUrl || players[sp.id].flagUrl || "";
     players[sp.id].countryCode = sp.countryCode || players[sp.id].countryCode || sp.id;
     players[sp.id].memberAvatars = Array.isArray(sp.memberAvatars) ? sp.memberAvatars.slice(0, 4) : (players[sp.id].memberAvatars || []);
     players[sp.id].memberCount = sp.memberCount ?? players[sp.id].memberCount ?? 1;
@@ -2150,7 +2164,7 @@ function renderLastRoundWinner() {
 
     slot.innerHTML = `
         <div class="round-winner-card">
-            <div class="round-winner-avatar round-winner-flag">${winner.flag || winner.countryFlag || "🌍"}</div>
+            <div class="round-winner-avatar round-winner-flag${winner.flagUrl ? " has-flag-image" : ""}" style="${winner.flagUrl ? `background-image:url('${winner.flagUrl}')` : ""}">${winner.flagUrl ? "" : (winner.flag || "")}</div>
             <div class="round-winner-info">
                 <div class="round-winner-label">GANADOR ACTUAL</div>
                 <div class="round-winner-name">${winner.name}</div>
@@ -2184,6 +2198,7 @@ function updateTopShowcase() {
                 name: entry.name,
                 avatar: livePlayer?.avatar || entry.avatar || "https://p16-webcast.tiktokcdn.com/webcast-va/new_gifter_badge_v3.png~tplv-obj.image",
                 flag: livePlayer?.flag || entry.flag || "",
+                flagUrl: livePlayer?.flagUrl || entry.flagUrl || "",
                 currentScore: Math.floor(livePlayer?.score || 0),
                 displayScore: Math.floor(livePlayer?.score || 0),
                 bestScore: Math.floor(livePlayer?.bestScore || livePlayer?.score || 0),
@@ -2205,6 +2220,7 @@ function updateTopShowcase() {
             name: "ESPERANDO...",
             avatar: "https://p16-webcast.tiktokcdn.com/webcast-va/new_gifter_badge_v3.png~tplv-obj.image",
             flag: "",
+            flagUrl: "",
             score: 0,
             isPlaceholder: true
         });
@@ -2221,7 +2237,7 @@ function updateTopShowcase() {
 
         item.innerHTML = `
             ${p.title ? `<div class="top-player-title">${p.title}</div>` : ''}
-            <div class="top-player-avatar" style="background-image: url('${p.avatar || ''}')">${p.flag ? `<span class="top-player-flag">${p.flag}</span>` : ""}</div>
+            <div class="top-player-avatar" style="background-image: url('${p.avatar || ''}')">${p.flagUrl ? `<span class="top-player-flag top-player-flag-image" style="background-image:url('${p.flagUrl}')"></span>` : (p.flag ? `<span class="top-player-flag">${p.flag}</span>` : "")}</div>
             <div class="top-rank-badge">${rank}</div>
             <div class="top-player-name">${p.name}</div>
             ${!p.isPlaceholder ? `<div class="top-player-score">VICTORIAS ${Math.floor(p.victories || 0)}</div>` : ''}
@@ -2308,7 +2324,7 @@ socket.on("arena:roundEnd", (data) => {
     overlay.innerHTML = `
         <div class="victory-card">
             <h1 class="victory-title">🏁 GANADOR DE LA RONDA 🏁</h1>
-            <div class="victory-avatar victory-flag">${w.flag || w.countryFlag || "🌍"}</div>
+            <div class="victory-avatar victory-flag${w.flagUrl ? " has-flag-image" : ""}" style="${w.flagUrl ? `background-image:url('${w.flagUrl}')` : ""}">${w.flagUrl ? "" : (w.flag || "")}</div>
             <h2 class="victory-name">${w.name}</h2>
             <div class="victory-stats">PTS DE RONDA: ${Math.floor(w.standingScore || w.score || 0)}</div>
             ${arenaChampion?.name ? `<div class="victory-stats">👑 NUMERO UNO DEL ARENA: ${arenaChampion.name} · ${Math.floor(arenaChampion.victories || 0)} RONDAS</div>` : ""}

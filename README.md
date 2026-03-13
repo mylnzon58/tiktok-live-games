@@ -118,9 +118,10 @@ Reglas fijas del arena que no deben revertirse:
 - cada usuario pertenece a un país; se detecta por prefijo/nombre en chat o por `countryCode`
 - likes, gifts y chat power impactan al jugador real en servidor, pero la UI del arena muestra globos agregados por país
 - un globo del arena representa a un país:
-  - bandera al centro
+  - bandera por imagen real al centro
   - mini avatares al costado
   - `PTS` del país dentro del globo
+- si no se puede detectar un país real, ese usuario no debe entrar al arena visible; no usar `Mundo` ni `GLOBAL` como equipo jugable en `/arena`
 - `ganador de la ronda`: el país que termina con mayor `standingScore` agregado
 - `numero uno del arena`: el país con más `RONDAS` ganadas en el podio persistente
 - si empatan en `RONDAS`, desempata por score actual y luego `bestScore`
