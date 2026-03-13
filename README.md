@@ -111,23 +111,37 @@ Ejemplo: Un regalo Galaxy (1000 💎) × 3 repeticiones = **3000 puntos** para e
 
 ### Arena
 
-Reglas finales del arena:
-- `likes/taps`: curan y ayudan a reingresar, pero no dominan el ranking
-- `chat`: sirve para entrar/reaparecer y activar feedback ligero
-- `gift pequeño`: impacto útil
-- `gift mediano`: daño y empuje visibles
-- `gift grande`: control fuerte de ronda
-- `gift épico/legendario`: KO claros, FX premium y ventaja real
+Reglas fijas del arena que no deben revertirse:
+- HUD simple y entendible: mostrar solo `PTS`, `RONDAS` y `VP` (`vidas perdidas`)
+- `HP` existe para combate y feedback visual, pero no debe dominar el HUD textual
+- el modo actual de `/arena` es `ARENA POR PAISES`, no PvP individual directo
+- cada usuario pertenece a un país; se detecta por prefijo/nombre en chat o por `countryCode`
+- likes, gifts y chat power impactan al jugador real en servidor, pero la UI del arena muestra globos agregados por país
+- un globo del arena representa a un país:
+  - bandera al centro
+  - mini avatares al costado
+  - `PTS` del país dentro del globo
+- `ganador de la ronda`: el país que termina con mayor `standingScore` agregado
+- `numero uno del arena`: el país con más `RONDAS` ganadas en el podio persistente
+- si empatan en `RONDAS`, desempata por score actual y luego `bestScore`
+- ataques, choques, rayos y sierra nunca deben pegar entre miembros del mismo país
+- `likes/taps`: suman poco, inflan visualmente y ayudan a sostener presión del país
+- `regalos`: son mucho más poderosos que los taps y mandan el ritmo del combate
+- ataques, choques y sierra deben quitar puntos reales, no solo hacer FX
+- jugadores inactivos no deben contaminar ranking vivo ni locuciones
+- historial persistente solo puede servir para memoria reciente, nunca para revivir jugadores viejos en el arena vivo
 
-El ranking de ronda del arena ahora prioriza:
-- puntos de regalo de la ronda
-- daño causado
-- cantidad de regalos efectivos
+Resumen visual obligatorio:
+- dentro del globo país: `PTS`
+- podio superior: `RONDAS`
+- debajo o pequeño: `VP`
 
-El Top Arena persistente de 12h usa prestigio derivado de:
-- victorias
-- mejor score histórico
-- aporte acumulado en regalos
+Nota para futuras IA o cambios automáticos:
+- no reintroducir HUD con `HP` textual dominante
+- no mezclar top persistente viejo con ranking vivo actual
+- no volver a usar listas históricas crudas para poblar el podio superior sin filtro temporal
+- no volver a mezclar `/arena` con el juego de países de la raíz
+- no volver a renderizar usuarios individuales como unidad principal en `/arena`; la unidad principal es el país
 
 ---
 

@@ -44,6 +44,7 @@ function normalizeChampionStandings(entries = []) {
             id: entry.id || null,
             name: entry.name || previous?.name || "ESPERANDO...",
             avatar: entry.avatar || previous?.avatar || "",
+            flag: entry.flag || previous?.flag || "",
             victories: Math.max(0, Number(entry.victories) || 0),
             time: entry.time || previous?.time || "",
             timestamp
@@ -59,6 +60,10 @@ function normalizeChampionStandings(entries = []) {
 
 let lastWinners = normalizeChampionStandings(championsStorage.load());
 championsStorage.save(lastWinners);
+arena.seedChampionStandings(lastWinners);
+if (lastWinners[0]?.id) {
+    arena.setLastWinnerId(lastWinners[0].id);
+}
 ranking.setRankingChampion(rankingChampStorage.load());
 
 let currentLeaderCode = null;
@@ -150,6 +155,14 @@ function sanitizeLeaderChatMessage(comment) {
     return normalized;
 }
 
+function resolveArenaCountry(rawData, user = null) {
+    const country = resolveCountry(rawData || {});
+    if (user?.id) {
+        userCountryOverrides[String(user.id).toLowerCase()] = country;
+    }
+    return country;
+}
+
 function resolveCountry(rawData) {
     const uniqueId = String(rawData.uniqueId || rawData.user?.uniqueId || "").toLowerCase();
     if (uniqueId && userCountryOverrides[uniqueId]) {
@@ -185,19 +198,6 @@ function resolveCountry(rawData) {
     return "GLOBAL";
 }
 
-function isCompetitiveArenaPlayer(playerId) {
-    return Boolean(playerId) &&
-        !playerId.startsWith("bot_") &&
-        !playerId.startsWith("debug_") &&
-        !playerId.startsWith("stress_") &&
-        !playerId.startsWith("rose_burst_") &&
-        !playerId.startsWith("donut_wave_") &&
-        !playerId.startsWith("galaxy_stress_") &&
-        !playerId.startsWith("universe_spike_") &&
-        !playerId.startsWith("mixed_flood_") &&
-        playerId !== "debug_user";
-}
-
 function updateRankingChampion(countryWinner) {
     if (!countryWinner) return;
     const now = Date.now();
@@ -224,7 +224,7 @@ function resetRound() {
     const arenaWinner = arena.getRoundWinner();
 
     let persistedArenaWinner = null;
-    if (arenaWinner?.id && isCompetitiveArenaPlayer(arenaWinner.id)) {
+    if (arenaWinner?.id) {
         persistedArenaWinner = arena.markRoundWinner(arenaWinner.id);
         if (persistedArenaWinner) {
             lastWinners = normalizeChampionStandings([
@@ -233,12 +233,14 @@ function resetRound() {
                     id: persistedArenaWinner.id,
                     name: persistedArenaWinner.name,
                     avatar: persistedArenaWinner.avatar,
+                    flag: persistedArenaWinner.flag,
                     victories: persistedArenaWinner.victories,
                     time: new Date().toLocaleTimeString(),
                     timestamp: Date.now()
                 }
             ]);
             championsStorage.save(lastWinners);
+            arena.seedChampionStandings(lastWinners);
         }
     }
 
@@ -305,11 +307,19 @@ function startArenaSawLoop() {
         if (!hits.length) return;
 
         hits.forEach((hit) => {
-            io.emit("arena:sawHit", hit);
+            const sawAttacker = arena.getCountryState(hit.attacker.countryCode) || hit.attacker;
+            const sawTarget = arena.getCountryState(hit.target.countryCode) || hit.target;
+            io.emit("arena:sawHit", {
+                attacker: sawAttacker,
+                target: sawTarget,
+                damage: hit.damage,
+                scoreLoss: hit.scoreLoss,
+                ko: hit.ko
+            });
             if (hit.ko) {
                 io.emit("arena:ko", {
-                    attackerId: hit.attacker.id,
-                    targetId: hit.target.id
+                    attackerId: sawAttacker.id,
+                    targetId: sawTarget.id
                 });
             }
         });
@@ -391,13 +401,14 @@ async function connectToTikTok() {
     }
 }
 
-function handleArenaGift(event) {
-    const attacker = arena.ensurePlayer(event.user, "gift");
+function handleArenaGift(event, rawData) {
+    const attackerCountryCode = resolveCountry(rawData);
+    const attacker = arena.ensurePlayer(event.user, "gift", { countryCode: attackerCountryCode });
     if (!attacker) return;
 
     if (attacker.state === "ELIMINATED" && Date.now() >= attacker.eliminatedUntil) {
         arena.applyChatActivity(attacker.id);
-        io.emit("arena:respawn", { userId: attacker.id, mode: "gift" });
+        io.emit("arena:respawn", { userId: attackerCountryCode, mode: "gift" });
     }
 
     const targetSelection = arena.pickTarget(attacker.id);
@@ -409,13 +420,15 @@ function handleArenaGift(event) {
 
     const result = arena.applyGiftCombat(attacker.id, target.id, event.gift, isSuddenDeath);
     if (!result) return;
+    const attackerCountry = arena.getCountryState(result.attacker.countryCode) || result.attacker;
+    const targetCountry = arena.getCountryState(result.target.countryCode) || result.target;
 
     io.emit("arena:gift", {
-        attacker: { id: result.attacker.id, x: result.attacker.x, y: result.attacker.y },
-        attackerState: result.attacker,
-        target: result.target,
-        targetId: result.target.id,
-        targetState: result.target.state,
+        attacker: { id: attackerCountry.id, x: attackerCountry.x, y: attackerCountry.y },
+        attackerState: attackerCountry,
+        target: targetCountry,
+        targetId: targetCountry.id,
+        targetState: targetCountry.state,
         diamondCount: event.gift.diamondCount,
         repeatCount: event.gift.repeatCount,
         totalDiamonds: event.gift.totalDiamonds,
@@ -433,7 +446,7 @@ function handleArenaGift(event) {
 
     if (result.comboMultiplier > 1) {
         io.emit("arena:combo", {
-            attackerId: result.attacker.id,
+            attackerId: attackerCountry.id,
             combo: result.attacker.comboCount,
             multiplier: result.comboMultiplier
         });
@@ -441,14 +454,14 @@ function handleArenaGift(event) {
 
     if (event.gift.totalDiamonds >= GAME_CONFIG.countries.bigGiftThreshold) {
         io.emit("arena:burst", {
-            sourceId: result.attacker.id,
-            targetId: result.target.id,
-            sourceX: result.attacker.x,
-            sourceY: result.attacker.y,
-            x: result.target.x,
-            y: result.target.y,
-            targetX: result.target.x,
-            targetY: result.target.y,
+            sourceId: attackerCountry.id,
+            targetId: targetCountry.id,
+            sourceX: attackerCountry.x,
+            sourceY: attackerCountry.y,
+            x: targetCountry.x,
+            y: targetCountry.y,
+            targetX: targetCountry.x,
+            targetY: targetCountry.y,
             count: event.gift.totalDiamonds >= 20000 ? 8 : 4,
             color: event.gift.tier === "legendary" ? "#fff7d6" : "#fbbf24"
         });
@@ -456,7 +469,7 @@ function handleArenaGift(event) {
 
     if (event.gift.category === "mega" || event.gift.totalDiamonds >= 500) {
         io.emit("arena:powerup", {
-            userId: result.attacker.id,
+            userId: attackerCountry.id,
             type: "buzzsaw",
             duration: 900
         });
@@ -464,13 +477,13 @@ function handleArenaGift(event) {
 
     if (result.ko) {
         io.emit("arena:ko", {
-            attackerId: result.attacker.id,
-            targetId: result.target.id
+            attackerId: attackerCountry.id,
+            targetId: targetCountry.id
         });
     }
 
     if (targetSelection.respawned) {
-        io.emit("arena:respawn", { userId: result.target.id, mode: "basic" });
+        io.emit("arena:respawn", { userId: targetCountry.id, mode: "basic" });
     }
 
     broadcastHallOfFame();
@@ -513,7 +526,7 @@ function bindTikTokListeners(connection) {
             const event = normalizeGiftEvent(rawData, giftCatalog);
             if (!event.user) return;
             handleRankingGift(event, rawData);
-            handleArenaGift(event);
+            handleArenaGift(event, rawData);
         } catch (error) {
             console.error("Gift error:", error.message);
         }
@@ -536,15 +549,16 @@ function bindTikTokListeners(connection) {
             flag: ranking.getCountries()[country]?.flag || ""
         });
 
-        const player = arena.ensurePlayer(event.user, "like");
+        const player = arena.ensurePlayer(event.user, "like", { countryCode: country });
         if (!player) return;
 
         const support = arena.applyLikeSupport(player.id, event.likeCount);
         const comboLikes = support?.likeCombo || event.likeCount;
         const strike = arena.applyLikeStrike(player.id, comboLikes, isSuddenDeath);
+        const playerCountry = arena.getCountryState(player.countryCode) || support?.player || null;
         io.emit("arena:like", {
-            userId: player.id,
-            player: support?.player || null,
+            userId: playerCountry?.id || player.id,
+            player: playerCountry || null,
             likeCount: event.likeCount,
             comboLikes,
             heal: support?.heal || 0,
@@ -553,13 +567,13 @@ function bindTikTokListeners(connection) {
         });
 
         if (support?.respawned) {
-            io.emit("arena:respawn", { userId: player.id, mode: "basic" });
+            io.emit("arena:respawn", { userId: playerCountry?.id || player.id, mode: "basic" });
         }
 
-        if (support?.player && comboLikes >= GAME_CONFIG.arena.likeBurstThreshold) {
+        if (playerCountry && comboLikes >= GAME_CONFIG.arena.likeBurstThreshold) {
             io.emit("arena:burst", {
-                x: support.player.x,
-                y: support.player.y,
+                x: playerCountry.x,
+                y: playerCountry.y,
                 count: comboLikes >= GAME_CONFIG.arena.likeMegaPowerThreshold ? 6 : 3,
                 color: comboLikes >= GAME_CONFIG.arena.likeMiniPowerThreshold ? "#7dd3fc" : "#bbf7d0"
             });
@@ -570,16 +584,18 @@ function bindTikTokListeners(connection) {
                 ? GAME_CONFIG.arena.likeMegaPowerDurationFrames
                 : GAME_CONFIG.arena.likeMiniPowerDurationFrames;
             io.emit("arena:powerup", {
-                userId: player.id,
+                userId: playerCountry?.id || player.id,
                 type: "buzzsaw",
                 duration
             });
         }
 
         if (strike) {
+            const strikeAttacker = arena.getCountryState(strike.attacker.countryCode) || strike.attacker;
+            const strikeTarget = arena.getCountryState(strike.target.countryCode) || strike.target;
             io.emit("arena:likeStrike", {
-                attacker: strike.attacker,
-                target: strike.target,
+                attacker: strikeAttacker,
+                target: strikeTarget,
                 damage: strike.damage,
                 scoreLoss: strike.scoreLoss,
                 ko: strike.ko,
@@ -588,8 +604,8 @@ function bindTikTokListeners(connection) {
             });
             if (strike.ko) {
                 io.emit("arena:ko", {
-                    attackerId: strike.attacker.id,
-                targetId: strike.target.id
+                    attackerId: strikeAttacker.id,
+                    targetId: strikeTarget.id
                 });
             }
         }
@@ -623,8 +639,12 @@ function bindTikTokListeners(connection) {
             });
         }
 
-        const player = arena.ensurePlayer(event.user, "chat");
+        const arenaCountry = detectedCountry || resolveArenaCountry(rawData, event.user);
+        const player = arena.ensurePlayer(event.user, "chat", { countryCode: arenaCountry });
         if (!player) return;
+        if (detectedCountry) {
+            arena.setPlayerCountry(player.id, detectedCountry);
+        }
         const activity = arena.applyChatActivity(player.id);
         const chatRequestedPower = text.includes(`+ ${GAME_CONFIG.arena.chatPowerKeyword}`) ||
             text.includes(`+${GAME_CONFIG.arena.chatPowerKeyword}`) ||
@@ -634,16 +654,17 @@ function bindTikTokListeners(connection) {
         const cleanComment = sanitizeLeaderChatMessage(event.comment);
 
         if (chatRequestedPower) {
+            const powerCountry = arena.getCountryState((power?.player || player).countryCode) || power?.player || player;
             io.emit("arena:chatPower", {
-                userId: player.id,
+                userId: powerCountry.id,
                 keyword: GAME_CONFIG.arena.chatPowerKeyword,
-                player: power?.player || null,
+                player: powerCountry || null,
                 heal: power?.heal || 0,
                 scoreGain: power?.scoreGain || 0
             });
             if (power?.duration) {
                 io.emit("arena:powerup", {
-                    userId: player.id,
+                    userId: powerCountry.id,
                     type: "buzzsaw",
                     duration: power.duration
                 });
@@ -653,12 +674,12 @@ function bindTikTokListeners(connection) {
             queueArenaState();
         }
         if (activity?.respawned) {
-            io.emit("arena:respawn", { userId: player.id, mode: "basic" });
+            io.emit("arena:respawn", { userId: arenaCountry, mode: "basic" });
         }
 
         if (
             topArenaLeader?.id &&
-            topArenaLeader.id === player.id &&
+            topArenaLeader.id === arenaCountry &&
             cleanComment &&
             cleanComment.length >= 3 &&
             !chatRequestedPower
@@ -669,8 +690,8 @@ function bindTikTokListeners(connection) {
             if (arenaLeaderVoiceWindow.count < 5) {
                 arenaLeaderVoiceWindow.count += 1;
                 io.emit("arena:leaderChat", {
-                    userId: player.id,
-                    name: player.name,
+                    userId: arenaCountry,
+                    name: DEFAULT_COUNTRIES[arenaCountry]?.name || player.name,
                     comment: cleanComment,
                     remaining: Math.max(0, 5 - arenaLeaderVoiceWindow.count)
                 });
