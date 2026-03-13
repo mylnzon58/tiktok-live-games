@@ -1,21 +1,22 @@
-# 🎮 TikTok LIVE — Countries + Arena
+# 🎮 TikTok LIVE — Team Arena + Arena
 
 Proyecto de overlay dual para TikTok LIVE:
-- `/overlay`: batalla de países basada en regalos y taps
-- `/arena`: arena PvP ligera para espectadores, con ranking de ronda y top persistente
+- `/` y `/overlay`: arena por países/equipos basada en regalos, taps y chat
+- `/arena`: arena PvP clásica individual, con ranking de ronda y top persistente
 
 Separación conceptual obligatoria:
 - `overlay` y `arena` comparten servidor y conexión LIVE, pero son dos productos distintos.
-- `overlay` no debe asumir reglas visuales ni competitivas del arena.
-- `arena` no debe contaminar la UX ni la documentación del overlay.
+- `overlay` es el modo por países/equipos.
+- `arena` es el modo clásico individual.
 - cualquier IA o desarrollador debe tratar ambos flujos como dominios separados que solo comparten infraestructura.
 
 La arquitectura está separada por responsabilidad:
 - `server.js`: autoridad de conexión, reglas, scoring, rondas y contratos Socket.IO
-- `lib/arena-manager.js`: estados de jugador, KO, respawn, inactividad y Hall of Fame
+- `lib/arena-manager.js`: arena clásica individual
+- `lib/team-arena-manager.js`: arena por países/equipos
 - `lib/gift-catalog.js`: catálogo extensible de regalos y resolución de tiers/FX
 - `lib/live-event-adapter.js`: normalización de eventos de TikTok LIVE
-- `overlay.js` y `arena.js`: render, UI y efectos no autoritativos
+- `teamarena.js` y `arena.js`: render, UI y efectos no autoritativos
 
 ---
 
@@ -109,40 +110,37 @@ puntos = diamantes × cantidad_repetida
 
 Ejemplo: Un regalo Galaxy (1000 💎) × 3 repeticiones = **3000 puntos** para el país.
 
-### Arena
+### Arena clásica (`/arena`)
 
-Reglas fijas del arena que no deben revertirse:
+Reglas fijas que no deben revertirse:
 - HUD simple y entendible: mostrar solo `PTS`, `RONDAS` y `VP` (`vidas perdidas`)
 - `HP` existe para combate y feedback visual, pero no debe dominar el HUD textual
-- el modo actual de `/arena` es `ARENA POR PAISES`, no PvP individual directo
-- cada usuario pertenece a un país; se detecta por prefijo/nombre en chat o por `countryCode`
-- likes, gifts y chat power impactan al jugador real en servidor, pero la UI del arena muestra globos agregados por país
-- un globo del arena representa a un país:
-  - bandera por imagen real al centro
+- `ganador de la ronda`: jugador individual con mayor `standingScore`
+- `numero uno del arena`: jugador con más `RONDAS` ganadas
+- si empatan en `RONDAS`, desempata por score actual y luego `bestScore`
+- regalos son mucho más fuertes que taps
+- ataques, choques, rayos y sierra deben quitar puntos reales
+- jugadores inactivos no deben contaminar ranking vivo ni locuciones
+
+### Team arena (`/` y `/overlay`)
+
+Reglas fijas que no deben revertirse:
+- cada usuario entra a un país/equipo escribiendo su país o prefijo en el chat
+- el equipo visible es el país, no el jugador individual
+- cada globo representa un país:
+  - bandera real al centro
   - mini avatares al costado
   - `PTS` del país dentro del globo
-- si no se puede detectar un país real, ese usuario no debe entrar al arena visible; no usar `Mundo` ni `GLOBAL` como equipo jugable en `/arena`
-- `ganador de la ronda`: el país que termina con mayor `standingScore` agregado
-- `numero uno del arena`: el país con más `RONDAS` ganadas en el podio persistente
-- si empatan en `RONDAS`, desempata por score actual y luego `bestScore`
-- ataques, choques, rayos y sierra nunca deben pegar entre miembros del mismo país
-- `likes/taps`: suman poco, inflan visualmente y ayudan a sostener presión del país
-- `regalos`: son mucho más poderosos que los taps y mandan el ritmo del combate
-- ataques, choques y sierra deben quitar puntos reales, no solo hacer FX
-- jugadores inactivos no deben contaminar ranking vivo ni locuciones
-- historial persistente solo puede servir para memoria reciente, nunca para revivir jugadores viejos en el arena vivo
-
-Resumen visual obligatorio:
-- dentro del globo país: `PTS`
-- podio superior: `RONDAS`
-- debajo o pequeño: `VP`
+- si no se detecta un país real, ese usuario no entra al team arena visible
+- el ganador de la ronda es el país con mayor `standingScore` agregado
+- el podio superior guarda `RONDAS` ganadas por país
+- nunca pegar entre miembros del mismo país
 
 Nota para futuras IA o cambios automáticos:
+- no volver a mezclar `/arena` clásico con el team arena de la raíz
+- no reintroducir `overlay` viejo como producto principal
+- no volver a usar listas históricas crudas para poblar podios sin filtro temporal
 - no reintroducir HUD con `HP` textual dominante
-- no mezclar top persistente viejo con ranking vivo actual
-- no volver a usar listas históricas crudas para poblar el podio superior sin filtro temporal
-- no volver a mezclar `/arena` con el juego de países de la raíz
-- no volver a renderizar usuarios individuales como unidad principal en `/arena`; la unidad principal es el país
 
 ---
 
@@ -200,17 +198,18 @@ Si un espectador envía un regalo desde un país **no incluido**, se agrega auto
 
 | Evento | Descripción |
 |--------|-------------|
-| `rankingUpdate` | Ranking actualizado con nuevos puntajes |
-| `leaderChanged` | Hay un nuevo país en el #1 |
-| `roundReset` | La ronda terminó, scores reiniciados |
 | `timerUpdate` | Actualización del countdown cada segundo |
-| `bigGift` | Se recibió un regalo de alto valor |
 | `status` | Estado de la conexión a TikTok |
 | `arena:gift` | Impacto de regalo resuelto por servidor |
 | `arena:like` | Curación/apoyo no autoritativo para FX |
 | `arena:respawn` | Reentrada clara del jugador |
 | `arena:hallOfFameUpdate` | Top persistente de la arena |
 | `arena:currentRanking` | Ranking de la ronda actual |
+| `teamArena:gift` | Impacto de regalo del team arena |
+| `teamArena:like` | Curación/apoyo del team arena |
+| `teamArena:respawn` | Reentrada clara del equipo/jugador |
+| `teamArena:hallOfFameUpdate` | Top persistente del team arena |
+| `teamArena:currentRanking` | Ranking actual del team arena |
 
 ---
 
@@ -235,6 +234,9 @@ GameRankPaisTik/
 ├── arena.html
 ├── arena.js
 ├── arena.css
+├── teamarena.html
+├── teamarena.js
+├── teamarena.css
 └── README.md
 ```
 

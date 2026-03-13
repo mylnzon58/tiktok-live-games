@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>⚔️ Tap Tap Arena — TikTok LIVE</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚔️</text></svg>" />
+    <link rel="stylesheet" href="/teamarena.css?v=2" />
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Rajdhani:wght@600;700&display=swap"
+        rel="stylesheet" />
+</head>
+
+<body>
+    <!-- Overlay Fase Final -->
+    <div id="x2-alpha-overlay">
+        <h1 class="x2-banner">FASE FINAL</h1>
+        <div class="x2-subtitle">IMPACTO REFORZADO</div>
+    </div>
+
+    <!-- Ticker de Campeones -->
+    <div id="champions-ticker"></div>
+
+    <!-- Visual Announcer (Phase 3) -->
+    <div id="announcer-container"></div>
+
+    <!-- Switch Button para regresar al Ranking -->
+    <a href="/arena" id="switch-btn">⚔️ Cambiar a Arena Clásica</a>
+
+    <!-- Botón habilitar Sonido -->
+    <button id="sound-btn">🔇 Activar Sonido</button>
+
+
+
+    <!-- El Lienzo de Batalla -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Panel Lateral Izquierdo: Guía de Poderes -->
+    <div id="powers-guide">
+        <h3>TAP TAP ATAQUE</h3>
+        <ul>
+            <li><span class="emoji">🌌</span> UNIVERSO / LEÓN = ¡BOMBA!</li>
+            <li><span class="emoji">⚡</span> GALAXIA = TRIPLE RAYO</li>
+            <li><span class="emoji">⚙️</span> REGALO > 1000 = SIERRA</li>
+            <li><span class="emoji">✨</span> ESTRELLA / ZAPATO = LÁSER</li>
+            <li><span class="emoji">🍩</span> DONA / RAYO = SHOCK</li>
+            <li><img
+                    src="https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/eba3a9bb85c33e017f3648eaf88d7189~tplv-obj.png" />
+                ROSA = ATAQUE</li>
+            <li><span class="emoji">💖</span> LIKES = CURA / SALTO</li>
+            <li><span class="emoji">👑</span> CENTRO = +PODER</li>
+        </ul>
+    </div>
+
+    <!-- Panel Lateral Derecho: Ranking de la Arena -->
+    <div id="arena-ranking">
+        <div class="ranking-header">🏁 GANADOR RONDA<br><small>ULTIMO CIERRE</small></div>
+        <div id="round-winner-slot" class="round-winner-slot">
+            <div class="round-winner-empty">
+                <span class="round-winner-empty-label">CIERRE DE RONDA EN</span>
+                <span class="round-winner-empty-time">05:00</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Efectos y UI Flotante HTMl (si los hay) -->
+    <div id="floating-ui-layer"></div>
+
+    <!-- Panel de Debug para Pruebas -->
+    <div id="debug-panel">
+        <div class="debug-header">🛠️ MODO DESARROLLO</div>
+        <button id="debug-spawn-bot">🤖 Spawn Bot</button>
+        <button id="debug-gift-rose">🌹 Rosa (1)</button>
+        <button id="debug-gift-galaxy">🌌 Galaxia (1000)</button>
+        <button id="debug-gift-universe">🦁 Universo (35000)</button>
+        <button id="debug-toggle-sd">🔥 Fase Final</button>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/teamarena.js?v=2"></script>
+</body>
+
+</html>

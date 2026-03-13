@@ -171,7 +171,8 @@ soundBtn.addEventListener('click', (e) => {
 
 function resolvePreferredVoice() {
     const voices = window.speechSynthesis?.getVoices?.() || [];
-    return voices.find((voice) => /es-/i.test(voice.lang) && /female|monica|paulina|helena|sabina|google español/i.test(voice.name))
+    return voices.find((voice) => /es-/i.test(voice.lang) && /sabina|helena|paulina|monica|mónica|soledad|laura|google español|microsoft/i.test(voice.name))
+        || voices.find((voice) => /es-/i.test(voice.lang) && /google|microsoft|natural|neural/i.test(voice.name))
         || voices.find((voice) => /es-/i.test(voice.lang))
         || null;
 }
@@ -231,7 +232,7 @@ function queueAnnouncement(text, options = {}) {
 }
 
 function announceEs(text, options = {}) {
-    queueAnnouncement(text, { lang: "es", rate: 1.02, pitch: 0.98, volume: 0.9, ...options });
+    queueAnnouncement(text, { lang: "es", rate: 0.96, pitch: 0.96, volume: 0.95, ...options });
 }
 
 function announce(spanishText, options = {}) {
@@ -241,16 +242,16 @@ function announce(spanishText, options = {}) {
 function playArenaIntroAnnouncement(force = false) {
     if (introAnnouncementDone && !force) return;
     introAnnouncementDone = true;
-    announce("Arena activa. El numero uno del arena sera el unico con lectura de chats.", { gapMs: 650 });
-    announce("Prueben rosa, capibara, helado o dona y miren como se enciende la arena.", { gapMs: 700 });
+    announce("Arena por paises activa. Para entrar, escriban su pais o su prefijo en el chat y luego hagan tap tap.", { gapMs: 650 });
+    announce("Los regalos empujan con mucha fuerza a su pais y el ganador de la ronda sube al podio del arena.", { gapMs: 700 });
 }
 
 function promptReturnToArena(force = false) {
     const now = Date.now();
     if (!force && now - lastReturnPromptAt < 45000) return;
     lastReturnPromptAt = now;
-    spawnFloatingText("TAP TAP O CHATEA PARA VOLVER", canvas.width / 2, canvas.height / 2 - 140, "#fef08a");
-    announce("Tap tap o escribe en el chat para volver al arena.", { gapMs: 650 });
+    spawnFloatingText("ESCRIBE TU PAIS Y HAZ TAP TAP", canvas.width / 2, canvas.height / 2 - 140, "#fef08a");
+    announce("Escribe tu pais o prefijo en el chat y luego tap tap para volver a la partida.", { gapMs: 650 });
     screenShake = Math.max(screenShake, 4);
 }
 
@@ -259,13 +260,13 @@ function announceGiftTip() {
     if (now - lastGiftTipAt < 52000) return;
     lastGiftTipAt = now;
     const tips = [
-        "La rosa activa disparo rápido y baja puntos del oponente.",
-        "Rosa, capibara y helado tambien pueden mover la ronda y sorprender a todos.",
-        "Capibara, rosa o dona meten presion inmediata y hacen reaccionar la arena.",
-        "La dona empuja al rival y activa una onda especial.",
-        "Fuegos artificiales activan una ráfaga enorme que se siente en toda la arena.",
+        "Escriban su pais o prefijo y hagan tap tap para unirse a su equipo en esta arena.",
+        "La rosa activa disparo rapido para su pais y baja puntos del rival.",
+        "Capibara, rosa o dona meten presion inmediata y hacen reaccionar la arena de paises.",
+        "La dona empuja al rival y activa una onda especial para su equipo.",
+        "Fuegos artificiales activan una rafaga enorme que se siente en toda la arena.",
         "Galaxia desata rayos premium enormes y cambia por completo una ronda.",
-        "León y Universo activan un megablast descomunal que sacude toda la arena."
+        "Leon y Universo activan un megablast descomunal que sacude toda la arena."
     ];
     announce(tips[Math.floor(Math.random() * tips.length)], { gapMs: 650 });
 }
@@ -275,11 +276,12 @@ function announcePromoTip() {
     if (now - lastPromoTipAt < 98000) return;
     lastPromoTipAt = now;
     const promos = [
+        "Escriban su pais o prefijo y luego tap tap para sumar gente a su equipo.",
         "Prueben rosa, capibara, helado o dona y miren como cambia la pelea en segundos.",
         "Compartir y apoyarnos entre todos ayuda a viralizar este live y sumar seguidores.",
         "Apoyen siguiendo al creador del juego para impulsar esta arena en TikTok.",
         "Quien gane la ronda puede cambiar toda la historia del arena.",
-        "Quien gane el numero uno del arena tendra lectura de chats en voz.",
+        "El pais que gane la ronda sube al podio del arena y queda marcado arriba.",
         "Si les interesa un juego como este, consulten por privado.",
         "Este juego tambien puede adaptarse por encargo. Consulten precio por privado."
     ];
@@ -287,7 +289,7 @@ function announcePromoTip() {
 }
 
 function speakLeaderChat(name, comment) {
-    const cleanName = String(name || "Ganador del arena").trim().slice(0, 32);
+    const cleanName = String(name || "Numero uno del arena").trim().slice(0, 32);
     const cleanComment = String(comment || "").replace(/\s+/g, " ").trim().slice(0, 110);
     if (!cleanComment) return;
     announce(`Numero uno del arena. ${cleanName} dice: ${cleanComment}`, { gapMs: 700 });
@@ -1123,6 +1125,12 @@ class Player {
         this.id = data.id;
         this.name = data.name || "Guerrero";
         this.avatar = data.avatar || "";
+        this.flag = data.flag || data.countryFlag || "";
+        this.flagUrl = data.flagUrl || "";
+        this.countryCode = data.countryCode || this.id;
+        this.memberAvatars = Array.isArray(data.memberAvatars) ? data.memberAvatars.slice(0, 4) : [];
+        this.memberCount = data.memberCount || 1;
+        this.activeCount = data.activeCount || 1;
         this.hp = data.hp || MAX_HP;
         this.score = data.score || 0;
         this.standingScore = data.standingScore || this.score || 0;
@@ -1418,37 +1426,46 @@ class Player {
         ctx.clip(); // Cortar a círculo
 
         const img = getAvatarImage(this.avatar);
+        const flagImg = getAvatarImage(this.flagUrl);
+        const gradient = ctx.createRadialGradient(this.x, this.y, this.currentRadius * 0.15, this.x, this.y, this.currentRadius);
+        gradient.addColorStop(0, "rgba(255,255,255,0.28)");
+        gradient.addColorStop(1, "rgba(15,23,42,0.92)");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(this.x - this.currentRadius, this.y - this.currentRadius, this.currentRadius * 2, this.currentRadius * 2);
+
         if (img && img.complete && img.naturalWidth > 0) {
+            ctx.globalAlpha = 0.22;
             ctx.drawImage(img, this.x - this.currentRadius, this.y - this.currentRadius, this.currentRadius * 2, this.currentRadius * 2);
+            ctx.globalAlpha = this.opacity;
+        }
+
+        ctx.fillStyle = "rgba(4, 10, 24, 0.4)";
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.currentRadius * 0.52, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.currentRadius * 0.42, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+        if (flagImg && flagImg.complete && flagImg.naturalWidth > 0) {
+            ctx.drawImage(flagImg, this.x - (this.currentRadius * 0.5), this.y - (this.currentRadius * 0.34), this.currentRadius, this.currentRadius * 0.68);
         } else {
-            // Fallback de alto contraste
-            ctx.fillStyle = "#666"; // Gris más claro
-            ctx.fill();
-            // Dibujar inicial o icono
             ctx.fillStyle = "white";
-            ctx.font = `bold ${this.currentRadius}px Rajdhani`;
+            ctx.font = `bold ${Math.max(26, Math.floor(this.currentRadius * 0.9))}px Arial`;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            ctx.fillText(this.name[0].toUpperCase(), this.x, this.y);
+            ctx.fillText(this.flag || this.name[0].toUpperCase(), this.x, this.y - 2);
         }
+        ctx.restore();
 
         // --- PUNTOS / SCORE DENTRO DEL GLOBO ---
         ctx.restore();
         ctx.save();
         ctx.globalAlpha = this.opacity;
 
-        // Badge de Score (Central)
-        ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
         const badgeSize = Math.max(this.currentRadius * 0.7, 18);
-        ctx.beginPath();
-        ctx.arc(this.x, this.y + (this.currentRadius * 0.3), badgeSize / 2, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = "white";
-        ctx.font = `bold ${Math.floor(badgeSize * 0.55)}px Rajdhani`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(Math.floor(this.standingScore ?? this.score), this.x, this.y + (this.currentRadius * 0.3));
 
         if ((this.deaths || 0) > 0) {
             const skullX = this.x + (this.currentRadius * 0.56);
@@ -1461,6 +1478,37 @@ class Player {
             ctx.fillStyle = "#fecaca";
             ctx.font = `bold ${Math.max(9, Math.floor(skullRadius * 0.68))}px Rajdhani`;
             ctx.fillText(`VP ${this.deaths}`, skullX, skullY);
+        }
+
+        if (this.memberAvatars?.length) {
+            const slots = this.memberAvatars.slice(0, 4);
+            slots.forEach((url, index) => {
+                const angle = (-Math.PI / 2) + ((index / Math.max(1, slots.length)) * Math.PI * 2);
+                const orbitRadius = this.currentRadius + 16;
+                const faceX = this.x + Math.cos(angle) * orbitRadius;
+                const faceY = this.y + Math.sin(angle) * orbitRadius;
+                const faceRadius = Math.max(12, this.currentRadius * 0.18);
+                const faceImg = getAvatarImage(url);
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(faceX, faceY, faceRadius, 0, Math.PI * 2);
+                ctx.closePath();
+                ctx.clip();
+                if (faceImg && faceImg.complete && faceImg.naturalWidth > 0) {
+                    ctx.drawImage(faceImg, faceX - faceRadius, faceY - faceRadius, faceRadius * 2, faceRadius * 2);
+                } else {
+                    ctx.fillStyle = "rgba(148,163,184,0.95)";
+                    ctx.fillRect(faceX - faceRadius, faceY - faceRadius, faceRadius * 2, faceRadius * 2);
+                }
+                ctx.restore();
+
+                ctx.beginPath();
+                ctx.arc(faceX, faceY, faceRadius, 0, Math.PI * 2);
+                ctx.strokeStyle = "rgba(255,255,255,0.9)";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
         }
 
         // Rango HOF (Si existe)
@@ -1528,16 +1576,14 @@ class Player {
         ctx.shadowBlur = 4;
         ctx.shadowColor = "black";
         ctx.fillText(this.name, this.x, this.y - this.currentRadius - 10);
+        if ((this.memberCount || 1) > 1) {
+            ctx.fillStyle = "#cbd5e1";
+            ctx.font = "bold 12px Rajdhani";
+            ctx.fillText(`${this.activeCount || 0}/${this.memberCount} EN EQUIPO`, this.x, this.y - this.currentRadius - 28);
+        }
         ctx.shadowBlur = 0;
 
         ctx.globalAlpha = 1.0;
-
-        // Dibujar HP (Debajo de la burbuja)
-        ctx.fillStyle = "rgba(255,255,255,0.8)";
-        ctx.font = "bold 12px Rajdhani";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(`${Math.floor(this.hp)} HP`, this.x, this.y + this.currentRadius + 15);
 
         if (this.state === "ELIMINATED") {
             ctx.fillStyle = "#ff8c42";
@@ -1671,6 +1717,23 @@ class Player {
                 );
             }
         }
+
+        const sawActive = this.sawLife > 0 || passiveSawTier > 0;
+        const badgeY = sawActive ? this.y : this.y + (this.currentRadius * 0.3);
+        const scoreBadgeSize = sawActive ? badgeSize * 0.82 : badgeSize;
+        ctx.fillStyle = "rgba(0, 0, 0, 0.58)";
+        ctx.beginPath();
+        ctx.arc(this.x, badgeY, scoreBadgeSize / 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = sawActive ? "rgba(255, 230, 160, 0.8)" : "rgba(255,255,255,0.18)";
+        ctx.stroke();
+
+        ctx.fillStyle = "white";
+        ctx.font = `bold ${Math.floor(scoreBadgeSize * 0.55)}px Rajdhani`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(Math.floor(this.standingScore ?? this.score), this.x, badgeY);
 
         ctx.shadowBlur = 0;
     }
@@ -1872,7 +1935,7 @@ class LaserBeam {
 let isSuddenDeath = false;
 let lastArenaChampionId = null;
 
-socket.on("arena:suddenDeath", (active) => {
+socket.on("teamArena:suddenDeath", (active) => {
     isSuddenDeath = active;
     const sdOverlay = document.getElementById("x2-alpha-overlay");
     if (active) {
@@ -1892,7 +1955,7 @@ socket.on("arena:suddenDeath", (active) => {
     }
 });
 
-socket.on("arena:champion", (id) => {
+socket.on("teamArena:champion", (id) => {
     lastArenaChampionId = id;
     console.log("🏆 El campeón reinante es:", id);
 });
@@ -1905,7 +1968,7 @@ function syncStateToServer(p) {
 }
 
 // --- 🏆 EVENTOS PHASE 2: PRESTIGIO ---
-socket.on("arena:champions", (winners) => {
+socket.on("teamArena:champions", (winners) => {
     const ticker = document.getElementById("champions-ticker");
     sessionChampions = Array.isArray(winners) ? winners : [];
     if (!ticker) return;
@@ -1917,6 +1980,7 @@ socket.on("arena:champions", (winners) => {
     const html = winners.map(w => `
         <div class="champion-item">
             <span class="champ-crown">👑</span>
+            <span class="champ-crown">${w.flag || "🌍"}</span>
             <span class="champ-name">${w.name}</span>
             <span class="champ-wins">${w.victories} VICS</span>
             <span class="champ-time">${w.time}</span>
@@ -1927,7 +1991,7 @@ socket.on("arena:champions", (winners) => {
 });
 // ------------------------------------------
 
-socket.on("arena:combo", () => {
+socket.on("teamArena:combo", () => {
     createComboBurst();
 });
 
@@ -1973,7 +2037,7 @@ function showAnnouncer(text, color) {
     }
 }
 
-socket.on("arena:sync", (serverPlayers) => {
+socket.on("teamArena:sync", (serverPlayers) => {
     for (const id in serverPlayers) {
         const sp = serverPlayers[id];
         syncPlayerFromServer(sp);
@@ -2006,6 +2070,12 @@ function syncPlayerFromServer(sp) {
         players[sp.id].invulnerableUntil = sp.invulnerableUntil || 0;
         players[sp.id].totalGiftDiamonds = sp.totalGiftDiamonds || players[sp.id].totalGiftDiamonds || 0;
         players[sp.id].totalLikes = sp.totalLikes || players[sp.id].totalLikes || 0;
+        players[sp.id].flag = sp.flag || sp.countryFlag || players[sp.id].flag || "";
+        players[sp.id].flagUrl = sp.flagUrl || players[sp.id].flagUrl || "";
+        players[sp.id].countryCode = sp.countryCode || players[sp.id].countryCode || sp.id;
+        players[sp.id].memberAvatars = Array.isArray(sp.memberAvatars) ? sp.memberAvatars.slice(0, 4) : (players[sp.id].memberAvatars || []);
+        players[sp.id].memberCount = sp.memberCount ?? players[sp.id].memberCount ?? 1;
+        players[sp.id].activeCount = sp.activeCount ?? players[sp.id].activeCount ?? 1;
         if (sp.avatar) players[sp.id].avatar = sp.avatar;
 
         // El servidor solo es autoritativo en posicion para spawn/respawn o jugadores sinteticos.
@@ -2023,6 +2093,12 @@ function syncPlayerFromServer(sp) {
     players[sp.id].hp = sp.hp ?? players[sp.id].hp;
     players[sp.id].state = sp.state || players[sp.id].state;
     players[sp.id].invulnerableUntil = sp.invulnerableUntil || 0;
+    players[sp.id].flag = sp.flag || sp.countryFlag || players[sp.id].flag || "";
+    players[sp.id].flagUrl = sp.flagUrl || players[sp.id].flagUrl || "";
+    players[sp.id].countryCode = sp.countryCode || players[sp.id].countryCode || sp.id;
+    players[sp.id].memberAvatars = Array.isArray(sp.memberAvatars) ? sp.memberAvatars.slice(0, 4) : (players[sp.id].memberAvatars || []);
+    players[sp.id].memberCount = sp.memberCount ?? players[sp.id].memberCount ?? 1;
+    players[sp.id].activeCount = sp.activeCount ?? players[sp.id].activeCount ?? 1;
 
     if (sp.sawActiveUntil > Date.now()) {
         const remainingFrames = Math.floor((sp.sawActiveUntil - Date.now()) / (1000 / 60));
@@ -2069,6 +2145,7 @@ function updatePowersGuide() {
             ${renderList(giftRules)}
         </div>
         <div class="powers-footer">
+            <span class="powers-timer-label">ESCRIBE TU PAIS O PREFIJO PARA UNIRTE</span>
             <span class="powers-timer-label">FIN DE RONDA</span>
             <span id="round-time-remaining">05:00</span>
         </div>
@@ -2093,20 +2170,20 @@ function renderLastRoundWinner() {
 
     slot.innerHTML = `
         <div class="round-winner-card">
-            <img class="round-winner-avatar" src="${winner.avatar || 'https://www.tiktok.com/favicon.ico'}" onerror="this.src='https://www.tiktok.com/favicon.ico'" />
+            <div class="round-winner-avatar round-winner-flag${winner.flagUrl ? " has-flag-image" : ""}" style="${winner.flagUrl ? `background-image:url('${winner.flagUrl}')` : ""}">${winner.flagUrl ? "" : (winner.flag || "")}</div>
             <div class="round-winner-info">
                 <div class="round-winner-label">GANADOR ACTUAL</div>
                 <div class="round-winner-name">${winner.name}</div>
                 <div class="round-winner-meta">
-                    <span>⚔️ ${Math.floor(winner.standingScore || winner.score || 0)}</span>
-                    <span>VIDAS PERDIDAS ${Math.floor(winner.deaths || 0)}</span>
+                    <span>PTS ${Math.floor(winner.standingScore || winner.score || 0)}</span>
+                    <span>VP ${Math.floor(winner.deaths || 0)}</span>
                 </div>
             </div>
         </div>
     `;
 }
 // Escuchamos el Hall of Fame persistente del servidor (Top 10 real de 12 horas)
-socket.on("arena:hallOfFameUpdate", (list) => {
+socket.on("teamArena:hallOfFameUpdate", (list) => {
     console.log("🏆 Recibido Hall of Fame:", list);
     persistentHOF = Array.isArray(list) ? list : [];
     arenaHallOfFame = persistentHOF.reduce((acc, player) => {
@@ -2126,6 +2203,8 @@ function updateTopShowcase() {
                 id: entry.id || livePlayer?.id || entry.name,
                 name: entry.name,
                 avatar: livePlayer?.avatar || entry.avatar || "https://p16-webcast.tiktokcdn.com/webcast-va/new_gifter_badge_v3.png~tplv-obj.image",
+                flag: livePlayer?.flag || entry.flag || "",
+                flagUrl: livePlayer?.flagUrl || entry.flagUrl || "",
                 currentScore: Math.floor(livePlayer?.score || 0),
                 displayScore: Math.floor(livePlayer?.score || 0),
                 bestScore: Math.floor(livePlayer?.bestScore || livePlayer?.score || 0),
@@ -2146,6 +2225,8 @@ function updateTopShowcase() {
         podium3.push({
             name: "ESPERANDO...",
             avatar: "https://p16-webcast.tiktokcdn.com/webcast-va/new_gifter_badge_v3.png~tplv-obj.image",
+            flag: "",
+            flagUrl: "",
             score: 0,
             isPlaceholder: true
         });
@@ -2162,7 +2243,7 @@ function updateTopShowcase() {
 
         item.innerHTML = `
             ${p.title ? `<div class="top-player-title">${p.title}</div>` : ''}
-            <div class="top-player-avatar" style="background-image: url('${p.avatar || ''}')"></div>
+            <div class="top-player-avatar" style="background-image: url('${p.avatar || ''}')">${p.flagUrl ? `<span class="top-player-flag top-player-flag-image" style="background-image:url('${p.flagUrl}')"></span>` : (p.flag ? `<span class="top-player-flag">${p.flag}</span>` : "")}</div>
             <div class="top-rank-badge">${rank}</div>
             <div class="top-player-name">${p.name}</div>
             ${!p.isPlaceholder ? `<div class="top-player-score">VICTORIAS ${Math.floor(p.victories || 0)}</div>` : ''}
@@ -2212,7 +2293,7 @@ socket.on("timerUpdate", (seconds) => {
     }
 });
 
-socket.on("arena:roundEnd", (data) => {
+socket.on("teamArena:roundEnd", (data) => {
     countdownOverlay.classList.remove("active");
     Object.values(players).forEach((player) => {
         player.hp = MAX_HP;
@@ -2249,9 +2330,9 @@ socket.on("arena:roundEnd", (data) => {
     overlay.innerHTML = `
         <div class="victory-card">
             <h1 class="victory-title">🏁 GANADOR DE LA RONDA 🏁</h1>
-            <img class="victory-avatar" src="${w.avatar || 'https://www.tiktok.com/favicon.ico'}" onerror="this.src='https://www.tiktok.com/favicon.ico'"/>
+            <div class="victory-avatar victory-flag${w.flagUrl ? " has-flag-image" : ""}" style="${w.flagUrl ? `background-image:url('${w.flagUrl}')` : ""}">${w.flagUrl ? "" : (w.flag || "")}</div>
             <h2 class="victory-name">${w.name}</h2>
-            <div class="victory-stats">⚔️ VALOR DE RONDA: ${Math.floor(w.standingScore || w.score || 0)}</div>
+            <div class="victory-stats">PTS DE RONDA: ${Math.floor(w.standingScore || w.score || 0)}</div>
             ${arenaChampion?.name ? `<div class="victory-stats">👑 NUMERO UNO DEL ARENA: ${arenaChampion.name} · ${Math.floor(arenaChampion.victories || 0)} RONDAS</div>` : ""}
         </div>
     `;
@@ -2274,12 +2355,12 @@ socket.on("arena:roundEnd", (data) => {
     }, 8000);
 });
 
-socket.on("arena:lastRoundWinner", (winner) => {
+socket.on("teamArena:lastRoundWinner", (winner) => {
     lastCompletedRoundWinner = winner || null;
     renderLastRoundWinner();
 });
 
-socket.on("arena:powerup", (data) => {
+socket.on("teamArena:powerup", (data) => {
     const target = players[data.userId];
     if (target) {
         if (data.type === "buzzsaw") {
@@ -2295,7 +2376,7 @@ socket.on("arena:powerup", (data) => {
     }
 });
 
-socket.on("arena:burst", (data) => {
+socket.on("teamArena:burst", (data) => {
     const burstCount = Math.max(1, Math.min(data.count || 3, 8));
     const source = (data.sourceId && players[data.sourceId]) || (
         Number.isFinite(data.sourceX) && Number.isFinite(data.sourceY)
@@ -2333,7 +2414,7 @@ socket.on("arena:burst", (data) => {
 });
 
 // EVENTO SALIDA / AFK (GC Sweep)
-socket.on("arena:leave", (data) => {
+socket.on("teamArena:leave", (data) => {
     if (players[data.id]) {
         // Efecto visual de salir
         createExplosion(players[data.id].x, players[data.id].y, "#555");
@@ -2345,7 +2426,7 @@ socket.on("arena:leave", (data) => {
     }
 });
 
-socket.on("arena:respawn", (data) => {
+socket.on("teamArena:respawn", (data) => {
     const player = players[data.userId];
     if (!player) return;
     player.state = "ACTIVE";
@@ -2361,7 +2442,7 @@ socket.on("arena:respawn", (data) => {
 const recentHeals = {};
 
 // EVENTO DE CURACIÓN / APOYO (LIKES / TAP TAP)
-socket.on("arena:like", (data) => {
+socket.on("teamArena:like", (data) => {
     const p = syncPlayerFromServer(data.player) || players[data.userId];
     if (p) {
         p.lastActive = Date.now(); // Despierta de AFK inmediatamente
@@ -2409,7 +2490,7 @@ socket.on("arena:like", (data) => {
     }
 });
 
-socket.on("arena:likeStrike", (data) => {
+socket.on("teamArena:likeStrike", (data) => {
     const attacker = syncPlayerFromServer(data.attacker) || players[data.attacker?.id];
     const target = syncPlayerFromServer(data.target) || players[data.target?.id];
     if (!attacker || !target) return;
@@ -2446,7 +2527,7 @@ socket.on("arena:likeStrike", (data) => {
     playSound("hit", 1.08);
 });
 
-socket.on("arena:sawHit", (data) => {
+socket.on("teamArena:sawHit", (data) => {
     const attacker = syncPlayerFromServer(data.attacker) || players[data.attacker?.id];
     const target = syncPlayerFromServer(data.target) || players[data.target?.id];
     if (!attacker || !target) return;
@@ -2463,7 +2544,7 @@ socket.on("arena:sawHit", (data) => {
 });
 
 // EVENTO DE PODER POR CHAT (Aura Visual)
-socket.on("arena:chatPower", (data) => {
+socket.on("teamArena:chatPower", (data) => {
     const p = syncPlayerFromServer(data.player) || players[data.userId];
     if (p) {
         // Efecto visual de "Aura"
@@ -2498,7 +2579,7 @@ socket.on("arena:chatPower", (data) => {
     }
 });
 
-socket.on("arena:leaderChat", (data) => {
+socket.on("teamArena:leaderChat", (data) => {
     if (!data?.comment) return;
     if (!currentTopArenaLeader?.id || data.userId !== currentTopArenaLeader.id) return;
     const focusX = canvas.width / 2;
@@ -2509,7 +2590,7 @@ socket.on("arena:leaderChat", (data) => {
     screenShake = Math.max(screenShake, 3);
 });
 
-socket.on("arena:ko", (data) => {
+socket.on("teamArena:ko", (data) => {
     const attacker = players[data.attackerId];
     const target = players[data.targetId];
     const x = target?.x || attacker?.x || (canvas.width / 2);
@@ -2597,7 +2678,7 @@ function getPaidGiftFxProfile(giftValue, diamondsTotal) {
 }
 
 // EVENTO DE ATAQUE (REGALOS)
-socket.on("arena:gift", (data) => {
+socket.on("teamArena:gift", (data) => {
     const attackerId = data.attacker?.id;
     const attacker = syncPlayerFromServer(data.attackerState) || players[attackerId];
     if (!attacker) return;
@@ -2806,7 +2887,7 @@ function updateRankingDOM(force = false) {
     }
 }
 
-socket.on("arena:currentRanking", (data) => {
+socket.on("teamArena:currentRanking", (data) => {
     roundRanking = data; // Ranking de la ronda actual
     lastRoundRankingAt = Date.now();
     updateRankingDOM(true); // Forzar actualización cuando cambian los líderes
@@ -3151,7 +3232,7 @@ function loop() {
 
     // Enviar lote de posiciones cada 10 frames (~160ms) - MÁS RÁPIDO para reducir lag percibido
     if (frameCount % 10 === 0 && Object.keys(positionBatch).length > 0) {
-        socket.emit("arena:batchUpdate", positionBatch);
+        socket.emit("teamArena:batchUpdate", positionBatch);
         positionBatch = {}; // Limpiar lote después de enviar
     }
 
@@ -3223,25 +3304,25 @@ requestAnimationFrame(loop);
 // ------------------------------------------
 if (DEBUG_MODE) {
     document.getElementById("debug-spawn-bot")?.addEventListener("click", () => {
-        socket.emit("arena:debug:gift", { giftName: "Bot Spawn", diamondCount: 1, uniqueId: "bot_" + Math.floor(Math.random() * 1000) });
+        socket.emit("teamArena:debug:gift", { giftName: "Bot Spawn", diamondCount: 1, uniqueId: "bot_" + Math.floor(Math.random() * 1000) });
         spawnFloatingText("BOT", canvas.width / 2, canvas.height / 2, "#fff");
     });
 
     document.getElementById("debug-gift-rose")?.addEventListener("click", () => {
-        socket.emit("arena:debug:gift", { giftName: "Rosa", diamondCount: 1 });
+        socket.emit("teamArena:debug:gift", { giftName: "Rosa", diamondCount: 1 });
         spawnFloatingText("ROSE", canvas.width / 2, canvas.height / 2, "#ff4757");
     });
 
     document.getElementById("debug-gift-galaxy")?.addEventListener("click", () => {
-        socket.emit("arena:debug:gift", { giftName: "Galaxia", diamondCount: 1000 });
+        socket.emit("teamArena:debug:gift", { giftName: "Galaxia", diamondCount: 1000 });
     });
 
     document.getElementById("debug-gift-universe")?.addEventListener("click", () => {
-        socket.emit("arena:debug:gift", { giftName: "Universo", diamondCount: 35000 });
+        socket.emit("teamArena:debug:gift", { giftName: "Universo", diamondCount: 35000 });
     });
 
     document.getElementById("debug-toggle-sd")?.addEventListener("click", () => {
-        socket.emit("arena:debug:toggleSD");
+        socket.emit("teamArena:debug:toggleSD");
     });
 }
 

@@ -212,6 +212,7 @@ html {
     display: flex;
     justify-content: center;
     align-items: center;
+    flex-wrap: wrap;
     gap: 12px;
     margin-top: 2px;
     padding-top: 10px;
@@ -313,8 +314,18 @@ html {
     height: 56px;
     border-radius: 50%;
     border: 2px solid rgba(251, 191, 36, 0.8);
-    object-fit: cover;
     flex-shrink: 0;
+}
+
+.round-winner-flag {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.24), rgba(15,23,42,0.95));
+    font-size: 30px;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
 }
 
 .round-winner-info {
@@ -484,6 +495,17 @@ html {
     box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
 }
 
+.victory-flag {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.24), rgba(15,23,42,0.96));
+    font-size: 86px;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
 .victory-name {
     font-family: 'Bungee', cursive;
     font-size: 28px;
@@ -632,6 +654,7 @@ html {
 }
 
 .top-player-avatar {
+    position: relative;
     width: 80px;
     /* Aumentado de 65px */
     height: 80px;
@@ -642,6 +665,24 @@ html {
     background-size: cover;
     background-position: center;
     margin-bottom: 10px;
+}
+
+.top-player-flag {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 42px;
+    background: radial-gradient(circle at 50% 50%, rgba(0,0,0,0.08), rgba(0,0,0,0.42));
+    border-radius: 50%;
+}
+
+.top-player-flag-image {
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    font-size: 0;
 }
 
 .top-player-score {
