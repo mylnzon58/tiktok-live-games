@@ -157,11 +157,8 @@ function sanitizeLeaderChatMessage(comment) {
 }
 
 function resolveArenaCountry(rawData, user = null) {
-    const country = resolveCountry(rawData || {});
-    if (user?.id) {
-        userCountryOverrides[String(user.id).toLowerCase()] = country;
-    }
-    return country;
+    const uniqueId = String(user?.id || rawData?.user?.uniqueId || rawData?.uniqueId || "").toLowerCase();
+    return uniqueId ? (userCountryOverrides[uniqueId] || null) : null;
 }
 
 function resolveCountry(rawData) {
@@ -390,7 +387,7 @@ async function connectToTikTok() {
 }
 
 function handleArenaGift(event, rawData) {
-    const attackerCountryCode = resolveCountry(rawData);
+    const attackerCountryCode = resolveArenaCountry(rawData, event.user);
     if (!attackerCountryCode) return;
     const attacker = arena.ensurePlayer(event.user, "gift", { countryCode: attackerCountryCode });
     if (!attacker) return;
@@ -539,7 +536,9 @@ function bindTikTokListeners(connection) {
             flag: ranking.getCountries()[country]?.flag || ""
         });
 
-        const player = arena.ensurePlayer(event.user, "like", { countryCode: country });
+        const arenaCountryCode = resolveArenaCountry(rawData, event.user);
+        if (!arenaCountryCode) return;
+        const player = arena.ensurePlayer(event.user, "like", { countryCode: arenaCountryCode });
         if (!player) return;
 
         const support = arena.applyLikeSupport(player.id, event.likeCount);
