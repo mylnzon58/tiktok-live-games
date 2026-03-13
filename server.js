@@ -82,7 +82,7 @@ if (teamLastWinners[0]?.id) {
 }
 
 let isSuddenDeath = false;
-let timeRemaining = GAME_CONFIG.countries.roundDurationSeconds;
+let timeRemaining = GAME_CONFIG.arena.roundDurationSeconds;
 let timerInterval = null;
 let tiktokRetryTimer = null;
 let chromeSyncTimer = null;
@@ -160,6 +160,31 @@ function broadcastHallOfFame() {
 
 function broadcastTeamHallOfFame() {
     io.emit("teamArena:hallOfFameUpdate", teamArena.getHallOfFameList(10));
+}
+
+function emitArenaTelemetry(eventName, payload) {
+    io.emit("arena:telemetry", {
+        event: eventName,
+        serverTs: Date.now(),
+        ...payload
+    });
+}
+
+function logArenaGift(event, result) {
+    const attacker = result?.attacker;
+    const target = result?.target;
+    if (!attacker?.id || !target?.id) return;
+    console.log(
+        `[arena gift] ${attacker.name || attacker.id} -> ${target.name || target.id} | gift=${event.gift.name} x${event.gift.repeatCount} | diamonds=${event.gift.totalDiamonds} | fx=${event.gift.fx} | sfx=${event.gift.sfx} | score+${result.scoreGain} | dmg=${result.damage} | loss=${result.scoreLoss} | ko=${result.ko ? "yes" : "no"}`
+    );
+}
+
+function logArenaLike(event, player, support, strike) {
+    if (!player?.id) return;
+    const comboLikes = support?.likeCombo || event.likeCount;
+    console.log(
+        `[arena like] ${player.name || player.id} | likes=${event.likeCount} | total=${event.totalLikeCount || 0} | src=${event.countSource || "unknown"} | combo=${comboLikes} | heal=${support?.heal || 0} | score+${support?.scoreGain || 0} | strike=${strike ? "yes" : "no"} | ko=${strike?.ko ? "yes" : "no"}`
+    );
 }
 
 function sanitizeLeaderChatMessage(comment) {
@@ -326,7 +351,7 @@ function resetRound() {
 
 function startTimer() {
     clearInterval(timerInterval);
-    timeRemaining = GAME_CONFIG.countries.roundDurationSeconds;
+    timeRemaining = GAME_CONFIG.arena.roundDurationSeconds;
     io.emit("timerUpdate", timeRemaining);
 
     timerInterval = setInterval(() => {
@@ -480,6 +505,7 @@ function handleArenaGift(event) {
 
     const result = arena.applyGiftCombat(attacker.id, target.id, event.gift, isSuddenDeath);
     if (!result) return;
+    logArenaGift(event, result);
 
     io.emit("arena:gift", {
         attacker: { id: result.attacker.id, x: result.attacker.x, y: result.attacker.y },
@@ -500,6 +526,27 @@ function handleArenaGift(event) {
         damage: result.damage,
         scoreGain: result.scoreGain,
         scoreLoss: result.scoreLoss
+    });
+    emitArenaTelemetry("gift", {
+        userId: result.attacker.id,
+        userName: result.attacker.name,
+        targetId: result.target.id,
+        targetName: result.target.name,
+        giftName: event.gift.name,
+        diamondCount: event.gift.diamondCount,
+        repeatCount: event.gift.repeatCount,
+        repeatCountSource: event.repeatCountSource || "unknown",
+        totalDiamonds: event.gift.totalDiamonds,
+        effectKey: event.gift.fx,
+        category: event.gift.category,
+        sfx: event.gift.sfx,
+        multiplier: result.comboMultiplier,
+        damage: result.damage,
+        scoreGain: result.scoreGain,
+        scoreLoss: result.scoreLoss,
+        burstTriggered: event.gift.totalDiamonds >= GAME_CONFIG.countries.bigGiftThreshold,
+        powerupTriggered: event.gift.category === "mega" || event.gift.totalDiamonds >= 500,
+        ko: Boolean(result.ko)
     });
 
     if (result.comboMultiplier > 1) {
@@ -646,6 +693,7 @@ function handleArenaLike(event) {
     const support = arena.applyLikeSupport(player.id, event.likeCount);
     const comboLikes = support?.likeCombo || event.likeCount;
     const strike = arena.applyLikeStrike(player.id, comboLikes, isSuddenDeath);
+    logArenaLike(event, player, support, strike);
 
     io.emit("arena:like", {
         userId: player.id,
@@ -655,6 +703,21 @@ function handleArenaLike(event) {
         heal: support?.heal || 0,
         scoreGain: support?.scoreGain || 0,
         respawned: Boolean(support?.respawned)
+    });
+    emitArenaTelemetry("like", {
+        userId: player.id,
+        userName: player.name,
+        likeCount: event.likeCount,
+        totalLikeCount: event.totalLikeCount || 0,
+        countSource: event.countSource || "unknown",
+        comboLikes,
+        heal: support?.heal || 0,
+        scoreGain: support?.scoreGain || 0,
+        respawned: Boolean(support?.respawned),
+        burstTriggered: Boolean(support?.player && comboLikes >= GAME_CONFIG.arena.likeBurstThreshold),
+        powerupTriggered: Boolean(comboLikes >= GAME_CONFIG.arena.likeMiniPowerThreshold),
+        strikeTriggered: Boolean(strike),
+        ko: Boolean(strike?.ko)
     });
 
     if (support?.respawned) {
@@ -903,7 +966,11 @@ function bindTikTokListeners(connection) {
     connection.on("gift", (rawData) => {
         try {
             const event = normalizeGiftEvent(rawData, giftCatalog);
-            if (!event.user) return;
+            if (!event?.user) {
+                const rawName = rawData?.giftName || rawData?.gift?.gift_name || rawData?.gift?.name || "unknown";
+                console.warn(`[gift skipped] missing normalized event/user | gift=${rawName}`);
+                return;
+            }
             handleArenaGift(event);
             handleTeamArenaGift(event, rawData);
         } catch (error) {
@@ -913,14 +980,20 @@ function bindTikTokListeners(connection) {
 
     connection.on("like", (rawData) => {
         const event = normalizeLikeEvent(rawData);
-        if (!event.user) return;
+        if (!event?.user) {
+            console.warn("[like skipped] missing normalized event/user");
+            return;
+        }
         handleArenaLike(event);
         handleTeamArenaLike(event, rawData);
     });
 
     connection.on("chat", (rawData) => {
         const event = normalizeChatEvent(rawData);
-        if (!event.user) return;
+        if (!event?.user) {
+            console.warn("[chat skipped] missing normalized event/user");
+            return;
+        }
         handleArenaChat(event);
         handleTeamArenaChat(event, rawData);
     });

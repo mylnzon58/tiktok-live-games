@@ -772,11 +772,20 @@ html {
     z-index: 3000;
     pointer-events: none;
     font-family: 'Bungee', cursive;
-    font-size: 250px;
+    min-width: 220px;
+    padding: 22px 32px;
+    border-radius: 28px;
+    border: 3px solid rgba(255, 255, 255, 0.28);
+    background: rgba(5, 8, 18, 0.78);
+    backdrop-filter: blur(14px);
+    text-align: center;
+    font-size: clamp(92px, 18vw, 190px);
+    line-height: 1;
     color: #ff4757;
     text-shadow: 0 0 30px rgba(255, 71, 87, 0.8), 0 0 60px rgba(255, 71, 87, 0.4);
     animation: countdownPulse 1s ease-out infinite;
     display: none;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.42);
 }
 
 @keyframes countdownPulse {
@@ -930,6 +939,31 @@ html {
 
 #debug-panel button:active {
     transform: scale(0.95);
+}
+
+.debug-telemetry {
+    margin-top: 8px;
+    max-height: 220px;
+    overflow: auto;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    padding-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.debug-telemetry-item {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 7px 8px;
+    font-size: 11px;
+    line-height: 1.35;
+    color: #e5eefc;
+}
+
+.debug-telemetry-item strong {
+    color: #fef08a;
 }
 
 /* --- PHASE 3: VISUALS --- */
