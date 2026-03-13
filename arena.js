@@ -36,25 +36,25 @@ let camera = {
 function getArenaBounds() {
     const cx = canvas.width / 2;
     const cy = canvas.height / 2;
-    const radius = Math.min(canvas.width, canvas.height) / 2 - 48;
-    return { cx, cy, radius };
+    const side = Math.min(canvas.width, canvas.height) - 96;
+    const half = side / 2;
+    return {
+        cx,
+        cy,
+        side,
+        half,
+        left: cx - half,
+        right: cx + half,
+        top: cy - half,
+        bottom: cy + half
+    };
 }
 
 function clampToArena(x, y, margin = 120) {
-    const { cx, cy, radius } = getArenaBounds();
-    const dx = x - cx;
-    const dy = y - cy;
-    const distance = Math.sqrt(dx * dx + dy * dy) || 1;
-    const maxDistance = Math.max(radius - margin, 1);
-
-    if (distance <= maxDistance) {
-        return { x, y };
-    }
-
-    const ratio = maxDistance / distance;
+    const { left, right, top, bottom } = getArenaBounds();
     return {
-        x: cx + dx * ratio,
-        y: cy + dy * ratio
+        x: Math.min(Math.max(x, left + margin), right - margin),
+        y: Math.min(Math.max(y, top + margin), bottom - margin)
     };
 }
 
@@ -74,6 +74,7 @@ setTimeout(() => {
 let duelBeams = []; // Phase 4
 let arenaHallOfFame = {}; // Kings of the last 12 hours
 let persistentHOF = [];
+let sessionChampions = [];
 
 // ==========================================
 // MOTOR DE AUDIO (SYNTH)
@@ -102,6 +103,7 @@ let lastCompletedRoundWinner = null;
 let lastRoundWinnerHypeAt = 0;
 let lastRoundWinnerHypeId = null;
 let lastTopDuelVoiceAt = 0;
+let lastRoundRankingAt = 0;
 
 // Attempt auto-unlock de AudioContext silencioso
 function tryUnlockAudio() {
@@ -546,6 +548,28 @@ const sfx = {
         osc.connect(g).connect(audioCtx.destination);
         osc.start(now);
         osc.stop(now + 0.3);
+    },
+    glide: (pitchMod = 1) => {
+        if (!soundEnabled) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const noise = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        noise.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'triangle';
+        noise.type = 'sawtooth';
+        osc.frequency.setValueAtTime(120 * pitchMod, now);
+        osc.frequency.exponentialRampToValueAtTime(72 * pitchMod, now + 0.12);
+        noise.frequency.setValueAtTime(240 * pitchMod, now);
+        noise.frequency.exponentialRampToValueAtTime(130 * pitchMod, now + 0.12);
+        gain.gain.setValueAtTime(0.022, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc.start(now);
+        noise.start(now);
+        osc.stop(now + 0.12);
+        noise.stop(now + 0.12);
     }
 };
 
@@ -733,6 +757,10 @@ const MAX_HP = 1000; // Incrementado de 500 para mayor supervivencia
 let PLAYER_RADIUS = 50; // Aumentado de 45 a 50 para mejor escala inicial
 const BASE_SPEED = 2.8; // Un poco mas de rebote para evitar quietud
 const NUM_STARS = 100;
+const PASSIVE_SAW_SMALL_SCORE = 400;
+const PASSIVE_SAW_CONTINUOUS_SCORE = 550;
+const PASSIVE_SAW_MEDIUM_SCORE = 700;
+const PASSIVE_SAW_LARGE_SCORE = 1000;
 
 // Caché de imágenes pre-cargadas (Avatares)
 const avatarCache = {};
@@ -768,11 +796,11 @@ function drawBackground() {
         }
     });
 
-    // Dibujar Jaula Circular (Arena limit)
-    const { cx, cy, radius: arenaRadius } = getArenaBounds();
+    // Dibujar Jaula Cuadrada (Arena limit)
+    const { cx, cy, left, top, side } = getArenaBounds();
 
     ctx.beginPath();
-    ctx.arc(cx, cy, arenaRadius, 0, Math.PI * 2);
+    ctx.roundRect(left, top, side, side, 28);
     ctx.strokeStyle = "rgba(0, 240, 255, 0.2)";
     ctx.lineWidth = 15;
     ctx.stroke();
@@ -834,7 +862,7 @@ function drawBackground() {
     // ------------------------
 
     ctx.beginPath();
-    ctx.arc(cx, cy, arenaRadius, 0, Math.PI * 2);
+    ctx.roundRect(left, top, side, side, 28);
     ctx.strokeStyle = "rgba(0, 240, 255, 0.8)";
     ctx.shadowBlur = 15;
     ctx.shadowColor = "#00f0ff";
@@ -1136,6 +1164,7 @@ class Player {
         this.respawnSizeLockUntil = 0;
         this.lastBodyHitAt = 0;
         this.lastSawAudioAt = 0;
+        this.lastGlideAudioAt = 0;
 
         // Intervalo de reporte de posición al servidor
         if (this.id === socket.id || this.id.startsWith("bot_")) {
@@ -1196,37 +1225,20 @@ class Player {
         }
 
         // --- LÓGICA DE SIERRA (POWER-UP) ---
-        if (this.sawLife > 0) {
-            this.sawLife--;
-            this.sawAngle += 0.4 * this.spinDirection;
+        const passiveSawTier = this.getPassiveSawTier();
+        const hasContinuousSaw = (this.score || 0) >= PASSIVE_SAW_CONTINUOUS_SCORE;
+        if (this.sawLife > 0 || passiveSawTier > 0) {
+            if (this.sawLife > 0) {
+                this.sawLife--;
+            }
+            const sawSpinBoost = passiveSawTier >= 3 ? 0.2 : passiveSawTier >= 2 ? 0.12 : (hasContinuousSaw ? 0.1 : 0.06);
+            this.sawAngle += (0.4 + sawSpinBoost) * this.spinDirection;
             this.engagement = Math.max(this.engagement - 0.01, 0);
             const now = Date.now();
             const sawPulseEveryMs = Math.max(60, 118 - Math.min(42, this.engagement * 1.6));
             if (now - (this.lastSawAudioAt || 0) >= sawPulseEveryMs) {
                 this.lastSawAudioAt = now;
                 playSound("buzzsaw");
-            }
-
-            // Daño en área (Aura de Sierra)
-            if (Date.now() % 200 < 50) { // Throttled damage
-                for (const otherId in players) {
-                    if (otherId === this.id) continue;
-                    const other = players[otherId];
-                    if (!other || other.opacity < 0.5 || other.hp <= 0 || other.state === "ELIMINATED") continue;
-
-                    const dx = this.x - other.x;
-                    const dy = this.y - other.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    const auraRadius = this.currentRadius + 25; // El aura es un poco más grande
-
-                    if (dist < auraRadius + other.currentRadius) {
-                        // REQUERIMIENTO: "quita puntos y achica al otro"
-                        other.takeDamage(10, this.id);
-
-                        createExplosion(other.x, other.y, "#999");
-                        if (Math.random() > 0.8) playSound("hit");
-                    }
-                }
             }
         }
 
@@ -1238,12 +1250,20 @@ class Player {
             this.vy = (this.vy / computedSpeed) * maxSpeed;
         }
 
+        if (this.opacity > 0.45 && this.state === "ACTIVE" && computedSpeed > 5.2) {
+            const now = Date.now();
+            if (now - (this.lastGlideAudioAt || 0) > 420 && Math.random() < 0.08) {
+                this.lastGlideAudioAt = now;
+                playSound("glide", Math.min(1.45, 0.9 + (computedSpeed / 14)));
+            }
+        }
+
         // Físicas
         this.x += this.vx;
         this.y += this.vy;
 
-        // Rebote Jaula Circular
-        const { cx, cy, radius: arenaRadius } = getArenaBounds();
+        // Rebote Jaula Cuadrada
+        const { cx, cy, left, right, top, bottom } = getArenaBounds();
         const dx = this.x - cx;
         const dy = this.y - cy;
         const distToCenter = Math.sqrt(dx * dx + dy * dy);
@@ -1258,17 +1278,33 @@ class Player {
         }
         // ----------------------------
 
-        if (distToCenter + this.currentRadius > arenaRadius) {
-            const overlap = (distToCenter + this.currentRadius) - arenaRadius;
-            const nx = dx / distToCenter;
-            const ny = dy / distToCenter;
-            this.x -= nx * overlap;
-            this.y -= ny * overlap;
+        let bounced = false;
+        if (this.x + this.currentRadius > right) {
+            this.x = right - this.currentRadius;
+            this.vx = -Math.abs(this.vx);
+            bounced = true;
+        } else if (this.x - this.currentRadius < left) {
+            this.x = left + this.currentRadius;
+            this.vx = Math.abs(this.vx);
+            bounced = true;
+        }
 
-            const dotProd = this.vx * nx + this.vy * ny;
-            if (dotProd > 0) {
-                this.vx -= 2 * dotProd * nx;
-                this.vy -= 2 * dotProd * ny;
+        if (this.y + this.currentRadius > bottom) {
+            this.y = bottom - this.currentRadius;
+            this.vy = -Math.abs(this.vy);
+            bounced = true;
+        } else if (this.y - this.currentRadius < top) {
+            this.y = top + this.currentRadius;
+            this.vy = Math.abs(this.vy);
+            bounced = true;
+        }
+
+        if (bounced) {
+            const now = Date.now();
+            const impact = Math.sqrt((this.vx * this.vx) + (this.vy * this.vy));
+            if (now - (this.lastGlideAudioAt || 0) > 180) {
+                this.lastGlideAudioAt = now;
+                playSound("glide", Math.min(1.5, 1 + (impact / 12)));
             }
         } else if (this.opacity < 0.5) {
             // --- INACTIVIDAD FÍSICA: Empujar hacia los bordes ---
@@ -1552,14 +1588,16 @@ class Player {
         }
 
         // --- ⚙️ AURA DE SIERRA (PLAYER POWER) ---
-        if (this.sawLife > 0) {
-            const worldSawRadius = this.currentRadius + 15;
+        const passiveSawTier = this.getPassiveSawTier();
+        if (this.sawLife > 0 || passiveSawTier > 0) {
+            const tierRadiusBoost = passiveSawTier >= 3 ? 38 : passiveSawTier >= 2 ? 26 : passiveSawTier >= 1 ? 14 : 0;
+            const worldSawRadius = this.currentRadius + 15 + tierRadiusBoost;
             const worldTrailingAngle = this.sawAngle - (Math.PI / 2) * this.spinDirection;
             ctx.save();
             ctx.translate(this.x, this.y);
 
             // RAYOS ELÉCTRICOS (Neuromarketing visual)
-            if (this.sawLife > 0 && Math.random() < 0.3) {
+            if ((this.sawLife > 0 || passiveSawTier >= 2) && Math.random() < 0.3) {
                 ctx.beginPath();
                 ctx.strokeStyle = "#00d2ff";
                 ctx.lineWidth = 2;
@@ -1574,8 +1612,8 @@ class Player {
             ctx.rotate(this.sawAngle);
 
             const sawRadius = worldSawRadius;
-            const teethCount = Math.max(16, Math.min(34, 16 + Math.floor(this.engagement * 1.8)));
-            const toothDepth = 12 + Math.min(24, this.engagement * 0.8);
+            const teethCount = Math.max(16, Math.min(42, 16 + Math.floor(this.engagement * 1.8) + (passiveSawTier * 4)));
+            const toothDepth = 12 + Math.min(30, this.engagement * 0.8) + (passiveSawTier * 3);
             ctx.beginPath();
             for (let i = 0; i < teethCount * 2; i++) {
                 const angle = (i / (teethCount * 2)) * Math.PI * 2;
@@ -1635,6 +1673,13 @@ class Player {
         }
 
         ctx.shadowBlur = 0;
+    }
+
+    getPassiveSawTier() {
+        if ((this.score || 0) >= PASSIVE_SAW_LARGE_SCORE) return 3;
+        if ((this.score || 0) >= PASSIVE_SAW_MEDIUM_SCORE) return 2;
+        if ((this.score || 0) >= PASSIVE_SAW_SMALL_SCORE) return 1;
+        return 0;
     }
 
     takeDamage(amount, attackerId) {
@@ -1862,9 +1907,11 @@ function syncStateToServer(p) {
 // --- 🏆 EVENTOS PHASE 2: PRESTIGIO ---
 socket.on("arena:champions", (winners) => {
     const ticker = document.getElementById("champions-ticker");
+    sessionChampions = Array.isArray(winners) ? winners : [];
     if (!ticker) return;
     if (!winners || winners.length === 0) {
         ticker.innerHTML = "<span>ESPERANDO CAMPEONES...</span>";
+        updateTopShowcase();
         return;
     }
     const html = winners.map(w => `
@@ -1876,6 +1923,7 @@ socket.on("arena:champions", (winners) => {
         </div>
     `).join('<span class="champ-sep">|</span>');
     ticker.innerHTML = `<div class="ticker-scroll">${html} ${html}</div>`; // Duplicado para loop infinito
+    updateTopShowcase();
 });
 // ------------------------------------------
 
@@ -2071,21 +2119,19 @@ socket.on("arena:hallOfFameUpdate", (list) => {
 updatePowersGuide();
 
 function updateTopShowcase() {
-    const activeWindowMs = 60 * 1000;
-    const now = Date.now();
-    const podium3 = Object.values(players)
-        .filter((player) => player?.id)
-        .filter((player) => player.state !== "REMOVED")
-        .filter((player) => player.state !== "IDLE")
-        .filter((player) => (now - (player.lastActive || 0)) <= activeWindowMs)
-        .filter((player) => (player.victories || 0) > 0)
-        .map((player) => ({
-            ...player,
-            currentScore: Math.floor(player.score || 0),
-            displayScore: Math.floor(player.score || 0),
-            bestScore: Math.floor(player.bestScore || player.score || 0),
-            victories: Math.floor(player.victories || 0)
-        }))
+    const podium3 = sessionChampions
+        .map((entry) => {
+            const livePlayer = entry.id ? players[entry.id] : Object.values(players).find((player) => player?.name === entry.name);
+            return {
+                id: entry.id || livePlayer?.id || entry.name,
+                name: entry.name,
+                avatar: livePlayer?.avatar || entry.avatar || "https://p16-webcast.tiktokcdn.com/webcast-va/new_gifter_badge_v3.png~tplv-obj.image",
+                currentScore: Math.floor(livePlayer?.score || 0),
+                displayScore: Math.floor(livePlayer?.score || 0),
+                bestScore: Math.floor(livePlayer?.bestScore || livePlayer?.score || 0),
+                victories: Math.floor(entry.victories || 0)
+            };
+        })
         .sort((a, b) =>
             (b.victories - a.victories) ||
             (b.currentScore - a.currentScore) ||
@@ -2398,6 +2444,22 @@ socket.on("arena:likeStrike", (data) => {
     }
     screenShake = Math.max(screenShake, Math.min(isSuddenDeath ? 13 : 9, (isSuddenDeath ? 4.6 : 2.8) + (comboLikes / (isSuddenDeath ? 9 : 12))));
     playSound("hit", 1.08);
+});
+
+socket.on("arena:sawHit", (data) => {
+    const attacker = syncPlayerFromServer(data.attacker) || players[data.attacker?.id];
+    const target = syncPlayerFromServer(data.target) || players[data.target?.id];
+    if (!attacker || !target) return;
+
+    target.flash = 1;
+    createExplosion(target.x, target.y, "#fbbf24", { count: 14, speed: 6, shake: 4 });
+    pushShockwave({ x: target.x, y: target.y, r: 18, opacity: 0.65, color: "#fbbf24" });
+    spawnFloatingText(`-${Math.floor(data.damage || 0)}`, target.x, target.y - 22, "#fde68a");
+    if ((data.scoreLoss || 0) > 0) {
+        spawnFloatingText(`-${Math.floor(data.scoreLoss)} PTS`, target.x, target.y - 44, "#fca5a5");
+    }
+    screenShake = Math.max(screenShake, 5);
+    if (Math.random() > 0.35) playSound("hit", 0.94);
 });
 
 // EVENTO DE PODER POR CHAT (Aura Visual)
@@ -2746,6 +2808,7 @@ function updateRankingDOM(force = false) {
 
 socket.on("arena:currentRanking", (data) => {
     roundRanking = data; // Ranking de la ronda actual
+    lastRoundRankingAt = Date.now();
     updateRankingDOM(true); // Forzar actualización cuando cambian los líderes
 
     const visibleCompetitors = roundRanking.filter((player) => player?.state !== "REMOVED" && player?.state !== "IDLE").length;
@@ -2855,8 +2918,10 @@ socket.on("arena:currentRanking", (data) => {
 
 window.setInterval(() => {
     if (!soundEnabled) return;
-    const liveRoundLeader = roundRanking[0];
-    const liveRoundRunnerUp = roundRanking[1];
+    if (Date.now() - lastRoundRankingAt > 8000) return;
+    const activeRoundRanking = roundRanking.filter((player) => player?.state !== "REMOVED" && player?.state !== "IDLE");
+    const liveRoundLeader = activeRoundRanking[0];
+    const liveRoundRunnerUp = activeRoundRanking[1];
     if (liveRoundLeader?.name) {
         announce(`Lidera la ronda en este momento. ${liveRoundLeader.name}.`, { gapMs: 650 });
     }
@@ -2877,7 +2942,7 @@ window.setInterval(() => {
     }
     announceGiftTip();
     announcePromoTip();
-}, 78000);
+}, 52000);
 
 let frameCount = 0;
 let currentArenaKingId = null;

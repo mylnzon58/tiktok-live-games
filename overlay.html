@@ -9,7 +9,7 @@
     content="Overlay de ranking de países en tiempo real para TikTok LIVE basado en regalos recibidos." />
   <link rel="icon"
     href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌎</text></svg>" />
-  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/style.css?v=2" />
   <link
     href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap"
     rel="stylesheet" />
@@ -73,9 +73,8 @@
 
     <!-- Alerta de Instrucciones Fija -->
     <div id="fixed-instructions">
-      ⚠️ Escribe el prefijo de tu país (ej: <b>AR</b> o <b>Argentina</b>, <b>MX</b> o <b>México</b>) en el chat para
-      poder
-      participar. ⚠️
+      ⚠️ Escribe tu país en el chat para entrar a la batalla. Ej: <b>AR</b>, <b>Argentina</b>, <b>MX</b> o
+      <b>México</b>. Luego <b>TAP TAP</b> y <b>REGALOS</b> empujan tu barra. ⚠️
     </div>
 
     <!-- Guía de Puntos por Donación -->
@@ -109,7 +108,7 @@
       <div id="ranking-empty">
         <div class="empty-icon">🌎</div>
         <div class="empty-text">Esperando regalos...</div>
-        <div class="empty-sub">Los países aparecerán cuando los espectadores envíen regalos</div>
+        <div class="empty-sub">Escribe tu país en el chat para entrar. Luego tap tap y regalos hacen crecer tu barra.</div>
       </div>
     </div>
 
@@ -157,7 +156,7 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/overlay.js"></script>
+  <script src="/overlay.js?v=2"></script>
 </body>
 
 </html>

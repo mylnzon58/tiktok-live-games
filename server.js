@@ -31,7 +31,34 @@ const giftCatalog = createGiftCatalog();
 const championsStorage = createStorage("arena_champions.json", []);
 const rankingChampStorage = createStorage("ranking_champion.json", null);
 
-let lastWinners = championsStorage.load();
+function normalizeChampionStandings(entries = []) {
+    const map = new Map();
+    const now = Date.now();
+    for (const entry of entries || []) {
+        if (!entry?.name && !entry?.id) continue;
+        const timestamp = Number(entry.timestamp) || 0;
+        if (!timestamp || (now - timestamp) > GAME_CONFIG.arena.championMemoryWindowMs) continue;
+        const key = entry.id || entry.name;
+        const previous = map.get(key);
+        const candidate = {
+            id: entry.id || null,
+            name: entry.name || previous?.name || "ESPERANDO...",
+            avatar: entry.avatar || previous?.avatar || "",
+            victories: Math.max(0, Number(entry.victories) || 0),
+            time: entry.time || previous?.time || "",
+            timestamp
+        };
+        if (!previous || candidate.victories > previous.victories) {
+            map.set(key, candidate);
+        }
+    }
+    return Array.from(map.values())
+        .sort((a, b) => (b.victories - a.victories) || String(a.name).localeCompare(String(b.name)))
+        .slice(0, 10);
+}
+
+let lastWinners = normalizeChampionStandings(championsStorage.load());
+championsStorage.save(lastWinners);
 ranking.setRankingChampion(rankingChampStorage.load());
 
 let currentLeaderCode = null;
@@ -42,6 +69,7 @@ let tiktokRetryTimer = null;
 let chromeSyncTimer = null;
 let arenaBroadcastTimer = null;
 let rankingBroadcastTimer = null;
+let arenaSawTimer = null;
 const userCountryOverrides = {};
 let liveStatus = { connected: false, username: process.env.TIKTOK_USERNAME || DEFAULT_TIKTOK_USERNAME };
 let tiktokLive = null;
@@ -199,12 +227,17 @@ function resetRound() {
     if (arenaWinner?.id && isCompetitiveArenaPlayer(arenaWinner.id)) {
         persistedArenaWinner = arena.markRoundWinner(arenaWinner.id);
         if (persistedArenaWinner) {
-            lastWinners.unshift({
-                name: persistedArenaWinner.name,
-                victories: persistedArenaWinner.victories,
-                time: new Date().toLocaleTimeString()
-            });
-            lastWinners = lastWinners.slice(0, 10);
+            lastWinners = normalizeChampionStandings([
+                ...lastWinners,
+                {
+                    id: persistedArenaWinner.id,
+                    name: persistedArenaWinner.name,
+                    avatar: persistedArenaWinner.avatar,
+                    victories: persistedArenaWinner.victories,
+                    time: new Date().toLocaleTimeString(),
+                    timestamp: Date.now()
+                }
+            ]);
             championsStorage.save(lastWinners);
         }
     }
@@ -263,6 +296,26 @@ function startTimer() {
             resetRound();
         }
     }, 1000);
+}
+
+function startArenaSawLoop() {
+    clearInterval(arenaSawTimer);
+    arenaSawTimer = setInterval(() => {
+        const hits = arena.applySawAuraHits(isSuddenDeath, Date.now());
+        if (!hits.length) return;
+
+        hits.forEach((hit) => {
+            io.emit("arena:sawHit", hit);
+            if (hit.ko) {
+                io.emit("arena:ko", {
+                    attackerId: hit.attacker.id,
+                    targetId: hit.target.id
+                });
+            }
+        });
+
+        queueArenaState();
+    }, GAME_CONFIG.arena.sawTickIntervalMs);
 }
 
 function getTikTokConfig() {
@@ -471,9 +524,17 @@ function bindTikTokListeners(connection) {
         if (!event.user) return;
 
         const country = resolveCountry(rawData);
-        if (ranking.addLikes(country, event.likeCount, GAME_CONFIG.countries.likesPerPoint)) {
+        const rankingAdvanced = ranking.addLikes(country, event.likeCount, GAME_CONFIG.countries.likesPerPoint);
+        if (rankingAdvanced) {
             queueRankingState();
         }
+        io.emit("ranking:like", {
+            country,
+            likeCount: event.likeCount,
+            userId: event.user.id,
+            avatarUrl: event.user.profilePictureUrl || "",
+            flag: ranking.getCountries()[country]?.flag || ""
+        });
 
         const player = arena.ensurePlayer(event.user, "like");
         if (!player) return;
@@ -694,4 +755,5 @@ server.listen(PORT, () => {
     console.log(`🚀 Server on http://localhost:${PORT}`);
     startTimer();
     startChromeCookieSync();
+    startArenaSawLoop();
 });

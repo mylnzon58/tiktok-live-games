@@ -13,6 +13,14 @@ const ROUND_DURATION = 7 * 60;
 const MAX_VISIBLE = 20;
 let elapsedSeconds = 0;
 let elapsedInterval = null;
+let latestCountries = {};
+let lastVoiceAt = 0;
+let lastJoinVoiceAt = 0;
+let lastGiftVoiceAt = 0;
+let lastLikeVoiceAt = 0;
+let lastPromptVoiceAt = 0;
+let speechQueue = [];
+let speechBusy = false;
 
 // ──────────────────────────────────────────────────────────────
 // 🔊 Sistema de Sonido (Web Audio API)
@@ -226,6 +234,35 @@ function playRankUpSound() {
     osc.stop(now + 0.25);
 }
 
+function speakOverlay(text, { minGapMs = 4500, priority = false } = {}) {
+    if (!("speechSynthesis" in window) || !text) return;
+    const now = Date.now();
+    if (!priority && now - lastVoiceAt < minGapMs) return;
+    lastVoiceAt = now;
+    if (priority) {
+        speechQueue.unshift(text);
+    } else {
+        speechQueue.push(text);
+    }
+    flushSpeechQueue();
+}
+
+function flushSpeechQueue() {
+    if (speechBusy || !speechQueue.length || !("speechSynthesis" in window)) return;
+    const text = speechQueue.shift();
+    const utterance = new window.SpeechSynthesisUtterance(text);
+    utterance.lang = "es-ES";
+    utterance.rate = 1.06;
+    utterance.pitch = 1.02;
+    utterance.volume = 1;
+    speechBusy = true;
+    utterance.onend = utterance.onerror = () => {
+        speechBusy = false;
+        setTimeout(flushSpeechQueue, 250);
+    };
+    window.speechSynthesis.speak(utterance);
+}
+
 // ──────────────────────────────────────────────────────────────
 // Inicialización
 // ──────────────────────────────────────────────────────────────
@@ -234,6 +271,9 @@ document.addEventListener("DOMContentLoaded", () => {
     createParticles();
     startReactionLoop();
     startElapsed();
+    setTimeout(() => {
+        speakOverlay("Escribe tu país en el chat para entrar. Tap tap suma a tu barra. Los regalos empujan fuerte a tu país.", { priority: true, minGapMs: 0 });
+    }, 1200);
 });
 
 // ──────────────────────────────────────────────────────────────
@@ -409,10 +449,47 @@ function updateScaleLabels() {
     }
 }
 
+function getGiftAccent(giftName = "") {
+    const lower = String(giftName).toLowerCase();
+    if (lower.includes("rose") || lower.includes("rosa")) return "🌹";
+    if (lower.includes("capy") || lower.includes("capib")) return "🦫";
+    if (lower.includes("ice")) return "🍦";
+    if (lower.includes("donut") || lower.includes("dona")) return "🍩";
+    if (lower.includes("fire")) return "🎆";
+    if (lower.includes("galaxy") || lower.includes("galaxia")) return "🌌";
+    if (lower.includes("lion") || lower.includes("león") || lower.includes("leon")) return "🦁";
+    if (lower.includes("universe") || lower.includes("universo")) return "💥";
+    return "💎";
+}
+
+function triggerRowExcitement(row, intensity = "normal") {
+    if (!row) return;
+    row.classList.remove("rush", "gift-impact");
+    row.offsetHeight;
+    row.classList.add(intensity === "gift" ? "gift-impact" : "rush");
+    setTimeout(() => row.classList.remove("rush", "gift-impact"), intensity === "gift" ? 1200 : 700);
+}
+
+function spawnBarBurst(row, emoji = "✨", count = 6) {
+    const barOuter = row?.querySelector(".rank-bar-outer");
+    if (!barOuter) return;
+    for (let i = 0; i < count; i++) {
+        const burst = document.createElement("div");
+        burst.className = "bar-burst";
+        burst.textContent = emoji;
+        burst.style.left = `${12 + Math.random() * 76}%`;
+        burst.style.top = `${35 + Math.random() * 30}%`;
+        burst.style.animationDelay = `${i * 40}ms`;
+        barOuter.appendChild(burst);
+        setTimeout(() => burst.remove(), 1200);
+    }
+}
+
 // ──────────────────────────────────────────────────────────────
 // Ranking Update
 // ──────────────────────────────────────────────────────────────
 socket.on("rankingUpdate", (countries) => {
+    latestCountries = countries || {};
     renderRanking(countries);
 });
 
@@ -530,6 +607,8 @@ function renderRanking(countries) {
 
             spawnReaction("💎");
             playCoinSound();
+            triggerRowExcitement(row, scoreDiff >= 50 ? "gift" : "normal");
+            spawnBarBurst(row, scoreDiff >= 50 ? "💥" : "✨", scoreDiff >= 50 ? 10 : 5);
         }
 
         fragment.appendChild(row);
@@ -574,6 +653,7 @@ socket.on("leaderChanged", (leader) => {
         setTimeout(() => spawnReaction("👑"), i * 200);
     }
     playLeaderSound();
+    speakOverlay(`${leader.name || leader.code} toma la punta. Tap tap y regalos para cambiar la batalla.`, { priority: true, minGapMs: 2500 });
 });
 
 // ──────────────────────────────────────────────────────────────
@@ -609,6 +689,7 @@ socket.on("bigGift", (data) => {
     spawnDiamondRain();
     triggerScreenShake();
     playBigGiftSound();
+    speakOverlay(`Gran regalo para ${data.country}. Sigan enviando poder a su país.`, { priority: true, minGapMs: 2500 });
 });
 
 // ──────────────────────────────────────────────────────────────
@@ -692,6 +773,10 @@ socket.on("ranking:countryJoined", (data) => {
 
     // Sonidito
     playRankUpSound();
+    if (Date.now() - lastJoinVoiceAt > 7000) {
+        lastJoinVoiceAt = Date.now();
+        speakOverlay(`${data.country} entra a la batalla. Ahora tap tap y regalos para subir esa barra.`, { minGapMs: 2500 });
+    }
 });
 
 socket.on("connect", () => {
@@ -715,10 +800,36 @@ socket.on("disconnect", () => {
 // ──────────────────────────────────────────────────────────────
 socket.on("ranking:gift", (data) => {
     spawnGiftFly(data);
+    const row = document.querySelector(`.rank-row[data-code="${data.country}"]`);
+    triggerRowExcitement(row, "gift");
+    spawnBarBurst(row, getGiftAccent(data.giftName), Math.min(14, 4 + (data.repeatCount || 1)));
+    if (Date.now() - lastGiftVoiceAt > 5500) {
+        lastGiftVoiceAt = Date.now();
+        speakOverlay(`Regalo para ${data.country}. Esa barra se enciende.`, { minGapMs: 2500 });
+    }
+});
+
+socket.on("ranking:like", (data) => {
+    const row = document.querySelector(`.rank-row[data-code="${data.country}"]`);
+    if (!row) return;
+    triggerRowExcitement(row, "normal");
+    spawnBarBurst(row, "❤️", Math.min(8, Math.max(3, Math.ceil((data.likeCount || 1) / 2))));
+    const barOuter = row.querySelector(".rank-bar-outer");
+    if (barOuter) {
+        const tapCue = document.createElement("div");
+        tapCue.className = "tap-cue";
+        tapCue.textContent = `TAP +${Math.max(1, data.likeCount || 1)}`;
+        barOuter.appendChild(tapCue);
+        setTimeout(() => tapCue.remove(), 1100);
+    }
+    if (Date.now() - lastLikeVoiceAt > 9000 && (data.likeCount || 0) >= 3) {
+        lastLikeVoiceAt = Date.now();
+        speakOverlay(`Tap tap para ${data.country}. Sigan tocando para empujar esa barra.`, { minGapMs: 2500 });
+    }
 });
 
 function spawnGiftFly(data) {
-    const { country, avatarUrl } = data;
+    const { country, avatarUrl, giftName, coins } = data;
     const row = document.querySelector(`.rank-row[data-code="${country}"]`);
     if (!row) return;
     const barOuter = row.querySelector(".rank-bar-outer");
@@ -726,12 +837,14 @@ function spawnGiftFly(data) {
 
     const fly = document.createElement("div");
     fly.className = "gift-fly";
+    const accent = getGiftAccent(giftName);
 
-    if (avatarUrl) {
-        fly.innerHTML = `<img src="${avatarUrl}" alt="gift" onerror="this.src='https://www.tiktok.com/favicon.ico'" />`;
-    } else {
-        fly.innerHTML = `<div style="font-size:20px">💎</div>`;
-    }
+    fly.innerHTML = `
+        <div class="gift-fly-core">
+            ${avatarUrl ? `<img src="${avatarUrl}" alt="gift" onerror="this.src='https://www.tiktok.com/favicon.ico'" />` : `<div class="gift-fly-fallback">${accent}</div>`}
+        </div>
+        <div class="gift-fly-chip">${accent} ${giftName || "REGALO"} · ${formatScore(coins || 0)}</div>
+    `;
 
     barOuter.appendChild(fly);
     setTimeout(() => fly.remove(), 2000);
@@ -771,3 +884,28 @@ socket.on("ranking:championUpdate", (data) => {
         };
     }
 });
+
+window.setInterval(() => {
+    const now = Date.now();
+    if (now - lastPromptVoiceAt < 25000) return;
+    lastPromptVoiceAt = now;
+
+    const sorted = Object.entries(latestCountries || {})
+        .sort((a, b) => b[1].score - a[1].score)
+        .filter(([, data]) => (data.score || 0) > 0);
+
+    const leader = sorted[0];
+    const runner = sorted[1];
+
+    if (!leader) {
+        speakOverlay("Escribe tu país en el chat para entrar. Después tap tap y regalos para subir la barra.", { minGapMs: 0 });
+        return;
+    }
+
+    if (runner) {
+        speakOverlay(`${leader[0]} lidera. ${runner[0]} lo persigue. Tap tap y regalos para mover la pelea.`, { minGapMs: 0 });
+        return;
+    }
+
+    speakOverlay(`${leader[0]} va primero. Si quieres entrar a la batalla, escribe tu país en el chat y empieza con tap tap.`, { minGapMs: 0 });
+}, 32000);
