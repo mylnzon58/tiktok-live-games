@@ -111,6 +111,8 @@ let lastPromoTipAt = 0;
 let currentRoundSeconds = 3 * 60;
 let lastRoundLeaderId = null;
 let lastRoundLeaderCueAt = 0;
+let playerStreaks = {}; // Phase 4: Kill Streaks Dopamine
+let lastStreakAnnouncementAt = 0;
 let lastClutchCueAt = 0;
 let lastFinalStretchCueAt = 0;
 let lastReentryCueAt = 0;
@@ -124,6 +126,8 @@ let lastCountdownSpoken = null;
 let lastAnnouncementText = "";
 let lastAnnouncementQueuedAt = 0;
 let introHookPlayed = false;
+let globalGlitchIntensity = 0; // Neuromarketing: Distorsión auditiva/visual global
+let globalFlashCount = 0;
 
 // Attempt auto-unlock de AudioContext silencioso
 function tryUnlockAudio() {
@@ -216,15 +220,17 @@ function flushSpeechQueue() {
         return;
     }
     if (window.speechSynthesis.speaking) {
-        speechTimer = window.setTimeout(flushSpeechQueue, 350);
+        speechTimer = window.setTimeout(flushSpeechQueue, 150);
         return;
     }
 
     const next = speechQueue.shift();
+    if (!next) return;
+
     const resolvedText = typeof next.getText === "function" ? next.getText() : next.text;
     if (!resolvedText) {
         lastSpeechAt = Date.now();
-        speechTimer = window.setTimeout(flushSpeechQueue, next.gapMs ?? 550);
+        speechTimer = window.setTimeout(flushSpeechQueue, next.gapMs ?? 250);
         return;
     }
     const voice = preferredVoices[next.lang] || resolvePreferredVoice();
@@ -233,16 +239,16 @@ function flushSpeechQueue() {
     const msg = new window.SpeechSynthesisUtterance(resolvedText);
     msg.lang = "es-ES";
     if (voice) msg.voice = voice;
-    msg.rate = next.rate ?? 1.03;
-    msg.pitch = next.pitch ?? 1;
-    msg.volume = next.volume ?? 0.92;
+    msg.rate = next.rate ?? 1.12;
+    msg.pitch = next.pitch ?? 1.05;
+    msg.volume = next.volume ?? 1;
     msg.onend = () => {
         lastSpeechAt = Date.now();
-        speechTimer = window.setTimeout(flushSpeechQueue, next.gapMs ?? 550);
+        speechTimer = window.setTimeout(flushSpeechQueue, next.gapMs ?? 300);
     };
     msg.onerror = () => {
         lastSpeechAt = Date.now();
-        speechTimer = window.setTimeout(flushSpeechQueue, 600);
+        speechTimer = window.setTimeout(flushSpeechQueue, 400);
     };
     window.speechSynthesis.speak(msg);
 }
@@ -252,13 +258,13 @@ function queueAnnouncement(text, options = {}) {
     try {
         if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
         const now = Date.now();
-        const minIntervalMs = options.minIntervalMs ?? 3200;
+        const minIntervalMs = options.minIntervalMs ?? 1800;
         const dedupeBase = options.dedupeKey || (typeof text === "string" ? text : options.queueKey || "");
         const normalizedText = String(dedupeBase || "").trim().toLowerCase();
-        if (!options.force && normalizedText && normalizedText === lastAnnouncementText && (now - lastAnnouncementQueuedAt) < 18000) {
+        if (!options.force && normalizedText && normalizedText === lastAnnouncementText && (now - lastAnnouncementQueuedAt) < 12000) {
             return;
         }
-        if (!options.force && now - lastSpeechAt < minIntervalMs) return;
+        if (!options.force && now - lastSpeechAt < minIntervalMs && speechQueue.length > 2) return;
         if (options.queueKey) {
             speechQueue = speechQueue.filter((entry) => entry.queueKey !== options.queueKey);
         }
@@ -326,7 +332,7 @@ function announceCurrentRoundLeader() {
         getText: () => {
             const currentLeader = roundRanking[0];
             if (!currentLeader?.id) return "";
-            return `Va ganando esta ronda ${currentLeader.name} con ${Math.floor(currentLeader.score || 0)} puntos. Sigan a ${currentLeader.name} si quieren empujar esta ronda.`;
+            return `¡Atención! ${currentLeader.name} domina con ${Math.floor(currentLeader.score || 0)} puntos. ¡Sigan al líder ahora!`;
         }
     });
 }
@@ -434,8 +440,8 @@ const sfx = {
             osc.connect(gain); gain.connect(audioCtx.destination);
             osc.type = 'triangle';
             osc.frequency.setValueAtTime(freq, now + index * 0.03);
-            gain.gain.setValueAtTime(0.08, now + index * 0.03);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + index * 0.03 + 0.09);
+            gain.gain.setValueAtTime(0.18, now + index * 0.03);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + index * 0.03 + 0.12);
             osc.start(now + index * 0.03);
             osc.stop(now + index * 0.03 + 0.1);
         });
@@ -448,8 +454,8 @@ const sfx = {
         osc.type = 'square';
         osc.frequency.setValueAtTime(800, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.14, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.12);
         osc.start(audioCtx.currentTime);
         osc.stop(audioCtx.currentTime + 0.1);
     },
@@ -468,8 +474,8 @@ const sfx = {
         oscClick.type = 'triangle';
         oscClick.frequency.setValueAtTime(540, now);
         oscClick.frequency.exponentialRampToValueAtTime(120, now + 0.08);
-        gain.gain.setValueAtTime(0.18, now);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
         osc.start(now);
         oscClick.start(now);
         osc.stop(now + 0.18);
@@ -483,7 +489,7 @@ const sfx = {
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(60, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(1, audioCtx.currentTime + 0.6);
-        gain.gain.setValueAtTime(0.8, audioCtx.currentTime); // ¡DOPAMINA! Aumentado de 0.4 a 0.8
+        gain.gain.setValueAtTime(0.9, audioCtx.currentTime); // ¡DOPAMINA EXTREMA!
         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
         osc.start(audioCtx.currentTime);
         osc.stop(audioCtx.currentTime + 0.6);
@@ -1832,27 +1838,47 @@ class Player {
             ctx.shadowBlur = 0;
 
             // Chispas
-            if (Math.random() < 0.55) {
-                ctx.beginPath();
-                ctx.fillStyle = "#fbc531";
-                ctx.arc(Math.cos(worldTrailingAngle) * (sawRadius + 4), Math.sin(worldTrailingAngle) * (sawRadius + 4), 3, 0, Math.PI * 2);
-                ctx.fill();
-            }
-
-            ctx.restore();
-
             if (Math.random() < 0.35) {
                 createExplosion(
                     this.x + Math.cos(worldTrailingAngle) * worldSawRadius,
                     this.y + Math.sin(worldTrailingAngle) * worldSawRadius,
-                    "#fbc531",
-                    { count: 4, speed: 4, shake: 0 }
+                    "#ff9f43", { count: 3, speed: 4, shake: 0 }
                 );
+            }
+
+            ctx.restore();
+
+            // --- STREAK EFFECTS (Neuromarketing: Fuego si vas ganando) ---
+            const streak = playerStreaks[this.id] || 0;
+            if (streak >= 3) {
+                if (frameCount % 3 === 0) {
+                    pushParticle({
+                        x: this.x + (Math.random() - 0.5) * this.currentRadius,
+                        y: this.y + (Math.random() - 0.5) * this.currentRadius,
+                        vx: -this.vx * 0.3 + (Math.random() - 0.5) * 2,
+                        vy: -this.vy * 0.3 + (Math.random() - 0.5) * 2,
+                        life: 0.8,
+                        size: Math.random() * 10 + 5,
+                        color: streak >= 5 ? "#ff4757" : "#ffa502"
+                    });
+                }
+                
+                // Texto de racha sobre el jugador
+                ctx.save();
+                ctx.fillStyle = streak >= 5 ? "#ff4757" : "#ffa502";
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = "white";
+                ctx.font = "bold 16px Rajdhani";
+                ctx.textAlign = "center";
+                ctx.fillText(`${streak} KILLS 🔥`, this.x, this.y + this.currentRadius + 35);
+                ctx.restore();
             }
         }
 
         ctx.shadowBlur = 0;
     }
+
+
 
     getPassiveSawTier() {
         if ((this.score || 0) >= PASSIVE_SAW_LARGE_SCORE) return 3;
@@ -2106,8 +2132,8 @@ socket.on("arena:champions", (winners) => {
 });
 // ------------------------------------------
 
-socket.on("arena:combo", () => {
-    createComboBurst();
+socket.on("arena:combo", (data) => {
+    createComboBurst(data?.x, data?.y);
 });
 
 socket.on("arena:telemetry", (data) => {
@@ -2126,24 +2152,27 @@ socket.on("arena:telemetry", (data) => {
     }
 });
 
-function createComboBurst() {
+function createComboBurst(x, y) {
     const activePlayers = Object.values(players).filter((player) => player.opacity > 0.5);
     if (activePlayers.length === 0) return;
 
-    const source = activePlayers[Math.floor(Math.random() * activePlayers.length)];
-    for (let i = 0; i < 26; i++) {
-        const angle = (i / 26) * Math.PI * 2;
+    const sourceX = x ?? (activePlayers[Math.floor(Math.random() * activePlayers.length)].x);
+    const sourceY = y ?? (activePlayers[Math.floor(Math.random() * activePlayers.length)].y);
+    
+    for (let i = 0; i < 35; i++) {
+        const angle = (i / 35) * Math.PI * 2;
         pushParticle({
-            x: source.x,
-            y: source.y,
-            vx: Math.cos(angle) * (2 + Math.random() * 5),
-            vy: Math.sin(angle) * (2 + Math.random() * 5),
-            life: 0.8,
-            size: Math.random() * 4 + 2,
-            color: i % 2 === 0 ? "#ffd700" : "#ffffff"
+            x: sourceX,
+            y: sourceY,
+            vx: Math.cos(angle) * (3 + Math.random() * 7),
+            vy: Math.sin(angle) * (3 + Math.random() * 7),
+            life: 1.2,
+            size: Math.random() * 5 + 3,
+            color: i % 3 === 0 ? "#ffd700" : (i % 3 === 1 ? "#ff8c42" : "#ffffff")
         });
     }
     playSound("jackpot");
+    screenShake = Math.max(screenShake, 8);
 }
 // ------------------------------------------
 
@@ -2469,9 +2498,15 @@ socket.on("arena:roundEnd", (data) => {
 
     const w = roundWinner;
     console.log("🏆 GANADOR DE LA RONDA:", w.name);
-    announce(`Ganador de la ronda actual. ${w.name} con ${Math.floor(w.score || w.standingScore || 0)} puntos.`, { gapMs: 650 });
+    
+    // Limpiar cola para anuncio inmediato de ganador
+    speechQueue = [];
+    if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
+    
+    speakImmediate(`¡FINAL DE LA RONDA! El gran ganador es ${w.name} con ${Math.floor(w.score || w.standingScore || 0)} puntos. ¡Felicidades al nuevo campeón!`, { rate: 1.05, pitch: 1.1, volume: 1 });
+    
     if (arenaChampion?.name) {
-        announce(`Numero uno historico del arena. ${arenaChampion.name}. Lleva ${Math.floor(arenaChampion.victories || 0)} rondas ganadas.`, { gapMs: 650 });
+        announce(`Récord histórico: ${arenaChampion.name} lidera el salón de la fama con ${Math.floor(arenaChampion.victories || 0)} victorias.`, { gapMs: 600 });
     }
 
     // Efecto visual masivo de Victoria (Volumen reducido)
@@ -2772,11 +2807,41 @@ socket.on("arena:ko", (data) => {
     const target = players[data.targetId];
     const x = target?.x || attacker?.x || (canvas.width / 2);
     const y = target?.y || attacker?.y || (canvas.height / 2);
+
+    // Sistema de Rachas (Dopamina pura)
+    if (data.attackerId) {
+        playerStreaks[data.attackerId] = (playerStreaks[data.attackerId] || 0) + 1;
+        const streak = playerStreaks[data.attackerId];
+        const attackerName = attacker?.name || "Un gladiador";
+        
+        if (streak === 2) {
+            announce(`¡DOBLE ELIMINACIÓN de ${attackerName}!`, { pitch: 1.1 });
+            spawnFloatingText("DOUBLE KO", x, y - 100, "#f87171");
+        } else if (streak === 3) {
+             announce(`¡TRIPLE ELIMINACIÓN! ${attackerName} está imparable.`, { pitch: 1.2 });
+             spawnFloatingText("TRIPLE KO", x, y - 120, "#ef4444");
+             screenShake = Math.max(screenShake, 25);
+        } else if (streak >= 5) {
+             announce(`¡DOMINACIÓN TOTAL! ${attackerName} lleva ${streak} bajas seguidas.`, { pitch: 1.3, rate: 1.1 });
+             spawnFloatingText("GODLIKE STREAK", x, y - 140, "#b91c1c");
+             triggerOverlayFlash("255, 0, 0", 0.2);
+             screenShake = Math.max(screenShake, 35);
+        }
+    }
+
+    // Resetear racha de la víctima
+    if (data.targetId) {
+        playerStreaks[data.targetId] = 0;
+    }
+
     spawnFloatingText("KO", x, y - 70, "#fecaca");
-    createExplosion(x, y, "#fecaca", { count: 24, speed: 10, shake: 10 });
-    triggerOverlayFlash("255, 180, 180", 0.1);
+    createExplosion(x, y, "#fecaca", { count: 32, speed: 12, shake: 12 });
+    triggerOverlayFlash("255, 180, 180", 0.15);
     playSound("heavyExplosion");
-    screenShake = Math.max(screenShake, 18);
+    screenShake = Math.max(screenShake, 22);
+    
+    // Hitstop extra en KO
+    hitStopFrames = Math.max(hitStopFrames, 12);
 });
 
 function resolveArenaGiftEffect(data, attacker, target, diamondsTotal, giftValue, giftName) {
@@ -2854,35 +2919,35 @@ function getPaidGiftFxProfile(giftValue, diamondsTotal) {
     const totalValue = Math.max(giftValue || 0, diamondsTotal || 0);
     if (totalValue >= 35000) {
         return {
-            cameraScale: 1.9,
-            cameraFrames: 220,
-            flashAlpha: 0.34,
-            shake: 44,
-            shockwaveRadius: 68,
-            burstCount: 52,
-            burstSpeed: 16
+            cameraScale: 2.2,
+            cameraFrames: 300,
+            flashAlpha: 0.45,
+            shake: 90,
+            shockwaveRadius: 180,
+            burstCount: 160,
+            burstSpeed: 28
         };
     }
     if (totalValue >= 20000) {
         return {
-            cameraScale: 1.8,
-            cameraFrames: 185,
-            flashAlpha: 0.3,
-            shake: 38,
-            shockwaveRadius: 58,
-            burstCount: 44,
-            burstSpeed: 15
+            cameraScale: 2.05,
+            cameraFrames: 240,
+            flashAlpha: 0.38,
+            shake: 70,
+            shockwaveRadius: 130,
+            burstCount: 110,
+            burstSpeed: 22
         };
     }
     if (totalValue >= 5000) {
         return {
-            cameraScale: 1.66,
-            cameraFrames: 165,
-            flashAlpha: 0.25,
-            shake: 30,
-            shockwaveRadius: 46,
-            burstCount: 38,
-            burstSpeed: 13
+            cameraScale: 1.85,
+            cameraFrames: 190,
+            flashAlpha: 0.3,
+            shake: 50,
+            shockwaveRadius: 85,
+            burstCount: 65,
+            burstSpeed: 18
         };
     }
     if (totalValue >= 1000) {
@@ -3009,20 +3074,57 @@ socket.on("arena:gift", (data) => {
     // Detección de tipos de ataque: cubrir todos los effectKey emitidos por el servidor.
     if (giftEffect.type === "megaBlast") {
         playSound(data.giftName?.toLowerCase().includes("lion") || data.giftName?.toLowerCase().includes("león") ? "lionRoar" : "universeCrash");
-        screenShake = isSuddenDeath ? 56 : 44;
-        hitStopFrames = giftValue >= 30000 ? 32 : 24;
-        triggerOverlayFlash("255, 240, 200", 0.38);
-        triggerArenaBorderPulse("255, 214, 102", 0.82, 18);
-        triggerBackgroundGrade("255, 208, 120", 0.16);
-        spawnFloatingText("UNIVERSO", target.x, target.y, "#ffd166");
-        announce("Universo activado. Megablast total. Poder premium impresionante en toda la arena.");
-        createExplosion(target.x, target.y, "#fff", { count: 72, speed: 18, shake: 22 });
-        createExplosion(target.x + 40, target.y - 30, "#fbbf24", { count: 46, speed: 14, shake: 16 });
-        createExplosion(target.x - 50, target.y + 20, "#ff8c42", { count: 46, speed: 14, shake: 16 });
-        createExplosion(target.x, target.y, "#ffd166", { count: 58, speed: 12, shake: 18 });
-        pushShockwave({ x: target.x, y: target.y, r: 22, opacity: 1, color: "#fff7d6" });
-        pushShockwave({ x: target.x, y: target.y, r: 40, opacity: 0.92, color: "#ffd166" });
-        pushShockwave({ x: target.x, y: target.y, r: 62, opacity: 0.78, color: "#ffedd5" });
+        
+        // Neuromarketing: Pausa dramática más larga para regalos caros
+        hitStopFrames = giftValue >= 34000 ? 55 : (giftValue >= 20000 ? 40 : 28);
+        
+        screenShake = giftValue >= 30000 ? 95 : (giftValue >= 20000 ? 70 : 50);
+        triggerOverlayFlash("255, 240, 200", giftValue >= 30000 ? 0.7 : 0.45);
+        triggerArenaBorderPulse("255, 214, 102", 0.95, 25);
+        triggerBackgroundGrade("255, 200, 100", 0.25);
+        
+        const epicLabel = giftValue >= 30000 ? "¡COLAPSO TOTAL!" : "¡SÚPER MEGA IMPACTO!";
+        spawnFloatingText(epicLabel, target.x, target.y, "#ffd166");
+        
+        if (giftValue >= 30000) {
+            announce(`¡DIOS MÍO! ${attacker.name} acaba de lanzar un UNIVERSO. ¡EL ARENA VA A EXPLOTAR!`, { volume: 1, pitch: 1.1, rate: 1.05 });
+            globalGlitchIntensity = 45; // Activar distorsión global
+            triggerOverlayFlash("255, 255, 255", 0.9);
+            // Lluvia de monedas para el universo
+            for (let i = 0; i < 50; i++) {
+                ambientParticles.push({
+                    x: Math.random() * canvas.width,
+                    y: -20 - (Math.random() * 500),
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: 5 + Math.random() * 10,
+                    size: 15 + Math.random() * 10,
+                    opacity: 1,
+                    isCoin: true,
+                    rot: Math.random() * Math.PI,
+                    rotV: (Math.random() - 0.5) * 0.2
+                });
+            }
+        } else {
+            announce(`¡RUGIDO LEGENDARIO! Impacto masivo de ${attacker.name}. ¡Es increíble!`);
+        }
+
+        // Explosiones masivas en cadena
+        for (let i = 0; i < 6; i++) {
+            setTimeout(() => {
+                const ox = (Math.random() - 0.5) * 150;
+                const oy = (Math.random() - 0.5) * 150;
+                createExplosion(target.x + ox, target.y + oy, i % 2 === 0 ? "#fff" : "#ffd166", { 
+                    count: giftValue >= 30000 ? 100 : 60, 
+                    speed: 22, 
+                    shake: 25 
+                });
+                playSound("heavyExplosion");
+            }, i * 110);
+        }
+
+        pushShockwave({ x: target.x, y: target.y, r: 40, opacity: 1, color: "#fff7d6" });
+        pushShockwave({ x: target.x, y: target.y, r: 120, opacity: 0.9, color: "#ffd166" });
+        pushShockwave({ x: target.x, y: target.y, r: 200, opacity: 0.7, color: "#ffedd5" });
         for (let i = 0; i < 3; i++) {
             setTimeout(() => {
                 pushLightningBolt({
@@ -3144,7 +3246,7 @@ socket.on("arena:gift", (data) => {
 let roundRanking = []; // Ranking de la ronda actual
 
 let lastUIUpdate = 0;
-const UI_THROTTLE_MS = 1000; // Máximo 1 actualización de DOM por segundo
+const UI_THROTTLE_MS = 100; // Máximo 10 actualizaciones de DOM por segundo (antes 1)
 
 function updateRankingDOM(force = false) {
     const now = Date.now();
@@ -3350,6 +3452,15 @@ function loop() {
     }
 
     ctx.translate(canvas.width / 2, canvas.height / 2);
+    
+    // Phase 4: Distorsión Global (Universe Gift / Epic Events)
+    if (globalGlitchIntensity > 0) {
+        const gx = (Math.random() - 0.5) * globalGlitchIntensity;
+        ctx.translate(gx, 0);
+        globalGlitchIntensity *= 0.94;
+        if (globalGlitchIntensity < 0.1) globalGlitchIntensity = 0;
+    }
+
     ctx.scale(camera.scale, camera.scale);
     ctx.translate(-camera.x, -camera.y);
 

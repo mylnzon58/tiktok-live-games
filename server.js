@@ -648,8 +648,8 @@ function handleArenaGift(event) {
     const attacker = arena.ensurePlayer(event.user, "gift");
     if (!attacker) return;
 
-    if (attacker.state === "ELIMINATED" && Date.now() >= attacker.eliminatedUntil) {
-        arena.applyChatActivity(attacker.id);
+    if (attacker.state === "ELIMINATED") {
+        arena.respawnPlayer(attacker, "gift");
         io.emit("arena:respawn", { userId: attacker.id, mode: "gift" });
     }
 
