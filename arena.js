@@ -221,10 +221,16 @@ function flushSpeechQueue() {
     }
 
     const next = speechQueue.shift();
+    const resolvedText = typeof next.getText === "function" ? next.getText() : next.text;
+    if (!resolvedText) {
+        lastSpeechAt = Date.now();
+        speechTimer = window.setTimeout(flushSpeechQueue, next.gapMs ?? 550);
+        return;
+    }
     const voice = preferredVoices[next.lang] || resolvePreferredVoice();
     preferredVoices[next.lang] = voice;
 
-    const msg = new window.SpeechSynthesisUtterance(next.text);
+    const msg = new window.SpeechSynthesisUtterance(resolvedText);
     msg.lang = "es-ES";
     if (voice) msg.voice = voice;
     msg.rate = next.rate ?? 1.03;
@@ -247,20 +253,26 @@ function queueAnnouncement(text, options = {}) {
         if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
         const now = Date.now();
         const minIntervalMs = options.minIntervalMs ?? 3200;
-        const normalizedText = String(text).trim().toLowerCase();
+        const dedupeBase = options.dedupeKey || (typeof text === "string" ? text : options.queueKey || "");
+        const normalizedText = String(dedupeBase || "").trim().toLowerCase();
         if (!options.force && normalizedText && normalizedText === lastAnnouncementText && (now - lastAnnouncementQueuedAt) < 18000) {
             return;
         }
         if (!options.force && now - lastSpeechAt < minIntervalMs) return;
+        if (options.queueKey) {
+            speechQueue = speechQueue.filter((entry) => entry.queueKey !== options.queueKey);
+        }
         lastAnnouncementText = normalizedText;
         lastAnnouncementQueuedAt = now;
         speechQueue.push({
             text,
+            getText: options.getText,
             lang: "es",
             rate: options.rate,
             pitch: options.pitch,
             volume: options.volume,
-            gapMs: options.gapMs
+            gapMs: options.gapMs,
+            queueKey: options.queueKey || null
         });
         if (!speechTimer) {
             flushSpeechQueue();
@@ -304,6 +316,21 @@ function announce(spanishText, options = {}) {
     announceEs(spanishText, options);
 }
 
+function announceCurrentRoundLeader() {
+    const liveLeader = roundRanking[0];
+    if (!liveLeader?.id) return;
+    announce("Lider de ronda", {
+        gapMs: 650,
+        queueKey: "round-leader-live",
+        dedupeKey: `round-leader-${liveLeader.id}`,
+        getText: () => {
+            const currentLeader = roundRanking[0];
+            if (!currentLeader?.id) return "";
+            return `Va ganando esta ronda ${currentLeader.name} con ${Math.floor(currentLeader.score || 0)} puntos. Sigan a ${currentLeader.name} si quieren empujar esta ronda.`;
+        }
+    });
+}
+
 function playArenaIntroAnnouncement(force = false) {
     if (introAnnouncementDone && !force) return;
     introAnnouncementDone = true;
@@ -314,14 +341,14 @@ function playArenaIntroAnnouncement(force = false) {
 function playOpeningHook(force = false) {
     if (introHookPlayed && !force) return;
     introHookPlayed = true;
-    showAnnouncer("SUBE AL TOP Y QUEDATE CON LA VOZ", "#fef08a");
-    spawnFloatingText("SUBE AL TOP", canvas.width / 2, canvas.height / 2 - 160, "#fef08a");
+    showAnnouncer("SUBE AL TOP Y QUEDATE CON LA VOZ", "#ffcf84");
+    spawnFloatingText("SUBE AL TOP", canvas.width / 2, canvas.height / 2 - 160, "#ffcf84");
     triggerOverlayFlash("255, 230, 120", 0.08);
     screenShake = Math.max(screenShake, 5);
     playSound("jackpot");
     window.setTimeout(() => {
-        showAnnouncer("EL NUMERO UNO MANDA LA ARENA", "#7dd3fc");
-        spawnFloatingText("DEFIENDE EL TRONO", canvas.width / 2, canvas.height / 2 - 110, "#7dd3fc");
+        showAnnouncer("EL NUMERO UNO MANDA LA ARENA", "#62e6ff");
+        spawnFloatingText("DEFIENDE EL TRONO", canvas.width / 2, canvas.height / 2 - 110, "#62e6ff");
         playSound("powerUp");
     }, 1100);
 }
@@ -330,7 +357,7 @@ function promptReturnToArena(force = false) {
     const now = Date.now();
     if (!force && now - lastReturnPromptAt < 70000) return;
     lastReturnPromptAt = now;
-    spawnFloatingText("TAP TAP O CHATEA PARA VOLVER", canvas.width / 2, canvas.height / 2 - 140, "#fef08a");
+    spawnFloatingText("TAP TAP O CHATEA PARA VOLVER", canvas.width / 2, canvas.height / 2 - 140, "#ffcf84");
     announce("Tap tap o escribe en el chat para volver al arena.", { gapMs: 1400, force });
     screenShake = Math.max(screenShake, 4);
 }
@@ -907,7 +934,7 @@ function drawBackground() {
         backgroundGrade.alpha = 0;
     }
 
-    ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+    ctx.fillStyle = "rgba(255, 228, 205, 0.38)";
     bgStars.forEach(s => {
         ctx.beginPath();
         ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
@@ -924,7 +951,7 @@ function drawBackground() {
 
     ctx.beginPath();
     ctx.roundRect(left, top, side, side, 28);
-    ctx.strokeStyle = "rgba(0, 240, 255, 0.2)";
+    ctx.strokeStyle = "rgba(102, 231, 255, 0.34)";
     ctx.lineWidth = 15;
     ctx.stroke();
 
@@ -934,10 +961,10 @@ function drawBackground() {
     const kingZoneImage = getAvatarImage(kingZoneImageUrl);
     ctx.beginPath();
     ctx.arc(cx, cy, coreRadius, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(255, 215, 0, 0.08)";
+    ctx.fillStyle = "rgba(255, 136, 76, 0.14)";
     ctx.fill();
     ctx.lineWidth = 2;
-    ctx.strokeStyle = "rgba(255, 215, 0, 0.4)";
+    ctx.strokeStyle = "rgba(255, 187, 115, 0.56)";
     ctx.setLineDash([10, 10]);
     ctx.stroke();
     ctx.setLineDash([]);
@@ -957,27 +984,27 @@ function drawBackground() {
             kingImageRadius * 2
         );
     } else {
-        ctx.fillStyle = "rgba(255, 215, 0, 0.18)";
+        ctx.fillStyle = "rgba(255, 175, 102, 0.24)";
         ctx.fillRect(cx - kingImageRadius, cy - kingImageRadius - 6, kingImageRadius * 2, kingImageRadius * 2);
     }
     ctx.restore();
 
     ctx.beginPath();
     ctx.arc(cx, cy - 6, kingImageRadius + 3, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(255, 223, 128, 0.9)";
+    ctx.strokeStyle = "rgba(255, 226, 180, 0.94)";
     ctx.lineWidth = 4;
     ctx.shadowBlur = 18;
-    ctx.shadowColor = "rgba(255, 215, 0, 0.55)";
+    ctx.shadowColor = "rgba(255, 137, 79, 0.66)";
     ctx.stroke();
     ctx.shadowBlur = 0;
 
     ctx.beginPath();
     ctx.arc(cx, cy - 6, kingImageRadius + 11, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(255, 215, 0, 0.25)";
+    ctx.strokeStyle = "rgba(255, 177, 113, 0.4)";
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    ctx.fillStyle = "rgba(255, 215, 0, 0.88)";
+    ctx.fillStyle = "rgba(255, 205, 140, 0.95)";
     ctx.font = "bold 20px Rajdhani";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -986,9 +1013,9 @@ function drawBackground() {
 
     ctx.beginPath();
     ctx.roundRect(left, top, side, side, 28);
-    ctx.strokeStyle = "rgba(0, 240, 255, 0.8)";
+    ctx.strokeStyle = "rgba(102, 231, 255, 0.92)";
     ctx.shadowBlur = 15;
-    ctx.shadowColor = "#00f0ff";
+    ctx.shadowColor = "#69e9ff";
     ctx.lineWidth = 2;
     ctx.stroke();
     ctx.shadowBlur = 0;
@@ -1296,6 +1323,10 @@ class Player {
             this.y = 200;
         }
 
+        const initialClamped = clampToArena(this.x, this.y, PLAYER_RADIUS + 6);
+        this.x = initialClamped.x;
+        this.y = initialClamped.y;
+
         // Propiedades dinámicas
         this.currentRadius = PLAYER_RADIUS * 0.94;
         this.opacity = 1.0;
@@ -1597,18 +1628,19 @@ class Player {
         ctx.save();
         ctx.globalAlpha = this.opacity;
 
-        // Badge de Score (Central)
-        ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
-        const badgeSize = Math.max(this.currentRadius * 0.7, 18);
+        // Unico valor visible de ronda al centro, mas grande y claro.
+        ctx.fillStyle = "rgba(0, 0, 0, 0.48)";
+        const badgeSize = Math.max(this.currentRadius * 0.92, 28);
         ctx.beginPath();
-        ctx.arc(this.x, this.y + (this.currentRadius * 0.3), badgeSize / 2, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, badgeSize / 2, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.fillStyle = "white";
-        ctx.font = `bold ${Math.floor(badgeSize * 0.55)}px Rajdhani`;
+        const pulseScale = 1 + Math.min(0.18, (this.engagement || 0) / 900);
+        ctx.fillStyle = "#fff7d6";
+        ctx.font = `bold ${Math.floor(badgeSize * 0.62 * pulseScale)}px Rajdhani`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(Math.floor(this.standingScore ?? this.score), this.x, this.y + (this.currentRadius * 0.3));
+        ctx.fillText(Math.floor(this.score ?? 0), this.x, this.y);
 
         if ((this.deaths || 0) > 0) {
             const skullX = this.x + (this.currentRadius * 0.56);
@@ -1627,7 +1659,7 @@ class Player {
         if (!!arenaHallOfFame[this.id]) {
             ctx.fillStyle = "#ffd700";
             ctx.font = `bold ${Math.floor(badgeSize * 0.4)}px Rajdhani`;
-            ctx.fillText("RANK 👑", this.x, this.y - (this.currentRadius * 0.4));
+        ctx.fillText("TOP 👑", this.x, this.y - (this.currentRadius * 0.4));
         }
 
         // --- PRESTIGE AURAS (Tiered Glow) ---
@@ -1659,20 +1691,14 @@ class Player {
         if (this.flash > 0) {
             ctx.strokeStyle = "white";
         } else {
-            const hpPercent = (this.hp || 500) / MAX_HP; // Fallback para HP
+            const visiblePoints = Math.max(0, this.score || 0);
             const latentPulse = 0.55 + ((Math.sin(Date.now() / 160) + 1) * 0.3);
-            if (hpPercent > 0.6) {
-                ctx.strokeStyle = "#2ed573";
-            } else if (hpPercent > 0.3) {
-                ctx.strokeStyle = "#ffa502";
+            if (visiblePoints >= 1000) {
+                ctx.strokeStyle = "#fde68a";
+            } else if (visiblePoints >= 300) {
+                ctx.strokeStyle = "#7dd3fc";
             } else {
-                ctx.strokeStyle = "#ff4757";
-                // Heartbeat adictivo de "Near Miss"
-                if (Date.now() % 600 < 300) {
-                    ctx.lineWidth += 4;
-                    ctx.shadowBlur = 15;
-                    ctx.shadowColor = "#ff4757";
-                }
+                ctx.strokeStyle = "#86efac";
             }
             ctx.shadowBlur = Math.max(ctx.shadowBlur || 0, 10 + (this.engagement * 0.28));
             ctx.shadowColor = ctx.strokeStyle;
@@ -1692,25 +1718,18 @@ class Player {
 
         ctx.globalAlpha = 1.0;
 
-        // Dibujar HP (Debajo de la burbuja)
-        ctx.fillStyle = "rgba(255,255,255,0.8)";
-        ctx.font = "bold 12px Rajdhani";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(`${Math.floor(this.hp)} HP`, this.x, this.y + this.currentRadius + 15);
-
         if (this.state === "ELIMINATED") {
             ctx.fillStyle = "#ff8c42";
             ctx.font = "bold 13px Rajdhani";
-            ctx.fillText("RESPAWN...", this.x, this.y + this.currentRadius + 30);
+            ctx.fillText("RESPAWN...", this.x, this.y + this.currentRadius + 18);
         } else if (this.state === "IDLE") {
             ctx.fillStyle = "#8ec5ff";
             ctx.font = "bold 13px Rajdhani";
-            ctx.fillText("IDLE", this.x, this.y + this.currentRadius + 30);
+            ctx.fillText("IDLE", this.x, this.y + this.currentRadius + 18);
         } else if (this.invulnerableUntil > Date.now()) {
             ctx.fillStyle = "#7dd3fc";
             ctx.font = "bold 13px Rajdhani";
-            ctx.fillText("SHIELD", this.x, this.y + this.currentRadius + 30);
+            ctx.fillText("SHIELD", this.x, this.y + this.currentRadius + 18);
         }
 
         // --- TEAM SHIELDS (Phase 4) ---
@@ -2188,7 +2207,10 @@ function syncPlayerFromServer(sp) {
         const shouldSyncPosition =
             sp.id.startsWith("bot_") ||
             previousState === "ELIMINATED" ||
-            (previousState && previousState !== sp.state);
+            previousState === "IDLE" ||
+            (previousState && previousState !== sp.state) ||
+            !Number.isFinite(players[sp.id].x) ||
+            !Number.isFinite(players[sp.id].y);
 
         if (shouldSyncPosition) {
             players[sp.id].x = sp.x ?? players[sp.id].x;
@@ -2199,6 +2221,16 @@ function syncPlayerFromServer(sp) {
     players[sp.id].hp = sp.hp ?? players[sp.id].hp;
     players[sp.id].state = sp.state || players[sp.id].state;
     players[sp.id].invulnerableUntil = sp.invulnerableUntil || 0;
+    if (players[sp.id].state === "ACTIVE" || players[sp.id].state === "NEW") {
+        players[sp.id].opacity = 1;
+    }
+    const clamped = clampToArena(
+        players[sp.id].x ?? (canvas.width / 2),
+        players[sp.id].y ?? (canvas.height / 2),
+        Math.max(PLAYER_RADIUS, players[sp.id].currentRadius || PLAYER_RADIUS) + 8
+    );
+    players[sp.id].x = clamped.x;
+    players[sp.id].y = clamped.y;
 
     if (sp.sawActiveUntil > Date.now()) {
         const remainingFrames = Math.floor((sp.sawActiveUntil - Date.now()) / (1000 / 60));
@@ -2254,13 +2286,38 @@ function updatePowersGuide() {
 function renderLastRoundWinner() {
     const slot = document.getElementById("round-winner-slot");
     if (!slot) return;
+    const liveLeader = roundRanking[0] || null;
+    const liveRunnerUp = roundRanking[1] || null;
+    const leaderValue = Math.floor(liveLeader?.score || 0);
+    const runnerValue = Math.floor(liveRunnerUp?.score || 0);
+    const valueGap = Math.max(0, leaderValue - runnerValue);
     const winner = lastCompletedRoundWinner;
+    if (liveLeader?.id) {
+        const minutes = String(Math.floor(currentRoundSeconds / 60)).padStart(2, "0");
+        const secs = String(currentRoundSeconds % 60).padStart(2, "0");
+        slot.innerHTML = `
+            <div class="round-winner-card live-leader-card">
+                <img class="round-winner-avatar" src="${liveLeader.avatar || 'https://www.tiktok.com/favicon.ico'}" onerror="this.src='https://www.tiktok.com/favicon.ico'" />
+                <div class="round-winner-info">
+                    <div class="round-winner-label">LIDER DE ESTA RONDA</div>
+                    <div class="round-winner-name">${liveLeader.name}</div>
+                    <div class="round-winner-meta">
+                        <span>PUNTOS ${leaderValue}</span>
+                        <span>VENTAJA ${valueGap}</span>
+                    </div>
+                    <div class="round-winner-submeta">CIERRE EN ${minutes}:${secs}</div>
+                    ${winner?.id ? `<div class="round-winner-submeta">ULTIMO GANADOR: ${winner.name}</div>` : ""}
+                </div>
+            </div>
+        `;
+        return;
+    }
     if (!winner?.id) {
         const minutes = String(Math.floor(currentRoundSeconds / 60)).padStart(2, "0");
         const secs = String(currentRoundSeconds % 60).padStart(2, "0");
         slot.innerHTML = `
             <div class="round-winner-empty">
-                <span class="round-winner-empty-label">CIERRE DE RONDA EN</span>
+                <span class="round-winner-empty-label">LIDER DE ESTA RONDA</span>
                 <span class="round-winner-empty-time">${minutes}:${secs}</span>
             </div>
         `;
@@ -2274,8 +2331,8 @@ function renderLastRoundWinner() {
                 <div class="round-winner-label">ULTIMO GANADOR REAL</div>
                 <div class="round-winner-name">${winner.name}</div>
                 <div class="round-winner-meta">
-                    <span>⚔️ ${Math.floor(winner.standingScore || winner.score || 0)}</span>
-                    <span>VIDAS PERDIDAS ${Math.floor(winner.deaths || 0)}</span>
+                    <span>PUNTOS ${Math.floor(winner.score || winner.standingScore || 0)}</span>
+                    <span>RONDAS ${Math.floor(winner.victories || 0)}</span>
                 </div>
             </div>
         </div>
@@ -2337,11 +2394,11 @@ function updateTopShowcase() {
         item.className = `top-player-item rank-${rank} ${p.isPlaceholder ? 'placeholder' : ''}`;
 
         item.innerHTML = `
-            ${p.title ? `<div class="top-player-title">${p.title}</div>` : ''}
+            <div class="top-player-title">TOP HISTORICO</div>
             <div class="top-player-avatar" style="background-image: url('${p.avatar || ''}')"></div>
             <div class="top-rank-badge">${rank}</div>
             <div class="top-player-name">${p.name}</div>
-            ${!p.isPlaceholder ? `<div class="top-player-score">VICTORIAS ${Math.floor(p.victories || 0)}</div>` : ''}
+            ${!p.isPlaceholder ? `<div class="top-player-score">RONDAS GANADAS ${Math.floor(p.victories || 0)}</div>` : ''}
             ${p.isPlaceholder ? '' : '<div class="follow-arrow">⬆️</div>'}
         `;
         topShowcaseEl.appendChild(item);
@@ -2412,9 +2469,9 @@ socket.on("arena:roundEnd", (data) => {
 
     const w = roundWinner;
     console.log("🏆 GANADOR DE LA RONDA:", w.name);
-    announce(`Ganador de la ronda actual. ${w.name}.`, { gapMs: 650 });
+    announce(`Ganador de la ronda actual. ${w.name} con ${Math.floor(w.score || w.standingScore || 0)} puntos.`, { gapMs: 650 });
     if (arenaChampion?.name) {
-        announce(`Numero uno del arena. ${arenaChampion.name}. Lleva ${Math.floor(arenaChampion.victories || 0)} rondas ganadas.`, { gapMs: 650 });
+        announce(`Numero uno historico del arena. ${arenaChampion.name}. Lleva ${Math.floor(arenaChampion.victories || 0)} rondas ganadas.`, { gapMs: 650 });
     }
 
     // Efecto visual masivo de Victoria (Volumen reducido)
@@ -2430,8 +2487,8 @@ socket.on("arena:roundEnd", (data) => {
             <h1 class="victory-title">🏁 GANADOR DE LA RONDA 🏁</h1>
             <img class="victory-avatar" src="${w.avatar || 'https://www.tiktok.com/favicon.ico'}" onerror="this.src='https://www.tiktok.com/favicon.ico'"/>
             <h2 class="victory-name">${w.name}</h2>
-            <div class="victory-stats">⚔️ VALOR DE RONDA: ${Math.floor(w.standingScore || w.score || 0)}</div>
-            ${arenaChampion?.name ? `<div class="victory-stats">👑 NUMERO UNO DEL ARENA: ${arenaChampion.name} · ${Math.floor(arenaChampion.victories || 0)} RONDAS</div>` : ""}
+            <div class="victory-stats">🏁 PUNTOS DE RONDA: ${Math.floor(w.score || w.standingScore || 0)}</div>
+            ${arenaChampion?.name ? `<div class="victory-stats">👑 NUMERO UNO HISTORICO: ${arenaChampion.name} · ${Math.floor(arenaChampion.victories || 0)} RONDAS</div>` : ""}
         </div>
     `;
     document.body.appendChild(overlay);
@@ -2542,9 +2599,30 @@ const recentHeals = {};
 
 // EVENTO DE CURACIÓN / APOYO (LIKES / TAP TAP)
 socket.on("arena:like", (data) => {
-    const p = syncPlayerFromServer(data.player) || players[data.userId];
+    let p = syncPlayerFromServer(data.player) || players[data.userId];
+    if (!p && data?.userId) {
+        p = new Player({
+            id: data.userId,
+            name: data.player?.name || data.userName || data.userId,
+            avatar: data.player?.avatar || "",
+            hp: data.player?.hp || MAX_HP,
+            score: data.player?.score || 0,
+            standingScore: data.player?.standingScore || data.player?.score || 0,
+            state: data.player?.state || "ACTIVE"
+        });
+        const forcedSpawn = clampToArena(canvas.width / 2, canvas.height / 2, PLAYER_RADIUS + 12);
+        p.x = forcedSpawn.x;
+        p.y = forcedSpawn.y;
+        players[data.userId] = p;
+    }
     if (p) {
         p.lastActive = Date.now(); // Despierta de AFK inmediatamente
+        p.state = "ACTIVE";
+        p.opacity = 1;
+        p.currentRadius = Math.max(p.currentRadius || PLAYER_RADIUS, PLAYER_RADIUS * 0.96);
+        const visibleSpawn = clampToArena(p.x, p.y, p.currentRadius + 8);
+        p.x = visibleSpawn.x;
+        p.y = visibleSpawn.y;
         p.heal(data.heal || data.likeCount);
         p.engagement = Math.min((p.engagement || 0) + Math.max(10, data.likeCount * 2.8), 220);
         p.lastTapBoostAt = Date.now();
@@ -3102,8 +3180,8 @@ socket.on("arena:currentRanking", (data) => {
 
     const roundLeader = roundRanking[0] || null;
     const roundRunnerUp = roundRanking[1] || null;
-    const leaderStanding = Math.floor(roundLeader?.standingScore || roundLeader?.score || 0);
-    const runnerStanding = Math.floor(roundRunnerUp?.standingScore || roundRunnerUp?.score || 0);
+    const leaderStanding = Math.floor(roundLeader?.score || 0);
+    const runnerStanding = Math.floor(roundRunnerUp?.score || 0);
     const standingGap = Math.max(0, leaderStanding - runnerStanding);
 
     if (
@@ -3170,7 +3248,7 @@ socket.on("arena:currentRanking", (data) => {
         if (shouldHypeRoundWinner) {
             lastRoundWinnerHypeId = roundLeaderForVoice.id;
             lastRoundWinnerHypeAt = now;
-            announce(`Va ganando la ronda ${roundLeaderForVoice.name}. Sigan a ${roundLeaderForVoice.name} si quieren empujar esa ronda.`, { gapMs: 650 });
+            announceCurrentRoundLeader();
             screenShake = Math.max(screenShake, 5);
         }
     }
@@ -3184,7 +3262,11 @@ socket.on("arena:currentRanking", (data) => {
         if (shouldHypeLeader) {
             lastLeaderHypeId = leader.id;
             lastTopArenaHypeAt = now;
-            announce(`Numero uno del arena ${leader.name}. Sigan a ${leader.name} si van con el lider del arena.`, { gapMs: 650 });
+            if (leader.id === roundLeaderForVoice?.id) {
+                announce(`Numero uno historico del arena y tambien lider de esta ronda: ${leader.name}.`, { gapMs: 650 });
+            } else {
+                announce(`Numero uno historico del arena ${leader.name}. Lleva ${Math.floor(leader.victories || 0)} rondas ganadas.`, { gapMs: 650 });
+            }
             screenShake = Math.max(screenShake, 4);
         }
     }
@@ -3197,19 +3279,23 @@ window.setInterval(() => {
     const liveRoundLeader = activeRoundRanking[0];
     const liveRoundRunnerUp = activeRoundRanking[1];
     if (liveRoundLeader?.name) {
-        announce(`Lider parcial de esta ronda ${liveRoundLeader.name}. Sigan a ${liveRoundLeader.name} si quieren sostener la cima.`, { gapMs: 650 });
+        announceCurrentRoundLeader();
     }
     if (liveRoundLeader?.name && liveRoundRunnerUp?.name) {
         const gap = Math.max(
             0,
-            Math.floor((liveRoundLeader.standingScore || liveRoundLeader.score || 0) - (liveRoundRunnerUp.standingScore || liveRoundRunnerUp.score || 0))
+            Math.floor((liveRoundLeader.score || 0) - (liveRoundRunnerUp.score || 0))
         );
         if (gap <= 110) {
             announce(`Pelea intensa arriba. ${liveRoundLeader.name} y ${liveRoundRunnerUp.name} van muy cerca.`, { gapMs: 650 });
         }
     }
     if (currentTopArenaLeader?.name) {
-        announce(`Numero uno del arena ${currentTopArenaLeader.name}. Lleva ${Math.floor(currentTopArenaLeader.victories || 0)} rondas ganadas. Sigan a ${currentTopArenaLeader.name} si van con el puntero.`, { gapMs: 650 });
+        if (currentTopArenaLeader.id === liveRoundLeader?.id) {
+            announce(`${currentTopArenaLeader.name} es numero uno historico del arena y tambien va primero en esta ronda.`, { gapMs: 650 });
+        } else {
+            announce(`Numero uno historico del arena ${currentTopArenaLeader.name}. Lleva ${Math.floor(currentTopArenaLeader.victories || 0)} rondas ganadas, pero puede no ir primero en esta ronda.`, { gapMs: 650 });
+        }
     }
     announceGiftTip();
     announcePromoTip();

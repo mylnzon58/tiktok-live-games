@@ -9,6 +9,7 @@ const { syncTikTokEnvFromChrome } = require("./lib/chrome-cookie-sync");
 const { resolveCountryCodeFromText } = require("./lib/constants");
 const { createStorage } = require("./lib/storage");
 const { createArenaManager } = require("./lib/arena-manager");
+const { createCarreraManager } = require("./lib/carrera-manager");
 const { createTeamArenaManager } = require("./lib/team-arena-manager");
 const { createGiftCatalog } = require("./lib/gift-catalog");
 const { normalizeGiftEvent, normalizeLikeEvent, normalizeChatEvent } = require("./lib/live-event-adapter");
@@ -25,21 +26,26 @@ const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
 const arena = createArenaManager();
+const race = createCarreraManager();
 const teamArena = createTeamArenaManager();
 const giftCatalog = createGiftCatalog();
 
 const championsStorage = createStorage("arena_champions.json", []);
+const raceChampionsStorage = createStorage("carrera_champions.json", []);
 const teamChampionsStorage = createStorage("team_arena_champions.json", []);
 
 function normalizeChampionStandings(entries = [], options = {}) {
-    const { preserveCountryMeta = false } = options;
+    const {
+        preserveCountryMeta = false,
+        memoryWindowMs = GAME_CONFIG.arena.championMemoryWindowMs
+    } = options;
     const map = new Map();
     const now = Date.now();
 
     for (const entry of entries || []) {
         if (!entry?.name && !entry?.id) continue;
         const timestamp = Number(entry.timestamp) || 0;
-        if (!timestamp || (now - timestamp) > GAME_CONFIG.arena.championMemoryWindowMs) continue;
+        if (!timestamp || (now - timestamp) > memoryWindowMs) continue;
 
         const key = String(entry.id || entry.name);
         const previous = map.get(key);
@@ -68,14 +74,23 @@ function normalizeChampionStandings(entries = [], options = {}) {
         .slice(0, 10);
 }
 
-let lastWinners = normalizeChampionStandings(championsStorage.load());
+let lastWinners = normalizeChampionStandings(championsStorage.load(), {
+    memoryWindowMs: GAME_CONFIG.arena.championMemoryWindowMs
+});
+let raceLastWinners = normalizeChampionStandings(raceChampionsStorage.load(), {
+    memoryWindowMs: GAME_CONFIG.carrera.championMemoryWindowMs
+});
 let teamLastWinners = normalizeChampionStandings(teamChampionsStorage.load(), { preserveCountryMeta: true });
 championsStorage.save(lastWinners);
+raceChampionsStorage.save(raceLastWinners);
 teamChampionsStorage.save(teamLastWinners);
 teamArena.seedChampionStandings(teamLastWinners);
 
 if (lastWinners[0]?.id) {
     arena.setLastWinnerId(lastWinners[0].id);
+}
+if (raceLastWinners[0]?.id) {
+    race.setLastWinnerId(raceLastWinners[0].id);
 }
 if (teamLastWinners[0]?.id) {
     teamArena.setLastWinnerId(teamLastWinners[0].id);
@@ -87,8 +102,11 @@ let timerInterval = null;
 let tiktokRetryTimer = null;
 let chromeSyncTimer = null;
 let arenaBroadcastTimer = null;
+let raceBroadcastTimer = null;
 let teamArenaBroadcastTimer = null;
 let arenaSawTimer = null;
+let raceLoopTimer = null;
+let raceTimerInterval = null;
 const userCountryOverrides = {};
 let liveStatus = { connected: false, username: process.env.TIKTOK_USERNAME || DEFAULT_TIKTOK_USERNAME };
 let tiktokLive = null;
@@ -96,17 +114,27 @@ let isConnectingToTikTok = false;
 let arenaLeaderVoiceWindow = { leaderId: null, count: 0 };
 let teamArenaLeaderVoiceWindow = { leaderId: null, count: 0 };
 let lastCompletedRoundWinner = null;
+let lastCompletedRaceWinner = null;
 let lastCompletedTeamRoundWinner = null;
+let raceTimeRemaining = GAME_CONFIG.carrera.roundDurationSeconds;
+let lastRaceLeaderId = null;
 
 app.use(express.static(__dirname));
+app.use("/carrera", express.static(path.join(__dirname, "carrera")));
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "teamarena.html")));
 app.get("/overlay", (req, res) => res.sendFile(path.join(__dirname, "teamarena.html")));
 app.get("/arena", (req, res) => res.sendFile(path.join(__dirname, "arena.html")));
+app.get("/carrera", (req, res) => res.sendFile(path.join(__dirname, "carrera", "index.html")));
 app.get("/api/gifts", (req, res) => res.json(giftCatalog.getCatalogSnapshot()));
 
 function emitArenaState() {
     io.emit("arena:sync", arena.getPlayers());
     io.emit("arena:currentRanking", arena.getCurrentRanking());
+}
+
+function emitRaceState() {
+    io.emit("race:sync", race.getPlayers());
+    io.emit("race:currentRanking", race.getCurrentRanking());
 }
 
 function emitTeamArenaState() {
@@ -146,8 +174,28 @@ function queueTeamArenaState(force = false) {
     }, GAME_CONFIG.arena.arenaBroadcastDelayMs);
 }
 
+function queueRaceState(force = false) {
+    if (force) {
+        if (raceBroadcastTimer) {
+            clearTimeout(raceBroadcastTimer);
+            raceBroadcastTimer = null;
+        }
+        emitRaceState();
+        return;
+    }
+    if (raceBroadcastTimer) return;
+    raceBroadcastTimer = setTimeout(() => {
+        raceBroadcastTimer = null;
+        emitRaceState();
+    }, GAME_CONFIG.carrera.raceBroadcastDelayMs);
+}
+
 function broadcastChampions() {
     io.emit("arena:champions", lastWinners);
+}
+
+function broadcastRaceChampions() {
+    io.emit("race:champions", raceLastWinners);
 }
 
 function broadcastTeamChampions() {
@@ -156,6 +204,10 @@ function broadcastTeamChampions() {
 
 function broadcastHallOfFame() {
     io.emit("arena:hallOfFameUpdate", arena.getHallOfFameList(10));
+}
+
+function broadcastRaceHallOfFame() {
+    io.emit("race:hallOfFameUpdate", race.getHallOfFameList(10));
 }
 
 function broadcastTeamHallOfFame() {
@@ -175,7 +227,7 @@ function logArenaGift(event, result) {
     const target = result?.target;
     if (!attacker?.id || !target?.id) return;
     console.log(
-        `[arena gift] ${attacker.name || attacker.id} -> ${target.name || target.id} | gift=${event.gift.name} x${event.gift.repeatCount} | diamonds=${event.gift.totalDiamonds} | fx=${event.gift.fx} | sfx=${event.gift.sfx} | score+${result.scoreGain} | dmg=${result.damage} | loss=${result.scoreLoss} | ko=${result.ko ? "yes" : "no"}`
+        `[arena gift] ${attacker.name || attacker.id} -> ${target.name || target.id} | gift=${event.gift.name} x${event.gift.repeatCount} | diamonds=${event.gift.totalDiamonds} | fx=${event.gift.fx} | sfx=${event.gift.sfx} | fallback=${event.gift.tierFallbackUsed ? "yes" : "no"} | score+${result.scoreGain} | dmg=${result.damage} | loss=${result.scoreLoss} | ko=${result.ko ? "yes" : "no"}`
     );
 }
 
@@ -184,6 +236,22 @@ function logArenaLike(event, player, support, strike) {
     const comboLikes = support?.likeCombo || event.likeCount;
     console.log(
         `[arena like] ${player.name || player.id} | likes=${event.likeCount} | total=${event.totalLikeCount || 0} | src=${event.countSource || "unknown"} | combo=${comboLikes} | heal=${support?.heal || 0} | score+${support?.scoreGain || 0} | strike=${strike ? "yes" : "no"} | ko=${strike?.ko ? "yes" : "no"}`
+    );
+}
+
+function logRaceGift(event, result) {
+    const attacker = result?.attacker;
+    if (!attacker?.id) return;
+    const primaryTarget = result.targets?.[0];
+    console.log(
+        `[race gift] ${attacker.name || attacker.id} | gift=${event.gift.name} x${event.gift.repeatCount} | diamonds=${event.gift.totalDiamonds} | power=${result.powerLabel} | boost=+${result.progressGain} | momentum=+${result.momentumGain} | target=${primaryTarget?.name || "none"} | loss=${primaryTarget?.progressLoss || 0}`
+    );
+}
+
+function logRaceLike(event, player, support) {
+    if (!player?.id) return;
+    console.log(
+        `[race like] ${player.name || player.id} | likes=${event.likeCount} | total=${event.totalLikeCount || 0} | src=${event.countSource || "unknown"} | boost=+${support?.progressGain || 0} | momentum=+${support?.momentumGain || 0} | combo=${support?.comboLikes || event.likeCount}`
     );
 }
 
@@ -349,6 +417,61 @@ function resetRound() {
     startTimer();
 }
 
+function buildPersistedRaceWinner(entry) {
+    if (!entry?.id) return null;
+    return {
+        id: entry.id,
+        name: entry.name,
+        avatar: entry.avatar,
+        victories: entry.victories,
+        time: new Date().toLocaleTimeString(),
+        timestamp: Date.now()
+    };
+}
+
+function resetRaceRound(reason = "timer") {
+    const raceWinner = race.getRoundWinner();
+    let finalRaceWinner = raceWinner;
+
+    if (raceWinner?.id && isCompetitiveArenaPlayer(raceWinner.id)) {
+        const persistedRaceWinner = race.markRoundWinner(raceWinner.id);
+        if (persistedRaceWinner) {
+            raceLastWinners = normalizeChampionStandings([
+                ...raceLastWinners,
+                buildPersistedRaceWinner(persistedRaceWinner)
+            ], { memoryWindowMs: GAME_CONFIG.carrera.championMemoryWindowMs });
+            raceChampionsStorage.save(raceLastWinners);
+            finalRaceWinner = persistedRaceWinner;
+        }
+    }
+
+    io.emit("race:roundEnd", {
+        reason,
+        winner: finalRaceWinner,
+        roundWinner: finalRaceWinner
+    });
+
+    if (finalRaceWinner?.id) {
+        lastCompletedRaceWinner = {
+            id: finalRaceWinner.id,
+            name: finalRaceWinner.name,
+            avatar: finalRaceWinner.avatar,
+            progress: finalRaceWinner.progress,
+            progressPct: finalRaceWinner.progressPct,
+            victories: finalRaceWinner.victories,
+            finishMs: finalRaceWinner.finishMs || 0
+        };
+        io.emit("race:lastRoundWinner", lastCompletedRaceWinner);
+    }
+
+    lastRaceLeaderId = null;
+    race.resetRound();
+    queueRaceState(true);
+    broadcastRaceChampions();
+    broadcastRaceHallOfFame();
+    startRaceTimer();
+}
+
 function startTimer() {
     clearInterval(timerInterval);
     timeRemaining = GAME_CONFIG.arena.roundDurationSeconds;
@@ -366,6 +489,21 @@ function startTimer() {
 
         if (timeRemaining <= 0) {
             resetRound();
+        }
+    }, 1000);
+}
+
+function startRaceTimer() {
+    clearInterval(raceTimerInterval);
+    raceTimeRemaining = GAME_CONFIG.carrera.roundDurationSeconds;
+    io.emit("race:timerUpdate", raceTimeRemaining);
+
+    raceTimerInterval = setInterval(() => {
+        raceTimeRemaining -= 1;
+        io.emit("race:timerUpdate", raceTimeRemaining);
+
+        if (raceTimeRemaining <= 0) {
+            resetRaceRound("timer");
         }
     }, 1000);
 }
@@ -412,6 +550,25 @@ function startArenaSawLoop() {
 
         queueTeamArenaState();
     }, GAME_CONFIG.arena.sawTickIntervalMs);
+}
+
+function startRaceLoop() {
+    clearInterval(raceLoopTimer);
+    raceLoopTimer = setInterval(() => {
+        const tick = race.tick(Date.now());
+        if (tick.changed) {
+            const leader = race.getLeader();
+            if (leader?.id && leader.id !== lastRaceLeaderId) {
+                lastRaceLeaderId = leader.id;
+                io.emit("race:leaderChanged", leader);
+            }
+            queueRaceState();
+        }
+
+        if (tick.finishedPlayer?.id) {
+            resetRaceRound("finish");
+        }
+    }, GAME_CONFIG.carrera.tickIntervalMs);
 }
 
 function getTikTokConfig() {
@@ -686,6 +843,38 @@ function handleTeamArenaGift(event, rawData) {
     queueTeamArenaState();
 }
 
+function handleRaceGift(event) {
+    const attacker = race.ensurePlayer(event.user, "gift");
+    if (!attacker) return;
+
+    const result = race.applyGiftPower(attacker.id, event.gift);
+    if (!result) return;
+    logRaceGift(event, result);
+
+    io.emit("race:gift", {
+        attacker: result.attacker,
+        target: result.target,
+        targets: result.targets,
+        giftName: event.gift.name,
+        diamondCount: event.gift.diamondCount,
+        repeatCount: event.gift.repeatCount,
+        totalDiamonds: event.gift.totalDiamonds,
+        tier: event.gift.tier,
+        category: event.gift.category,
+        effectKey: event.gift.fx,
+        label: event.gift.label,
+        powerLabel: result.powerLabel,
+        sfx: event.gift.sfx,
+        progressGain: result.progressGain,
+        momentumGain: result.momentumGain,
+        shieldUntil: result.shieldUntil,
+        turboUntil: result.turboUntil
+    });
+
+    broadcastRaceHallOfFame();
+    queueRaceState();
+}
+
 function handleArenaLike(event) {
     const player = arena.ensurePlayer(event.user, "like");
     if (!player) return;
@@ -833,6 +1022,29 @@ function handleTeamArenaLike(event, rawData) {
     queueTeamArenaState();
 }
 
+function handleRaceLike(event) {
+    const player = race.ensurePlayer(event.user, "like");
+    if (!player) return;
+
+    const support = race.applyLikeBoost(player.id, event.likeCount);
+    if (!support) return;
+    logRaceLike(event, player, support);
+
+    io.emit("race:like", {
+        userId: player.id,
+        player: support.player,
+        likeCount: event.likeCount,
+        comboLikes: support.comboLikes,
+        progressGain: support.progressGain,
+        momentumGain: support.momentumGain,
+        shieldUntil: support.shieldUntil,
+        turboUntil: support.turboUntil
+    });
+
+    broadcastRaceHallOfFame();
+    queueRaceState();
+}
+
 function handleArenaChat(event) {
     const text = event.comment.toUpperCase();
     const player = arena.ensurePlayer(event.user, "chat");
@@ -962,6 +1174,33 @@ function handleTeamArenaChat(event, rawData) {
     }
 }
 
+function handleRaceChat(event) {
+    const player = race.ensurePlayer(event.user, "chat");
+    if (!player) return;
+
+    const text = String(event.comment || "").toUpperCase();
+    const shouldBoost = text.includes(GAME_CONFIG.carrera.chatWakeKeyword) || text.includes(GAME_CONFIG.carrera.chatBoostKeyword);
+    if (!shouldBoost) {
+        queueRaceState();
+        return;
+    }
+
+    const boost = race.applyChatBoost(player.id, event.comment);
+    if (!boost) return;
+
+    io.emit("race:chatBoost", {
+        userId: player.id,
+        player: boost.player,
+        keyword: boost.keyword,
+        progressGain: boost.progressGain,
+        momentumGain: boost.momentumGain,
+        turboUntil: boost.turboUntil
+    });
+
+    broadcastRaceHallOfFame();
+    queueRaceState();
+}
+
 function bindTikTokListeners(connection) {
     connection.on("gift", (rawData) => {
         try {
@@ -972,6 +1211,7 @@ function bindTikTokListeners(connection) {
                 return;
             }
             handleArenaGift(event);
+            handleRaceGift(event);
             handleTeamArenaGift(event, rawData);
         } catch (error) {
             console.error("Gift error:", error.message);
@@ -985,6 +1225,7 @@ function bindTikTokListeners(connection) {
             return;
         }
         handleArenaLike(event);
+        handleRaceLike(event);
         handleTeamArenaLike(event, rawData);
     });
 
@@ -995,6 +1236,7 @@ function bindTikTokListeners(connection) {
             return;
         }
         handleArenaChat(event);
+        handleRaceChat(event);
         handleTeamArenaChat(event, rawData);
     });
 }
@@ -1016,14 +1258,21 @@ io.on("connection", (socket) => {
     socket.emit("arena:currentRanking", arena.getCurrentRanking());
     socket.emit("arena:champion", arena.getLastWinnerId());
     socket.emit("arena:lastRoundWinner", lastCompletedRoundWinner);
+    socket.emit("race:timerUpdate", raceTimeRemaining);
+    socket.emit("race:sync", race.getPlayers());
+    socket.emit("race:currentRanking", race.getCurrentRanking());
+    socket.emit("race:champion", race.getLastWinnerId());
+    socket.emit("race:lastRoundWinner", lastCompletedRaceWinner);
     socket.emit("teamArena:sync", teamArena.getPlayers());
     socket.emit("teamArena:currentRanking", teamArena.getCurrentRanking());
     socket.emit("teamArena:champion", teamArena.getLastWinnerId());
     socket.emit("teamArena:lastRoundWinner", lastCompletedTeamRoundWinner);
     socket.emit("status", liveStatus);
     broadcastHallOfFame();
+    broadcastRaceHallOfFame();
     broadcastTeamHallOfFame();
     broadcastChampions();
+    broadcastRaceChampions();
     broadcastTeamChampions();
 
     socket.on("arena:batchUpdate", (batch) => {
@@ -1044,6 +1293,29 @@ io.on("connection", (socket) => {
             uniqueId: data.uniqueId || "debug_user",
             nickname: "MODO DEBUG",
             giftId: 999,
+            repeatCount: 1,
+            diamondCount: data.diamondCount,
+            giftName: data.giftName,
+            gift: {
+                diamond_count: data.diamondCount,
+                gift_name: data.giftName
+            },
+            profilePictureUrl: "https://p16-amd-va.tiktokcdn.com/img/musically-maliva-obj/1610411516752901~c5_720x720.jpeg",
+            user: {
+                uniqueId: data.uniqueId || "debug_user",
+                nickname: "MODO DEBUG",
+                profilePictureUrl: "https://p16-amd-va.tiktokcdn.com/img/musically-maliva-obj/1610411516752901~c5_720x720.jpeg"
+            }
+        };
+        tiktokLive.emit("gift", mockData);
+    });
+
+    socket.on("race:debug:gift", (data) => {
+        if (!tiktokLive) return;
+        const mockData = {
+            uniqueId: data.uniqueId || "debug_user",
+            nickname: "MODO DEBUG",
+            giftId: 998,
             repeatCount: 1,
             diamondCount: data.diamondCount,
             giftName: data.giftName,
@@ -1109,6 +1381,15 @@ setInterval(() => {
         broadcastHallOfFame();
     }
 
+    const raceCleanup = race.cleanup(now);
+    if (raceCleanup.changed) {
+        raceCleanup.removedIds.forEach((id) => {
+            io.emit("race:leave", { id });
+        });
+        queueRaceState(true);
+        broadcastRaceHallOfFame();
+    }
+
     const teamCleanup = teamArena.cleanup(now);
     if (!teamCleanup.changed) return;
 
@@ -1125,6 +1406,8 @@ setTimeout(connectToTikTok, initialDelay);
 server.listen(PORT, () => {
     console.log(`🚀 Server on http://localhost:${PORT}`);
     startTimer();
+    startRaceTimer();
     startChromeCookieSync();
     startArenaSawLoop();
+    startRaceLoop();
 });
