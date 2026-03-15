@@ -74,17 +74,13 @@ function normalizeChampionStandings(entries = [], options = {}) {
         .slice(0, 10);
 }
 
-let lastWinners = normalizeChampionStandings(championsStorage.load(), {
-    memoryWindowMs: GAME_CONFIG.arena.championMemoryWindowMs
-});
-let raceLastWinners = normalizeChampionStandings(raceChampionsStorage.load(), {
-    memoryWindowMs: GAME_CONFIG.carrera.championMemoryWindowMs
-});
-let teamLastWinners = normalizeChampionStandings(teamChampionsStorage.load(), { preserveCountryMeta: true });
-championsStorage.save(lastWinners);
-raceChampionsStorage.save(raceLastWinners);
-teamChampionsStorage.save(teamLastWinners);
-teamArena.seedChampionStandings(teamLastWinners);
+let lastWinners = [];
+let raceLastWinners = [];
+let teamLastWinners = [];
+championsStorage.save([]);
+raceChampionsStorage.save([]);
+teamChampionsStorage.save([]);
+teamArena.seedChampionStandings([]);
 
 if (lastWinners[0]?.id) {
     arena.setLastWinnerId(lastWinners[0].id);
@@ -679,6 +675,7 @@ function handleArenaGift(event) {
         effectKey: event.gift.fx,
         label: event.gift.label,
         sfx: event.gift.sfx,
+        sizeScale: event.gift.sizeScale,
         multiplier: result.comboMultiplier,
         damage: result.damage,
         scoreGain: result.scoreGain,
@@ -891,6 +888,7 @@ function handleArenaLike(event) {
         comboLikes,
         heal: support?.heal || 0,
         scoreGain: support?.scoreGain || 0,
+        userName: player.name,
         respawned: Boolean(support?.respawned)
     });
     emitArenaTelemetry("like", {

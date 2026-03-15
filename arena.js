@@ -5,28 +5,8 @@ const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d", { alpha: false, desynchronized: true }) || canvas.getContext("2d");
 const leaderboardEl = document.getElementById("arena-leaderboard");
 const floatingLayer = document.getElementById("floating-ui-layer");
-const debugPanel = document.getElementById("debug-panel");
-const debugTelemetryEl = document.getElementById("debug-telemetry");
+
 const DEBUG_MODE = new window.URLSearchParams(window.location.search).get("debug") === "1";
-const debugTelemetry = [];
-
-if (debugPanel) {
-    debugPanel.hidden = !DEBUG_MODE;
-}
-
-function renderDebugTelemetry() {
-    if (!DEBUG_MODE || !debugTelemetryEl) return;
-    debugTelemetryEl.innerHTML = debugTelemetry.map((entry) => `<div class="debug-telemetry-item">${entry}</div>`).join("");
-}
-
-function pushDebugTelemetry(html) {
-    if (!DEBUG_MODE || !html) return;
-    debugTelemetry.unshift(html);
-    if (debugTelemetry.length > 10) {
-        debugTelemetry.length = 10;
-    }
-    renderDebugTelemetry();
-}
 
 // Ajustar Canvas
 canvas.width = window.innerWidth || 800;
@@ -932,6 +912,12 @@ function drawBackground() {
 
     ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 1)`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if (isSuddenDeath) {
+        // Tinte de advertencia suave en Sudden Death
+        ctx.fillStyle = "rgba(180, 40, 20, 0.15)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
     if (backgroundGrade.alpha > 0.01) {
         ctx.fillStyle = `rgba(${backgroundGrade.color}, ${backgroundGrade.alpha})`;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1930,6 +1916,7 @@ class Projectile {
         this.attackerId = attackerId;
         this.color = color || "#00f0ff";
         this.speed = options.speed || 10;
+        this.radius = options.radius || 8;
         this.targetOffsetX = options.targetOffsetX || 0;
         this.targetOffsetY = options.targetOffsetY || 0;
         this.wobble = options.wobble || 0;
@@ -1965,9 +1952,9 @@ class Projectile {
     }
     draw() {
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 8, 0, Math.PI * 2); // Más grande (8 en vez de 6)
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.fillStyle = this.color;
-        ctx.shadowBlur = 15; // Más brillo
+        ctx.shadowBlur = this.radius * 2; 
         ctx.shadowColor = this.color;
         ctx.fill();
         ctx.shadowBlur = 0;
@@ -1996,6 +1983,7 @@ function spawnProjectileBurst(attacker, target, count, totalDamage, color, optio
             color,
             {
                 speed: 9 + (i % 3),
+                radius: options.radius || 8,
                 targetOffsetX,
                 targetOffsetY,
                 wobble: options.wobble || 0,
@@ -2082,14 +2070,14 @@ socket.on("arena:suddenDeath", (active) => {
     const sdOverlay = document.getElementById("x2-alpha-overlay");
     if (active) {
         if (sdOverlay) sdOverlay.style.display = "flex";
-        spawnFloatingText("FASE FINAL", canvas.width / 2, canvas.height / 2 - 200, "#ff8c42");
+        spawnFloatingText("FASE FINAL 🔥", canvas.width / 2, canvas.height / 2 - 200, "#ff8c42");
         showAnnouncer("FASE FINAL", "#ff8c42");
         playSound("heavyExplosion");
-        triggerOverlayFlash("255, 120, 80", 0.1);
-        createExplosion(canvas.width / 2, canvas.height / 2, "#ff8c42", { count: 36, speed: 14, shake: 18 });
+        triggerOverlayFlash("255, 120, 80", 0.08); // Overlay menos opaco
+        createExplosion(canvas.width / 2, canvas.height / 2, "#ff8c42", { count: 36, speed: 14, shake: 12 });
         pushShockwave({ x: canvas.width / 2, y: canvas.height / 2, r: 120, opacity: 0.85, color: "#ff8c42" });
-        screenShake = 16;
-        announce("Fase final activada. Impacto reforzado.");
+        screenShake = 12; // Menos vibración para no asustar
+        announce("Fase final activada. El daño aumenta considerablemente.");
     } else {
         if (sdOverlay) sdOverlay.style.display = "none";
         showAnnouncer("RITMO NORMAL", "#2ed573");
@@ -2136,21 +2124,7 @@ socket.on("arena:combo", (data) => {
     createComboBurst(data?.x, data?.y);
 });
 
-socket.on("arena:telemetry", (data) => {
-    if (!DEBUG_MODE || !data) return;
-    const stamp = new Date(data.serverTs || Date.now()).toLocaleTimeString();
-    if (data.event === "like") {
-        pushDebugTelemetry(
-            `<strong>LIKE</strong> ${stamp}<br>${data.userName || data.userId} · count ${Math.floor(data.likeCount || 0)} · combo ${Math.floor(data.comboLikes || 0)}<br>src ${data.countSource || "?"} · heal ${Math.floor(data.heal || 0)} · score ${Math.floor(data.scoreGain || 0)}<br>burst ${data.burstTriggered ? "si" : "no"} · power ${data.powerupTriggered ? "si" : "no"} · strike ${data.strikeTriggered ? "si" : "no"}`
-        );
-        return;
-    }
-    if (data.event === "gift") {
-        pushDebugTelemetry(
-            `<strong>GIFT</strong> ${stamp}<br>${data.userName || data.userId} -> ${data.targetName || data.targetId}<br>${data.giftName || "Gift"} x${Math.floor(data.repeatCount || 1)} · ${Math.floor(data.totalDiamonds || 0)} diamantes<br>fx ${data.effectKey || "?"} · sfx ${data.sfx || "?"} · src ${data.repeatCountSource || "?"}<br>burst ${data.burstTriggered ? "si" : "no"} · power ${data.powerupTriggered ? "si" : "no"} · ko ${data.ko ? "si" : "no"}`
-        );
-    }
-});
+
 
 function createComboBurst(x, y) {
     const activePlayers = Object.values(players).filter((player) => player.opacity > 0.5);
@@ -2654,13 +2628,29 @@ socket.on("arena:like", (data) => {
         p.lastActive = Date.now(); // Despierta de AFK inmediatamente
         p.state = "ACTIVE";
         p.opacity = 1;
-        p.currentRadius = Math.max(p.currentRadius || PLAYER_RADIUS, PLAYER_RADIUS * 0.96);
         const visibleSpawn = clampToArena(p.x, p.y, p.currentRadius + 8);
         p.x = visibleSpawn.x;
         p.y = visibleSpawn.y;
         p.heal(data.heal || data.likeCount);
+        // Mostrar nombre en el Tap para mayor reconocimiento
+        spawnFloatingText(`${data.userName?.substring(0,8) || ''} 💖`, p.x, p.y - 30, "#ff4757");
+        p.flash = 1;
         p.engagement = Math.min((p.engagement || 0) + Math.max(10, data.likeCount * 2.8), 220);
         p.lastTapBoostAt = Date.now();
+
+        // DOPAMINA VIRAL: Lluvia de corazones en cada Like
+        for (let i = 0; i < Math.min(3, data.likeCount); i++) {
+            pushParticle({
+                x: p.x + (Math.random() - 0.5) * 40,
+                y: p.y - 20,
+                vx: (Math.random() - 0.5) * 6,
+                vy: -Math.random() * 8 - 2,
+                life: 1.2,
+                size: Math.random() * 12 + 8,
+                color: "#ff4757",
+                isHeart: true
+            });
+        }
         p.flash = 1;
 
         screenShake = Math.max(screenShake, 2);
@@ -3016,8 +3006,8 @@ socket.on("arena:gift", (data) => {
         color: "#ffe29a"
     });
 
-    // Zoom automático si es un regalo grande
-    if (giftValue >= 1) {
+    // Zoom automático solo si es un regalo notable (Threshold: 20 diamantes)
+    if (giftValue >= 20) {
         focusCamera(attacker.x, attacker.y, fxProfile.cameraScale, fxProfile.cameraFrames);
 
         if (giftValue >= 500) {
@@ -3192,9 +3182,10 @@ socket.on("arena:gift", (data) => {
         createExplosion(target.x, target.y, color, { count: 44, speed: 14, shake: 18 });
         createExplosion(target.x + 28, target.y - 18, "#fff3b0", { count: 24, speed: 10, shake: 10 });
         createExplosion(target.x - 28, target.y + 18, "#f59e0b", { count: 24, speed: 10, shake: 10 });
-        pushShockwave({ x: target.x, y: target.y, r: 30, opacity: 0.95, color });
-        pushShockwave({ x: target.x, y: target.y, r: 52, opacity: 0.82, color: "#fff3b0" });
-        pushShockwave({ x: target.x, y: target.y, r: 72, opacity: 0.62, color: "#fde68a" });
+        const swScale = (data.sizeScale || 0.45) * 1.8;
+        pushShockwave({ x: target.x, y: target.y, r: 30 * swScale, opacity: 0.95, color });
+        pushShockwave({ x: target.x, y: target.y, r: 52 * swScale, opacity: 0.82, color: "#fff3b0" });
+        pushShockwave({ x: target.x, y: target.y, r: 72 * swScale, opacity: 0.62, color: "#fde68a" });
         triggerOverlayFlash("255, 214, 120", 0.24);
         triggerArenaBorderPulse("255, 214, 120", 0.56, 12);
         screenShake = Math.max(screenShake, isSuddenDeath ? 42 : 34);
@@ -3215,7 +3206,12 @@ socket.on("arena:gift", (data) => {
             setTimeout(() => {
                 if (attacker && target && target.hp > 0) {
                     playSound("shoot");
-                    spawnProjectileBurst(attacker, target, 1, damage / pCount, color, { wobble: giftValue >= 100 ? 8 : 4, life: giftValue >= 100 ? 120 : 100 });
+                    const pRadius = 10 + (data.sizeScale || 0.2) * 20;
+                    spawnProjectileBurst(attacker, target, 1, damage / pCount, color, { 
+                        wobble: giftValue >= 100 ? 8 : 4, 
+                        life: giftValue >= 100 ? 120 : 100,
+                        radius: pRadius
+                    });
                 }
             }, i * 40);
         }
@@ -3457,7 +3453,7 @@ function loop() {
     if (globalGlitchIntensity > 0) {
         const gx = (Math.random() - 0.5) * globalGlitchIntensity;
         ctx.translate(gx, 0);
-        globalGlitchIntensity *= 0.94;
+        globalGlitchIntensity *= 0.88; // Decaimiento más rápido para no agobiar
         if (globalGlitchIntensity < 0.1) globalGlitchIntensity = 0;
     }
 
@@ -3656,10 +3652,34 @@ function loop() {
     for (let i = particles.length - 1; i >= 0; i--) {
         let p = particles[i];
         p.x += p.vx; p.y += p.vy;
-        p.life -= 0.05;
+        p.life -= 0.035; // Vida un poco más larga
         ctx.globalAlpha = Math.max(0, p.life);
         ctx.fillStyle = p.color;
-        ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2); ctx.fill();
+        
+        if (p.isHeart) {
+            // Dibujar un corazón simple
+            const s = p.size || 10;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y + s / 4);
+            ctx.bezierCurveTo(p.x, p.y, p.x - s / 2, p.y, p.x - s / 2, p.y + s / 4);
+            ctx.bezierCurveTo(p.x - s / 2, p.y + s / 2, p.x, p.y + s * 0.75, p.x, p.y + s);
+            ctx.bezierCurveTo(p.x, p.y + s * 0.75, p.x + s / 2, p.y + s / 2, p.x + s / 2, p.y + s / 4);
+            ctx.bezierCurveTo(p.x + s / 2, p.y, p.x, p.y, p.x, p.y + s / 4);
+            ctx.fill();
+        } else if (p.isCoin) {
+            // Dibujar una moneda (círculo dorado con brillo)
+            const s = p.size || 8;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, s, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = "#fff7d6";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        } else {
+            ctx.beginPath(); 
+            ctx.arc(p.x, p.y, p.size || 3, 0, Math.PI * 2); 
+            ctx.fill();
+        }
         ctx.globalAlpha = 1.0;
         if (p.life <= 0) particles.splice(i, 1);
     }
