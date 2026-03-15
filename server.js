@@ -74,13 +74,10 @@ function normalizeChampionStandings(entries = [], options = {}) {
         .slice(0, 10);
 }
 
-let lastWinners = [];
-let raceLastWinners = [];
-let teamLastWinners = [];
-championsStorage.save([]);
-raceChampionsStorage.save([]);
-teamChampionsStorage.save([]);
-teamArena.seedChampionStandings([]);
+let lastWinners = normalizeChampionStandings(championsStorage.load() || []);
+let raceLastWinners = normalizeChampionStandings(raceChampionsStorage.load() || []);
+let teamLastWinners = normalizeChampionStandings(teamChampionsStorage.load() || [], { preserveCountryMeta: true });
+teamArena.seedChampionStandings(teamLastWinners);
 
 if (lastWinners[0]?.id) {
     arena.setLastWinnerId(lastWinners[0].id);
