@@ -1638,11 +1638,12 @@ class Player {
         const opacity = Math.max(0, Math.min(1, this.opacity || 0));
         if (opacity <= 0.01) return;
         if (isNaN(this.currentRadius) || this.currentRadius < 5) this.currentRadius = (typeof PLAYER_RADIUS !== "undefined" ? PLAYER_RADIUS : 72) || 50;
-        const drawX = Number.isFinite(this.x) ? this.x : (canvas.width / 2);
-        const drawY = Number.isFinite(this.y) ? this.y : (canvas.height / 2);
-        if (!Number.isFinite(drawX) || !Number.isFinite(drawY)) return;
-        this.x = drawX;
-        this.y = drawY;
+        const rawX = Number.isFinite(this.x) ? this.x : (canvas.width / 2);
+        const rawY = Number.isFinite(this.y) ? this.y : (canvas.height / 2);
+        
+        // Sanity Check final
+        this.x = rawX || 400;
+        this.y = rawY || 600;
 
         ctx.save();
         ctx.globalAlpha = opacity;
@@ -3444,8 +3445,23 @@ function updateRankingDOM(force = false) {
 
     updateTopShowcase(); // Actualizar podio superior
     renderLastRoundWinner();
+    
     if (leaderboardEl) {
         leaderboardEl.innerHTML = "";
+        // Repoblar con el Top 10 de la ronda actual
+        const top10 = roundRanking.slice(0, 10);
+        top10.forEach((p, index) => {
+            const item = document.createElement("div");
+            item.className = "leaderboard-item";
+            const val = Math.floor(p.score || 0);
+            item.innerHTML = `
+                <span class="rank-num">#${index + 1}</span>
+                <img class="rank-avatar" src="${p.avatar || 'https://www.tiktok.com/favicon.ico'}" />
+                <span class="rank-name">${p.name}</span>
+                <span class="rank-score">${formatScoreShort(val)}</span>
+            `;
+            leaderboardEl.appendChild(item);
+        });
     }
 }
 
