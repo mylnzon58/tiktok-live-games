@@ -416,6 +416,11 @@ window.addEventListener("pointerdown", () => {
 
 function speakCountdownNumber(seconds) {
     const spanishWords = {
+        10: "diez",
+        9: "nueve",
+        8: "ocho",
+        7: "siete",
+        6: "seis",
         5: "cinco",
         4: "cuatro",
         3: "tres",
@@ -1108,8 +1113,9 @@ function getAvatarImage(url) {
     if (!url) return null;
     if (avatarCache[url]) return avatarCache[url];
     const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = url;
+    // Forzamos bypass de caché con un timestamp solo para la primera carga
+    const sep = url.includes('?') ? '&' : '?';
+    img.src = url + sep + "t=" + Date.now();
     avatarCache[url] = img;
     return img;
 }
@@ -1725,13 +1731,17 @@ class Player {
         ctx.clip(); 
 
         const img = getAvatarImage(this.avatar);
+        
+        // Fondo base para el avatar (por si es transparente o no carga rápido)
+        ctx.fillStyle = "#333";
+        ctx.fill();
+
         if (img && img.complete && img.naturalWidth > 0) {
             ctx.drawImage(img, this.x - this.currentRadius, this.y - this.currentRadius, this.currentRadius * 2, this.currentRadius * 2);
         } else {
-            ctx.fillStyle = "#777"; 
-            ctx.fill();
+            // Inicial o icono genérico
             ctx.fillStyle = "white";
-            ctx.font = `bold ${Math.max(10, this.currentRadius)}px Rajdhani`;
+            ctx.font = `bold ${Math.max(12, this.currentRadius * 0.8)}px Rajdhani`;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             const initial = (this.name && this.name.length > 0) ? this.name[0].toUpperCase() : "?";
@@ -1743,7 +1753,7 @@ class Player {
         const scorePulse = 1 + (Math.sin(Date.now() / 150) * 0.05) + (this.scorePop || 0);
         if (this.scorePop > 0) this.scorePop *= 0.85;
         const scoreText = formatScoreShort(this.score ?? 0);
-        const badgeFontSize = Math.min(20, Math.max(14, Math.floor(16 * scorePulse)));
+        const badgeFontSize = Math.min(26, Math.max(16, Math.floor(20 * scorePulse)));
         const badgeH = 24;
         const badgeW = Math.max(56, Math.min(90, scoreText.length * (badgeFontSize * 0.65)));
         const badgeY = this.y + this.currentRadius * 0.72;
@@ -2182,8 +2192,8 @@ socket.on("arena:suddenDeath", (active) => {
         announce("Fase final activada. El daño aumenta considerablemente.");
     } else {
         if (sdOverlay) sdOverlay.style.display = "none";
-        showAnnouncer("RITMO NORMAL", "#2ed573");
-        announce("Modo normal restaurado.");
+        showAnnouncer("NUEVA RONDA", "#2ed573");
+        speakImmediate("Inicio de nueva ronda. Todos los jugadores reinician.", { rate: 1.0, pitch: 1.0, volume: 1 });
     }
 });
 
@@ -2192,18 +2202,24 @@ socket.on("arena:champion", (id) => {
     console.log("🏆 El campeón reinante es:", id);
 });
 
-socket.on("arena:sawHit", (hit) => {
-    const attacker = players[hit.attacker.id] || syncPlayerFromServer(hit.attacker);
-    const target = players[hit.target.id] || syncPlayerFromServer(hit.target);
+socket.on("arena:sawHit", (data) => {
+    const attacker = syncPlayerFromServer(data.attacker) || players[data.attacker?.id];
+    const target = syncPlayerFromServer(data.target) || players[data.target?.id];
     if (!attacker || !target) return;
 
-    if (hit.isTipClash) {
+    if (data.isTipClash) {
         spawnFloatingText("⚔️ CLASH", (attacker.x + target.x) / 2, (attacker.y + target.y) / 2, "#ffd700");
         playSound("buzzsaw", 1.4);
-        createExplosion((attacker.x + target.x) / 2, (attacker.y + target.y) / 2, "#fff", { count: 8, speed: 6 });
+        createExplosion((attacker.x + target.x) / 2, (attacker.y + target.y) / 2, "#fff", { count: 12, speed: 7 });
     } else {
-        // Impacto normal de sierra
-        if (Math.random() < 0.1) playSound("buzzsaw", 0.82);
+        target.flash = 0.8;
+        createExplosion(target.x, target.y, "#fbbf24", { count: 12, speed: 6, shake: 3 });
+        // Número de DAÑO (ROJO / AMARILLO para sierra)
+        spawnFloatingText(`-${Math.floor(data.damage || 0)} HP`, target.x, target.y - 30, "#ef4444");
+        if (data.scoreLoss > 0) {
+            spawnFloatingText(`-${Math.floor(data.scoreLoss)} PTS`, target.x, target.y - 50, "#fca5a5");
+        }
+        if (Math.random() < 0.2) playSound("buzzsaw", 0.85);
     }
 });
 
@@ -2575,7 +2591,7 @@ socket.on("timerUpdate", (seconds) => {
         renderLastRoundWinner();
     }
 
-    if (seconds > 5) {
+    if (seconds > 10) {
         lastCountdownSpoken = null;
     }
 
@@ -2593,10 +2609,12 @@ socket.on("timerUpdate", (seconds) => {
         countdownOverlay.textContent = String(seconds).padStart(2, "0");
         countdownOverlay.classList.add("active");
 
+        // Hablar TODOS los números del 10 al 1
+        speakCountdownNumber(seconds);
+
         if (seconds <= 5) {
             countdownOverlay.classList.remove("normal");
             countdownOverlay.classList.add("warning");
-            speakCountdownNumber(seconds);
         } else {
             countdownOverlay.classList.remove("warning");
             countdownOverlay.classList.add("normal");
@@ -2901,22 +2919,6 @@ socket.on("arena:likeStrike", (data) => {
     }
     screenShake = Math.max(screenShake, Math.min(isSuddenDeath ? 13 : 9, (isSuddenDeath ? 4.6 : 2.8) + (comboLikes / (isSuddenDeath ? 9 : 12))));
     playSound("hit", 1.08);
-});
-
-socket.on("arena:sawHit", (data) => {
-    const attacker = syncPlayerFromServer(data.attacker) || players[data.attacker?.id];
-    const target = syncPlayerFromServer(data.target) || players[data.target?.id];
-    if (!attacker || !target) return;
-
-    target.flash = 1;
-    createExplosion(target.x, target.y, "#fbbf24", { count: 14, speed: 6, shake: 4 });
-    pushShockwave({ x: target.x, y: target.y, r: 18, opacity: 0.65, color: "#fbbf24" });
-    spawnFloatingText(`-${Math.floor(data.damage || 0)}`, target.x, target.y - 22, "#fde68a");
-    if ((data.scoreLoss || 0) > 0) {
-        spawnFloatingText(`-${Math.floor(data.scoreLoss)} PTS`, target.x, target.y - 44, "#fca5a5");
-    }
-    screenShake = Math.max(screenShake, 5);
-    if (Math.random() > 0.35) playSound("hit", 0.94);
 });
 
 // EVENTO DE PODER POR CHAT (Aura Visual)
@@ -3636,6 +3638,7 @@ function loop() {
             const angle = (i / 3) * Math.PI * 2;
             players[id] = new Player({
                 i: id, n: "BOT_" + (i + 1), s: 50 + i * 30, h: 1000, st: "ACTIVE",
+                a: "https://p16-webcast.tiktokcdn.com/webcast-va/new_gifter_badge_v3.png~tplv-obj.image",
                 x: b.cx + Math.cos(angle) * spread,
                 y: b.cy + Math.sin(angle) * spread
             });
@@ -3968,13 +3971,20 @@ function loop() {
 
     // Detalle (avatar, nombre, etc.) dentro del transform de cámara
     pList.forEach(p => {
-        if (Number(p.hp ?? 1000) <= 0) return;
+        if (!p || Number(p.hp || 0) <= 0) return;
         try {
             p.draw();
         } catch (e) {
-            console.error("Error drawing player", p.id, e);
+            console.error("Error drawing player", p?.id, e);
         }
     });
+
+    if (DEBUG_MODE) {
+        ctx.fillStyle = "rgba(255, 0, 0, 0.8)";
+        ctx.font = "bold 24px Rajdhani";
+        ctx.fillText(`DEBUG MODE ON - PLAYERS: ${pList.length}`, 400, 300);
+        ctx.fillText(`CAM SCALE: ${camera.scale.toFixed(2)}`, 400, 330);
+    }
 
     ctx.restore(); // Restore Camera
     ctx.restore(); // Restore Shake
