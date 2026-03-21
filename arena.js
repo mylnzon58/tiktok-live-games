@@ -999,7 +999,7 @@ function pushHazard(hazard) {
 // CONFIGURACIONES FÍSICAS (arena rectangular: burbujas más grandes para verse bien)
 // ==========================================
 const MAX_HP = 1000; 
-let PLAYER_RADIUS = 52;
+let PLAYER_RADIUS = 38; // Iniciamos más pequeños para que la arena se sienta gigante
 
 /** Formatea puntuación para que se lea bien en la burbuja (ej: 3689633 → "3.7M") */
 function formatScoreShort(score) {
@@ -1515,10 +1515,10 @@ class Player {
         // --- DINÁMICA DE TAMAÑO ---
         const safeScore = Math.max(this.score || 0, 0);
         const scoreScale = Math.min(
-            (Math.sqrt(safeScore) * 1.45) + (Math.log2(safeScore + 1) * 3.5),
-            118
+            (Math.sqrt(safeScore) * 1.55) + (Math.log10(safeScore + 1) * 10), 
+            150 // Límite de crecimiento para veteranos legendarios
         );
-        const engagementScale = Math.min(this.engagement * 0.34, 42);
+        const engagementScale = Math.min((this.engagement || 0) * 0.42, 55); // Bonus por actividad reciente (tapping/regalos)
         const baseTargetRadius = PLAYER_RADIUS + scoreScale;
         let targetRadius = Math.max(PLAYER_RADIUS, baseTargetRadius + engagementScale);
         this.peakRadius = Math.max(this.peakRadius || PLAYER_RADIUS, targetRadius);
