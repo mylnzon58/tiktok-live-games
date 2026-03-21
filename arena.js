@@ -1065,7 +1065,6 @@ function drawBackground() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     if (isSuddenDeath) {
-        // Tinte de advertencia suave en Sudden Death
         ctx.fillStyle = "rgba(180, 40, 20, 0.15)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
@@ -1077,8 +1076,7 @@ function drawBackground() {
         backgroundGrade.alpha = 0;
     }
 
-    ctx.fillStyle = "rgba(255, 255, 255, 0.22)"; // Blanco sutil
-    // OPTIMIZACIÓN: Dibujar todas las estrellas en un solo lote de rects (más rápido que arcs individuales)
+    ctx.fillStyle = "rgba(255, 255, 255, 0.22)"; 
     for (let i = 0; i < bgStars.length; i++) {
         const s = bgStars[i];
         ctx.fillRect(s.x, s.y, s.size, s.size);
@@ -1088,30 +1086,29 @@ function drawBackground() {
             s.x = Math.random() * canvas.width;
         }
     }
+}
 
-    // --- ARENA RECTANGULAR Y MARCO NEÓN ---
+function drawArenaWalls() {
     const arenaB = getArenaBounds();
-    const rotation = Date.now() / 1200;
-
-    // Dibujar el Rectángulo
+    
+    // Dibujar el Rectángulo NEÓN
     ctx.lineWidth = 14;
     ctx.lineJoin = "round";
-    
-    // Caching de gradiente (Solo recrear si es necesario, pero aquí usamos colores fijos con opacidad para velocidad)
     ctx.strokeStyle = "rgba(102, 231, 255, 0.7)"; 
-    ctx.shadowBlur = 0; // Apagar sombras en el fondo para ganar FPS
-    // Marco en forma de L para rodear el Showcase (Panel derecho)
+    ctx.shadowBlur = 0; 
+
+    // Marco en forma de L
     ctx.beginPath();
     ctx.moveTo(arenaB.left, arenaB.top);
     ctx.lineTo(645, arenaB.top);
-    ctx.lineTo(645, 530); // Límite inferior del panel
+    ctx.lineTo(645, 530); 
     ctx.lineTo(arenaB.right, 530);
     ctx.lineTo(arenaB.right, arenaB.bottom);
     ctx.lineTo(arenaB.left, arenaB.bottom);
     ctx.closePath();
     ctx.stroke();
 
-    // Efecto de "Ruido Eléctrico" en el marco rectangular
+    // Efecto de "Ruido Eléctrico"
     for (let i = 0; i < 15; i++) {
         const side = Math.floor(Math.random() * 4);
         let sx, sy;
@@ -1126,7 +1123,7 @@ function drawBackground() {
         ctx.fill();
     }
 
-    // --- NÚCLEO: ZONA REY (proporciones claras, sin deformar) ---
+    // --- NÚCLEO: ZONA REY ---
     const coreRadius = 120;
     const kingZonePulse = 0.96 + ((Math.sin(Date.now() / 280) + 1) * 0.04);
     const cx = arenaB.cx, cy = arenaB.cy;
@@ -1147,56 +1144,12 @@ function drawBackground() {
     }
 
     const kingImageRadius = coreRadius * 0.5 * kingZonePulse;
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(cx, cy - 6, kingImageRadius, 0, Math.PI * 2);
-    ctx.closePath();
-    ctx.clip();
-    if (kingZoneImage && kingZoneImage.complete && kingZoneImage.naturalWidth > 0) {
-        ctx.drawImage(
-            kingZoneImage,
-            cx - kingImageRadius,
-            cy - kingImageRadius - 6,
-            kingImageRadius * 2,
-            kingImageRadius * 2
-        );
-    } else {
-        ctx.fillStyle = "rgba(255, 175, 102, 0.24)";
-        ctx.fillRect(cx - kingImageRadius, cy - kingImageRadius - 6, kingImageRadius * 2, kingImageRadius * 2);
-    }
-    ctx.restore();
-
-    ctx.beginPath();
-    ctx.arc(cx, cy - 4, kingImageRadius + 4, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(255, 226, 180, 0.9)";
-    ctx.lineWidth = 3;
-    ctx.shadowBlur = 12;
-    ctx.shadowColor = "rgba(255, 137, 79, 0.5)";
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-
-    ctx.fillStyle = "rgba(255, 205, 140, 0.95)";
-    ctx.font = "bold 18px Rajdhani";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("👑 ZONA REY", cx, cy + coreRadius - 20);
-    // ------------------------
-
-    // --- BORDE PULSANTE RECTANGULAR ---
-    if (arenaBorderPulse.alpha > 0.01) {
-        ctx.beginPath();
-        ctx.rect(arenaB.left - 2, arenaB.top - 2, arenaB.width + 4, arenaB.height + 4);
-        ctx.strokeStyle = `rgba(${arenaBorderPulse.color}, ${arenaBorderPulse.alpha})`;
-        ctx.shadowBlur = 26;
-        ctx.shadowColor = `rgba(${arenaBorderPulse.color}, 0.95)`;
-        ctx.lineWidth = arenaBorderPulse.width;
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-        arenaBorderPulse.alpha *= 0.88;
-        arenaBorderPulse.width *= 0.94;
-    } else {
-        arenaBorderPulse.alpha = 0;
-        arenaBorderPulse.width = 0;
+    if (kingZoneImage.complete && kingZoneImage.naturalWidth > 0) {
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.globalAlpha = 0.3;
+        ctx.drawImage(kingZoneImage, -kingImageRadius, -kingImageRadius, kingImageRadius * 2, kingImageRadius * 2);
+        ctx.restore();
     }
 }
 
@@ -4093,6 +4046,7 @@ function loop() {
         camera.y += (camera.targetY - camera.y) * 0.05;
     }
 
+    ctx.save(); // Save para transformación de CÁMARA
     ctx.translate(canvas.width / 2, canvas.height / 2);
     
     // Phase 4: Distorsión Global (Universe Gift / Epic Events)
@@ -4105,6 +4059,9 @@ function loop() {
 
     ctx.scale(camera.scale, camera.scale);
     ctx.translate(-camera.x, -camera.y);
+
+    // DENTRO DE CÁMARA: Los muros deben moverse con los jugadores
+    drawArenaWalls();
 
     // Dibujar Partículas Ambientales (Siempre se mueven y dibujan, independiente del Hit Stop)
     ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
