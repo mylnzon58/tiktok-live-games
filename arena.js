@@ -3287,34 +3287,34 @@ function describeArenaGiftImpact(data, attacker, target, giftEffect) {
         case "megaBlast":
             return {
                 overlay: `${attackerName} lanza ${giftName} contra ${targetName} · MEGABLAST TOTAL`,
-                voice: `${attackerName} lanza ${giftName} contra ${targetName}. Megablast total.`
+                voice: `¡${attackerName} dio ${giftName} desencadenando un Megablast!`
             };
         case "lightningStorm":
             return {
                 overlay: `${attackerName} lanza ${giftName} sobre ${targetName} · LLUVIA DE RAYOS`,
-                voice: `${attackerName} lanza ${giftName} sobre ${targetName}. Lluvia de rayos.`
+                voice: `¡${attackerName} dio ${giftName} desencadenando una lluvia de rayos sobre ${targetName}!`
             };
         case "fireBurst":
             return {
                 overlay: `${attackerName} prende ${giftName} sobre ${targetName} · FUEGO DE AREA`,
-                voice: `${attackerName} lanza ${giftName} contra ${targetName}. Fuego de area.`
+                voice: `¡${attackerName} dio ${giftName} desencadenando fuego de área!`
             };
         case "shockwave":
             return {
                 overlay: `${attackerName} golpea con ${giftName} a ${targetName} · ONDA DE CHOQUE`,
-                voice: `${attackerName} golpea con ${giftName} a ${targetName}. Onda de choque.`
+                voice: `¡${attackerName} dio ${giftName} desencadenando una onda de choque!`
             };
         case "buzzsaw":
             return {
                 overlay: `${attackerName} activa ${giftName} · SIERRA DE PODER`,
-                voice: `${attackerName} activa ${giftName}. Sierra de poder.`
+                voice: `¡${attackerName} dio ${giftName} desencadenando la sierra de poder!`
             };
         case "tapSpark":
         case "projectile":
         default:
             return {
                 overlay: `${attackerName} lanza ${giftName} a ${targetName}${effectLabel ? ` · ${effectLabel.toUpperCase()}` : ""}`,
-                voice: `${attackerName} envió ${giftName}. Efecto: Ataque contra ${targetName}!`
+                voice: `${attackerName} envió ${giftName} desencadenando un ataque contra ${targetName}!`
             };
     }
 }
