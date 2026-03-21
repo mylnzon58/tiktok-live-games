@@ -1833,13 +1833,14 @@ class Player {
         ctx.restore();
 
         // --- PUNTOS / SCORE (legible: formato corto 3.7M / 12k) ---
+        const sizeScale = this.currentRadius / PLAYER_RADIUS; // Factor de escala relativo
         const scorePulse = 1 + (Math.sin(Date.now() / 150) * 0.05) + (this.scorePop || 0);
         if (this.scorePop > 0) this.scorePop *= 0.85;
         const scoreText = formatScoreShort(this.score ?? 0);
-        const badgeFontSize = Math.min(32, Math.max(22, Math.floor(28 * scorePulse)));
-        const badgeH = 32;
-        const badgeW = Math.max(70, Math.min(120, scoreText.length * (badgeFontSize * 0.68)));
-        const badgeY = this.y + this.currentRadius * 0.72;
+        const badgeFontSize = Math.min(38, Math.max(18, Math.floor(22 * sizeScale * scorePulse)));
+        const badgeH = Math.max(28, 26 * sizeScale);
+        const badgeW = Math.max(60, Math.min(140, scoreText.length * (badgeFontSize * 0.68)));
+        const badgeY = this.y + this.currentRadius * 0.75;
         const badgeX = this.x - badgeW / 2;
         ctx.fillStyle = "rgba(0, 0, 0, 0.88)";
         ctx.beginPath();
@@ -1861,17 +1862,19 @@ class Player {
         ctx.fillText(scoreText, this.x, badgeY);
         ctx.shadowBlur = 0;
 
-        // Calaveras de muertes
+        // Calaveras de muertes (escalan con el tamaño)
         if ((this.deaths || 0) > 0) {
             const skullX = this.x + (this.currentRadius * 0.56);
             const skullY = this.y - (this.currentRadius * 0.58);
-            const skullRadius = Math.max(10, this.currentRadius * 0.19);
+            const skullRadius = Math.max(12, this.currentRadius * 0.22);
             ctx.beginPath();
             ctx.arc(skullX, skullY, skullRadius, 0, Math.PI * 2);
             ctx.fillStyle = "rgba(15, 23, 42, 0.82)";
             ctx.fill();
             ctx.fillStyle = "#fecaca";
-            ctx.font = `bold ${Math.max(9, Math.floor(skullRadius * 0.62))}px Rajdhani`;
+            ctx.font = `bold ${Math.max(11, Math.floor(skullRadius * 0.7))}px Rajdhani`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
             ctx.fillText(`X${this.deaths}`, skullX, skullY);
         }
 
@@ -1912,9 +1915,10 @@ class Player {
         ctx.stroke();
         ctx.shadowBlur = 0;
 
-        // Nombre
+        // Nombre (escala con el tamaño de la bola)
+        const nameFontSize = Math.max(14, Math.floor(14 * sizeScale));
         ctx.fillStyle = "white";
-        ctx.font = "bold 14px Rajdhani";
+        ctx.font = `bold ${nameFontSize}px Rajdhani`;
         ctx.textAlign = "center";
         
         // Racha de Victorias (Streak)
@@ -1925,28 +1929,38 @@ class Player {
             ctx.fillStyle = "#ffecd2";
         }
         
-        ctx.shadowBlur = 4;
+        // Corona grande para el líder
+        if (this === currentTopArenaLeader || (roundRanking[0] && roundRanking[0].id === this.id)) {
+            const crownSize = Math.max(22, Math.floor(22 * sizeScale));
+            ctx.font = `${crownSize}px serif`;
+            ctx.fillText("👑", this.x, this.y - this.currentRadius - (12 * sizeScale) - crownSize * 0.6);
+            ctx.font = `bold ${nameFontSize}px Rajdhani`;
+        }
+        
+        ctx.shadowBlur = 5;
         ctx.shadowColor = "black";
-        ctx.fillText(displayName, this.x, this.y - this.currentRadius - 10);
+        ctx.fillText(displayName, this.x, this.y - this.currentRadius - (12 * sizeScale));
         ctx.shadowBlur = 0;
 
-        // Estados
+        // Estados (escalan)
+        const stateFontSize = Math.max(13, Math.floor(13 * sizeScale));
         if (this.state === "ELIMINATED") {
             ctx.fillStyle = "#ff8c42";
-            ctx.font = "bold 13px Rajdhani";
-            ctx.fillText("RESPAWN...", this.x, this.y + this.currentRadius + 18);
+            ctx.font = `bold ${stateFontSize}px Rajdhani`;
+            ctx.fillText("RESPAWN...", this.x, this.y + this.currentRadius + (18 * sizeScale));
         } else if (this.invulnerableUntil > Date.now()) {
             ctx.fillStyle = "#7dd3fc";
-            ctx.font = "bold 13px Rajdhani";
-            ctx.fillText("SHIELD", this.x, this.y + this.currentRadius + 18);
+            ctx.font = `bold ${stateFontSize}px Rajdhani`;
+            ctx.fillText("SHIELD", this.x, this.y + this.currentRadius + (18 * sizeScale));
         }
 
-        // Racha de Kills
+        // Racha de Kills (escala)
         const streak = (window.playerStreaks && window.playerStreaks[this.id]) || 0;
         if (streak >= 3) {
+            const killFontSize = Math.max(16, Math.floor(16 * sizeScale));
             ctx.fillStyle = streak >= 5 ? "#ff4757" : "#ffa502";
-            ctx.font = "bold 16px Rajdhani";
-            ctx.fillText(`${streak} KILLS 🔥`, this.x, this.y + this.currentRadius + 38);
+            ctx.font = `bold ${killFontSize}px Rajdhani`;
+            ctx.fillText(`${streak} KILLS 🔥`, this.x, this.y + this.currentRadius + (38 * sizeScale));
             
             if (frameCount % 4 === 0) {
                 pushParticle({
