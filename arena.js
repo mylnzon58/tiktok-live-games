@@ -288,10 +288,10 @@ function queueAnnouncement(text, options = {}) {
 
 function speakImmediate(text, options = {}) {
     if (!soundEnabled || !text || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
-    const voice = preferredVoices.es || resolvePreferredVoice();
-    preferredVoices.es = voice;
+    const voiceInfo = preferredVoices.es || resolvePreferredVoice();
+    preferredVoices.es = voiceInfo;
     speechQueue = [];
-    speechTimer = null;
+    if (speechTimer) { clearTimeout(speechTimer); speechTimer = null; }
     try {
         window.speechSynthesis.cancel();
     } catch (error) {
@@ -299,9 +299,10 @@ function speakImmediate(text, options = {}) {
     }
     const msg = new window.SpeechSynthesisUtterance(text);
     msg.lang = "es-ES";
-    if (voice) msg.voice = voice;
-    msg.rate = options.rate ?? 0.86;
-    msg.pitch = options.pitch ?? 0.84;
+    if (voiceInfo?.voice) msg.voice = voiceInfo.voice;
+    const isFemale = voiceInfo?.isFemale;
+    msg.rate = options.rate ?? (isFemale ? 1.18 : 1.25);
+    msg.pitch = options.pitch ?? (isFemale ? 1.45 : 1.8);
     msg.volume = options.volume ?? 0.9;
     msg.onend = () => {
         lastSpeechAt = Date.now();
