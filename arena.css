@@ -513,7 +513,22 @@ body.dramatic-vignette::before {
     margin-bottom: 8px;
 }
 
-.rank-1 .top-player-avatar { border-color: #ffd700; box-shadow: 0 0 25px rgba(255, 215, 0, 0.5); }
+.rank-1 .top-player-avatar { 
+    border-color: #ffd700; 
+    box-shadow: 0 0 25px rgba(255, 215, 0, 0.5);
+    animation: pulseGoldBorder 1.5s infinite alternate;
+}
+
+@keyframes pulseGoldBorder {
+    0% {
+        box-shadow: 0 0 15px rgba(255, 200, 0, 0.4);
+        border-color: #facc15;
+    }
+    100% {
+        box-shadow: 0 0 45px rgba(255, 230, 0, 1), 0 0 10px rgba(255, 255, 255, 0.8) inset;
+        border-color: #fef08a;
+    }
+}
 
 .top-player-name {
     font-family: 'Bungee', cursive;

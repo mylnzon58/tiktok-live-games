@@ -397,7 +397,9 @@ function announcePromoTip() {
     const promos = [
         "Si ya tienes claro tu favorito, sigan al numero uno del arena y sostengan esa ventaja.",
         "El lider del arena puede cambiar rapido. Si vas con el puntero, siguelo y mantenlo arriba.",
-        "Cada ronda define al puntero. Si tu favorito va ganando, siguelo y sigan apoyando."
+        "Cada ronda define al puntero. Si tu favorito va ganando, siguelo y sigan apoyando.",
+        "Ayuden compartiendo el live. Si entra más gente a la batalla, tiraremos cofres para todos.",
+        "Toquen la pantalla y compartan. Mientras más compartan, más épica será la arena para soltar cofres."
     ];
     announce(promos[Math.floor(Math.random() * promos.length)], { gapMs: 1600 });
 }
@@ -1590,7 +1592,7 @@ class Player {
             const sawPulseEveryMs = Math.max(60, 118 - Math.min(42, this.engagement * 1.6));
             if (now - (this.lastSawAudioAt || 0) >= sawPulseEveryMs) {
                 this.lastSawAudioAt = now;
-                playSound("buzzsaw", 0.1); // Solo al 10% de volumen para no molestar la voz
+                playSound("buzzsaw", 0.03); // Solo al 10% de volumen para no molestar la voz
             }
         }
 
