@@ -516,44 +516,70 @@ body.dramatic-vignette::before {
 
 .rank-1 .top-player-avatar { 
     border-color: #ffd700; 
-    box-shadow: 0 0 25px rgba(255, 215, 0, 0.8), 0 0 10px rgba(255, 255, 255, 0.5) inset;
+    box-shadow: 0 0 35px rgba(255, 215, 0, 0.9), 0 0 20px rgba(255, 50, 50, 0.5) inset;
     animation: pulseGoldBorder 1.2s infinite alternate;
+    position: relative;
+}
+
+/* Efecto Corazón Latente solicitado para el #1 */
+.rank-1::after {
+    content: "💖";
+    position: absolute;
+    top: 15px;
+    left: 10px;
+    font-size: 28px;
+    animation: heartPulseLatent 1s infinite;
+    text-shadow: 0 0 15px #ff4d4d;
+    z-index: 10;
+}
+
+@keyframes heartPulseLatent {
+    0% { transform: scale(1) rotate(-5deg); opacity: 0.8; }
+    50% { transform: scale(1.4) rotate(5deg); opacity: 1; filter: brightness(1.2); }
+    100% { transform: scale(1) rotate(-5deg); opacity: 0.8; }
 }
 
 @keyframes pulseGoldBorder {
     0% {
-        box-shadow: 0 0 15px rgba(255, 200, 0, 0.4);
+        box-shadow: 0 0 20px rgba(255, 200, 0, 0.5);
         border-color: #facc15;
     }
     100% {
-        box-shadow: 0 0 45px rgba(255, 230, 0, 1), 0 0 10px rgba(255, 255, 255, 0.8) inset;
-        border-color: #fef08a;
+        box-shadow: 0 0 55px rgba(255, 100, 100, 0.8), 0 0 20px rgba(255, 255, 255, 0.8) inset;
+        border-color: #ffffff;
     }
 }
 
 .top-player-name {
     font-family: 'Bungee', cursive;
-    font-size: 13px;
+    font-size: 15px; /* Aumentado */
     color: #fff;
-    text-shadow: 2px 2px 4px #000;
+    text-shadow: 2px 2px 5px #000;
     text-align: center;
-    max-width: 120px;
+    max-width: 140px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+.rank-1 .top-player-name { font-size: 19px; color: #fef08a; } /* Gigante para el #1 */
 
-/* Etiqueta de Victorias (Capsula Amarilla Notable) */
+/* Etiqueta de Victorias (Capsula Amarilla Notable y GRANDE) */
 .top-player-victories-badge {
     background: #ffd700;
     color: #000;
-    font-size: 11px;
+    font-size: 15px; /* Aumentado masivamente */
     font-weight: 900;
-    padding: 3px 10px;
-    border-radius: 12px;
-    margin-top: 6px;
-    box-shadow: 0 2px 8px rgba(255, 215, 0, 0.4);
+    padding: 5px 16px; 
+    border-radius: 20px;
+    margin-top: 8px;
+    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.5);
     text-transform: uppercase;
+    border: 2px solid #fff;
+}
+.rank-1 .top-player-victories-badge { 
+    font-size: 18px; 
+    background: linear-gradient(to bottom, #fff, #ffd700);
+    animation: victoryPulse 1.5s infinite alternate;
 }
 
 /* Etiqueta de Puntos (Texto Amarillito Suave) */
