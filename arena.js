@@ -955,7 +955,7 @@ function pushHazard(hazard) {
 // CONFIGURACIONES FÍSICAS (arena rectangular: burbujas más grandes para verse bien)
 // ==========================================
 const MAX_HP = 1000; 
-let PLAYER_RADIUS = 72;
+let PLAYER_RADIUS = 52;
 
 /** Formatea puntuación para que se lea bien en la burbuja (ej: 3689633 → "3.7M") */
 function formatScoreShort(score) {
