@@ -1067,7 +1067,7 @@ function drawBackground() {
         backgroundGrade.alpha = 0;
     }
 
-    ctx.fillStyle = "rgba(255, 228, 205, 0.38)";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.18)"; // Blanco puro sutil para evitar parpadeo amarillento
     bgStars.forEach(s => {
         ctx.beginPath();
         ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
@@ -4266,7 +4266,7 @@ function loop() {
         playSound("heal", 0.5); // Sonido triunfal pitch grave
         playSound("powerUp");
 
-        triggerOverlayFlash("255, 215, 120", 0.08);
+        triggerOverlayFlash("255, 255, 255", 0.05); // Flash blanco neutro y más suave
     } else if (!currentClosestToCenter) {
         currentArenaKingId = null; // Nadie en el centro
     }
