@@ -4043,21 +4043,41 @@ function loop() {
         if (screenShake < 0.5) screenShake = 0;
     }
 
-    ctx.save(); // Save para Cámara
+    // --- CÁMARA DINÁMICA: CENTRALIZAR LÍDERES ---
+    const activeCompetitors = roundRanking.filter(p => (p.state !== "REMOVED" && p.state !== "IDLE") || (players[p.id] && players[p.id].hp > 0));
+    const leaderData = activeCompetitors[0];
+    const runnerUpData = activeCompetitors[1];
 
-    // Aplicar Cámara
+    const leader = leaderData ? (players[leaderData.id] || Object.values(players).find(p => p.name === leaderData.name)) : null;
+    const runnerUp = runnerUpData ? (players[runnerUpData.id] || Object.values(players).find(p => p.name === runnerUpData.name)) : null;
+
     if (camera.zoomTimer > 0) {
         camera.zoomTimer--;
         camera.scale += (camera.targetScale - camera.scale) * 0.1;
         camera.x += (camera.targetX - camera.x) * 0.1;
         camera.y += (camera.targetY - camera.y) * 0.1;
     } else {
-        camera.targetScale = 1;
-        camera.targetX = canvas.width / 2;
-        camera.targetY = canvas.height / 2;
-        camera.scale += (1 - camera.scale) * 0.05;
-        camera.x += (canvas.width / 2 - camera.x) * 0.05;
-        camera.y += (canvas.height / 2 - camera.y) * 0.05;
+        if (leader && leader.opacity > 0 && leader.hp > 0) {
+            if (runnerUp && runnerUp.opacity > 0 && runnerUp.hp > 0 && Math.abs((leader.score || 0) - (runnerUp.score || 0)) < 600) {
+                // PELEA CERCANA: Centrar cámara entre el 1º y el 2º
+                camera.targetX = (leader.x + runnerUp.x) / 2;
+                camera.targetY = (leader.y + runnerUp.y) / 2;
+                camera.targetScale = 0.90; // Abrir un poco para ver a ambos
+            } else {
+                // LÍDER CLARO: Seguir solo al 1º
+                camera.targetX = leader.x;
+                camera.targetY = leader.y;
+                camera.targetScale = 1.05; // Zoom más cerrado en el campeón
+            }
+        } else {
+            // REPOSO: Centrar en la Zona Rey
+            camera.targetX = canvas.width / 2;
+            camera.targetY = canvas.height / 2;
+            camera.targetScale = 0.82;
+        }
+        camera.scale += (camera.targetScale - camera.scale) * 0.05;
+        camera.x += (camera.targetX - camera.x) * 0.05;
+        camera.y += (camera.targetY - camera.y) * 0.05;
     }
 
     ctx.translate(canvas.width / 2, canvas.height / 2);
