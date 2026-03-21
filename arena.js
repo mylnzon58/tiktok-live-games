@@ -1538,9 +1538,17 @@ class Player {
         let targetRadius = Math.max(PLAYER_RADIUS, baseTargetRadius + engagementScale);
         this.peakRadius = Math.max(this.peakRadius || PLAYER_RADIUS, targetRadius);
 
-        // Tras respawn reaparece pequeno y vuelve a escalar despues del blindaje inicial.
-        if (Date.now() < (this.respawnSizeLockUntil || 0)) {
-            targetRadius = Math.min(targetRadius, PLAYER_RADIUS + 8);
+        // LÍMITE DE TAMAÑO JUSTO (Regla del Líder)
+        const leaderData = roundRanking[0];
+        if (leaderData && leaderData.id !== this.id) {
+            const leaderScore = leaderData.score || 0;
+            // Si el líder tiene 500+ puntos más que yo, mi tamaño (engagement boost) no puede superarlo
+            if (leaderScore - safeScore >= 500) {
+                const leaderPlayer = players[leaderData.id];
+                if (leaderPlayer && leaderPlayer.currentRadius > 0) {
+                    targetRadius = Math.min(targetRadius, leaderPlayer.currentRadius - 4);
+                }
+            }
         }
 
         if (this.state === "ELIMINATED") {
@@ -3250,7 +3258,8 @@ socket.on("arena:chatPower", (data) => {
         
         const label = (data.keyword || "PODER").toUpperCase();
         showAnnouncer(`🔥 ${p.name.toUpperCase()} ACTIVA ${label}!`, "#00f0ff");
-        announce(`¡Atención! ${p.name} acaba de escribir ${label} en el chat desatando su poder oculto.`, { gapMs: 600 });
+        // PRIORIDAD BAJA: Si hay muchos regalos, ignorar los gritos de PODER.
+        announce(`¡Increíble! ${p.name} descarga su ${label} en el combate.`, { gapMs: 1200, priority: false, minIntervalMs: 2500 });
 
         spawnFloatingText(label, p.x, p.y - 70, "#00f0ff");
         if (data.scoreGain > 0) {
@@ -3405,7 +3414,7 @@ function describeArenaGiftImpact(data, attacker, target, giftEffect) {
         ],
         shockwave: [
             { overlay: `🌊 ONDA DE CHOQUE EXPANSIVA DE ${attackerName}!`, voice: `¡Retumben los tambores! ${attackerName} dio ${giftName} desatando una onda de choque imparable contra ${targetName}.` },
-            { overlay: `💥 ${attackerName} GENERA UN IMPACTO SÍSMICO!`, voice: `¡Atención! ${attackerName} acaba de generar un impacto sísmico con ${giftName} lanzando a ${targetName} por los aires.` }
+            { overlay: `💥 ${attackerName} GENERA UN IMPACTO SÍSMICO!`, voice: `¡Increíble! ${attackerName} acaba de generar un impacto sísmico con ${giftName} lanzando a ${targetName} por los aires.` }
         ],
         buzzsaw: [
             { overlay: `⚙️ ${attackerName} ACTIVA SIERRA MORTAL CON ${giftName}!`, voice: `¡Sierra activada! ${attackerName} ha usado su ${giftName} para rodearse de hojas de acero. ¡Nadie se le acerque!` }
