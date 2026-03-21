@@ -10,7 +10,7 @@
 }
 
 :root {
-    --arena-area-width: calc(100% - 240px);
+    --arena-area-width: calc(100% - 160px);
 }
 
 body,
@@ -402,7 +402,7 @@ body.dramatic-vignette::before {
     position: absolute;
     top: 10px;
     left: 10px;
-    right: 250px; /* Deja espacio para el Hall of Fame lateral */
+    right: 170px; /* Deja espacio para el Hall of Fame lateral */
     height: 150px;
     background: rgba(10, 10, 25, 0.85);
     border: 2px solid rgba(255, 215, 0, 0.4);
@@ -459,7 +459,7 @@ body.dramatic-vignette::before {
     position: absolute;
     top: 10px;
     right: 10px;
-    width: 220px;
+    width: 140px;
     height: calc(100% - 20px);
     background: linear-gradient(180deg, rgba(255, 215, 0, 0.15) 0%, rgba(20, 20, 40, 0.9) 50%, rgba(0, 240, 255, 0.15) 100%);
     border: 3px solid rgba(255, 215, 0, 0.5);
@@ -503,8 +503,8 @@ body.dramatic-vignette::before {
 .top-player-item.rank-3 { order: 3; transform: scale(0.9); opacity: 0.8; }
 
 .top-player-avatar {
-    width: 90px;
-    height: 90px;
+    width: 70px;
+    height: 70px;
     border-radius: 15px; /* Cuadrado con bordes redondeados solicitado */
     border: 4px solid #fff;
     box-shadow: 0 10px 20px rgba(0,0,0,0.6);
@@ -532,11 +532,11 @@ body.dramatic-vignette::before {
 
 .top-player-name {
     font-family: 'Bungee', cursive;
-    font-size: 15px;
+    font-size: 13px;
     color: #fff;
     text-shadow: 2px 2px 4px #000;
     text-align: center;
-    max-width: 180px;
+    max-width: 120px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -570,7 +570,7 @@ body.dramatic-vignette::before {
 
 /* Ajustar el canvas para dejar espacio a la derecha */
 #gameCanvas {
-    width: calc(100% - 240px) !important;
+    width: calc(100% - 160px) !important;
     left: 0 !important;
 }
 
