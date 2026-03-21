@@ -430,7 +430,55 @@ function speakCountdownNumber(seconds) {
     const spoken = spanishWords[seconds];
     if (!spoken || lastCountdownSpoken === seconds) return;
     lastCountdownSpoken = seconds;
-    speakImmediate(spoken, { rate: 0.94, pitch: 0.92, volume: 1 });
+    // Usar speakImmediate solo para los últimos 3, el resto con announce rápido
+    if (seconds <= 3) {
+        speakImmediate(spoken, { rate: 0.85, pitch: 0.80, volume: 1 });
+    } else {
+        speakImmediate(spoken, { rate: 1.0, pitch: 0.92, volume: 1 });
+    }
+}
+
+// Sonido fuerte de cuenta regresiva (beep agudo)
+function playCountdownBeep(seconds) {
+    if (!soundEnabled || !audioCtx) return;
+    try {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        
+        // Pitch sube conforme quedan menos segundos
+        const basePitch = seconds <= 3 ? 1200 : (seconds <= 5 ? 1000 : 800);
+        osc.type = seconds <= 3 ? 'square' : 'sine';
+        osc.frequency.setValueAtTime(basePitch, now);
+        osc.frequency.exponentialRampToValueAtTime(basePitch * 0.7, now + 0.15);
+        
+        // Volumen fuerte y claro
+        const vol = seconds <= 3 ? 0.35 : (seconds <= 5 ? 0.25 : 0.18);
+        gain.gain.setValueAtTime(vol, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        
+        osc.start(now);
+        osc.stop(now + 0.2);
+        
+        // Doble beep para los últimos 3 segundos
+        if (seconds <= 3) {
+            const osc2 = audioCtx.createOscillator();
+            const gain2 = audioCtx.createGain();
+            osc2.connect(gain2);
+            gain2.connect(audioCtx.destination);
+            osc2.type = 'square';
+            osc2.frequency.setValueAtTime(basePitch * 1.5, now + 0.12);
+            gain2.gain.setValueAtTime(0.2, now + 0.12);
+            gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+            osc2.start(now + 0.12);
+            osc2.stop(now + 0.3);
+        }
+    } catch(e) {
+        console.error("Countdown beep error:", e);
+    }
 }
 
 const sfx = {
@@ -2645,16 +2693,19 @@ socket.on("timerUpdate", (seconds) => {
 
         // Hablar TODOS los números del 10 al 1
         speakCountdownNumber(seconds);
+        
+        // Beep fuerte de cuenta regresiva (más intenso conforme baja)
+        playCountdownBeep(seconds);
 
         if (seconds <= 5) {
             countdownOverlay.classList.remove("normal");
             countdownOverlay.classList.add("warning");
+            // Sacudida creciente en los últimos 5
+            screenShake = Math.max(screenShake, 6 - seconds);
         } else {
             countdownOverlay.classList.remove("warning");
             countdownOverlay.classList.add("normal");
         }
-
-        playSound("tick");
     } else {
         countdownOverlay.classList.remove("active");
         countdownOverlay.classList.remove("warning");
