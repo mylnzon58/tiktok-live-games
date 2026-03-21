@@ -631,8 +631,8 @@ const sfx = {
             oscNoise.frequency.setValueAtTime(310 + (index * 45), now + offset);
             oscNoise.frequency.linearRampToValueAtTime(510 + (index * 50), now + offset + 0.04);
 
-            gain.gain.setValueAtTime(0.06 * vol, now + offset);
-            gain.gain.exponentialRampToValueAtTime(0.002 * Math.max(0.1, vol), now + offset + 0.05);
+            gain.gain.setValueAtTime(0.02 * vol, now + offset);
+            gain.gain.exponentialRampToValueAtTime(0.0005 * vol, now + offset + 0.05);
 
             osc.start(now + offset);
             oscNoise.start(now + offset);
