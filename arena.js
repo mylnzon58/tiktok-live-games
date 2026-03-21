@@ -2447,62 +2447,77 @@ socket.on("arena:sync", (serverPlayers) => {
 });
 
 function syncPlayerFromServer(sp) {
-    if (!sp?.i) return null; // 'i' es id
-    const id = sp.i;
+    if (!sp) return null;
+    // Soportar formato comprimido (i,n,s,h,st,a) Y formato completo (id,name,score,hp,state,avatar)
+    const id = sp.i || sp.id;
+    if (!id) return null;
+
+    const name = sp.n || sp.name;
+    const avatar = sp.a || sp.avatar;
+    const score = sp.s ?? sp.score;
+    const hp = sp.h ?? sp.hp;
+    const state = sp.st || sp.state;
+    const x = sp.x;
+    const y = sp.y;
+    const standingScore = sp.ss ?? sp.standingScore;
+    const victories = sp.v ?? sp.victories;
+    const invulnerableUntil = sp.inv ?? sp.invulnerableUntil ?? 0;
+    const sawActiveUntil = sp.saw ?? sp.sawActiveUntil ?? 0;
+    const deaths = sp.d ?? sp.deaths;
 
     const existingPlayer = players[id];
     const previousState = existingPlayer?.state || null;
 
     if (!existingPlayer) {
         players[id] = new Player({
-            id: sp.i,
-            name: sp.n,
-            avatar: sp.a,
-            score: sp.s,
-            hp: sp.h,
-            x: sp.x,
-            y: sp.y,
-            state: sp.st
+            id,
+            name,
+            avatar,
+            score,
+            hp,
+            x,
+            y,
+            state
         });
     } else {
-        const newScore = sp.s ?? players[id].score;
+        const newScore = score ?? players[id].score;
         if (newScore > (players[id].score || 0)) {
             players[id].scorePop = 1.0;
-            // Aumentar engagement al recibir puntos (actividad)
             players[id].engagement = Math.min((players[id].engagement || 0) + 15, 100);
             players[id].lastTapBoostAt = Date.now();
         }
         players[id].score = newScore;
         
-        players[id].standingScore = sp.ss ?? players[id].standingScore ?? players[id].score ?? 0;
-        players[id].hp = sp.h ?? players[id].hp;
-        players[id].name = sp.n || players[id].name;
-        players[id].victories = sp.v ?? players[id].victories ?? 0;
-        players[id].state = sp.st || players[id].state;
-        players[id].invulnerableUntil = sp.inv || 0;
+        players[id].standingScore = standingScore ?? players[id].standingScore ?? players[id].score ?? 0;
+        players[id].hp = hp ?? players[id].hp;
+        players[id].name = name || players[id].name;
+        if (avatar) players[id].avatar = avatar;
+        players[id].victories = victories ?? players[id].victories ?? 0;
+        players[id].state = state || players[id].state;
+        players[id].invulnerableUntil = invulnerableUntil || 0;
+        if (deaths !== undefined) players[id].deaths = deaths;
 
-        // El servidor solo es autoritativo en posicion para spawn/respawn o jugadores sinteticos.
         const shouldSyncPosition =
             id.startsWith("bot_") ||
             previousState === "ELIMINATED" ||
             previousState === "IDLE" ||
-            (previousState && previousState !== sp.st) ||
+            (previousState && previousState !== state) ||
             !Number.isFinite(players[id].x) ||
             !Number.isFinite(players[id].y);
 
         if (shouldSyncPosition || !existingPlayer) {
-            players[id].x = sp.x ?? players[id].x;
-            players[id].y = sp.y ?? players[id].y;
+            players[id].x = x ?? players[id].x;
+            players[id].y = y ?? players[id].y;
         }
     }
 
-    if (sp.saw > Date.now()) {
-        const remainingFrames = Math.floor((sp.saw - Date.now()) / (1000 / 60));
+    if (sawActiveUntil > Date.now()) {
+        const remainingFrames = Math.floor((sawActiveUntil - Date.now()) / (1000 / 60));
         if (Math.abs((players[id].sawLife || 0) - remainingFrames) > 60) {
             players[id].sawLife = remainingFrames;
         }
-    } else {
-        players[id].sawLife = 0;
+    } else if (sawActiveUntil === 0) {
+        // Solo resetear si explícitamente es 0 (no del formato completo sin dato)
     }
 
     return players[id];
