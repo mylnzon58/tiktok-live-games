@@ -243,9 +243,10 @@ function flushSpeechQueue() {
     msg.rate = next.rate ?? (isFemale ? 1.18 : 1.25); 
     msg.pitch = next.pitch ?? (isFemale ? 1.45 : 1.8); // Pitch agresivo si es hombre para que parezca joven/femenina
     msg.volume = next.volume ?? 1;
+    msg.onstart = () => { if (audioCtx && masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.04, audioCtx.currentTime, 0.1); };
     msg.onend = () => {
+        if (audioCtx && masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.12, audioCtx.currentTime, 0.15);
         lastSpeechAt = Date.now();
-        speechTimer = window.setTimeout(flushSpeechQueue, next.gapMs ?? 300);
     };
     msg.onerror = () => {
         lastSpeechAt = Date.now();
@@ -315,10 +316,13 @@ function speakImmediate(text, options = {}) {
     msg.rate = options.rate ?? (isFemale ? 1.18 : 1.25);
     msg.pitch = options.pitch ?? (isFemale ? 1.45 : 1.8);
     msg.volume = options.volume ?? 1.0; // Volumen al máximo siempre
+    msg.onstart = () => { if (audioCtx && masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.04, audioCtx.currentTime, 0.1); };
     msg.onend = () => {
+        if (audioCtx && masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.12, audioCtx.currentTime, 0.15);
         lastSpeechAt = Date.now();
     };
     msg.onerror = () => {
+        if (audioCtx && masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.12, audioCtx.currentTime, 0.1);
         lastSpeechAt = Date.now();
     };
     window.speechSynthesis.speak(msg);
@@ -3509,180 +3513,183 @@ socket.on("arena:gift", (data) => {
     if (diamondsTotal >= 1) { // AHORA TODOS los regalos se leen por voz.
         announce(giftNarration.voice, { gapMs: 700 });
     }
-
-    // Detección de tipos de ataque: utilizar tanto la clave sugerida como los fallbacks.
-    if (giftEffect.type === "megaBlast") {
-        // Sonido prioritario del servidor o fallback por nombre
-        const blastSfx = data.sfx || (data.giftName?.toLowerCase().includes("lion") ? "lionRoar" : "universeCrash");
-        playSound(blastSfx);
-        
-        hitStopFrames = giftValue >= 34999 ? 55 : (giftValue >= 1000 ? 40 : 28);
-        screenShake = giftValue >= 30000 ? 95 : (giftValue >= 1000 ? 70 : 50);
-        triggerOverlayFlash("255, 240, 200", giftValue >= 30000 ? 0.7 : 0.45);
-        triggerArenaBorderPulse("255, 214, 102", 0.95, 25);
-        triggerBackgroundGrade("255, 200, 100", 0.25);
-        
-        const epicLabel = giftValue >= 30000 ? "¡COLAPSO TOTAL!" : "¡SÚPER MEGA IMPACTO!";
-        spawnFloatingText(epicLabel, target.x, target.y, "#ffd166");
-        
-        if (giftValue >= 30000) {
-            announce(`¡DIOS MÍO! ${attacker.name} acaba de lanzar un UNIVERSO. ¡EL ARENA VA A EXPLOTAR!`, { volume: 1, pitch: 1.1, rate: 1.05 });
-            globalGlitchIntensity = 45; // Activar distorsión global
-            triggerOverlayFlash("255, 255, 255", 0.9);
-            // Lluvia de monedas para el universo
-            for (let i = 0; i < 50; i++) {
-                ambientParticles.push({
-                    x: Math.random() * canvas.width,
-                    y: -20 - (Math.random() * 500),
-                    vx: (Math.random() - 0.5) * 4,
-                    vy: 5 + Math.random() * 10,
-                    size: 15 + Math.random() * 10,
-                    opacity: 1,
-                    isCoin: true,
-                    rot: Math.random() * Math.PI,
-                    rotV: (Math.random() - 0.5) * 0.2
-                });
-            }
-        } else {
-            announce(`¡RUGIDO LEGENDARIO! Impacto masivo de ${attacker.name}. ¡Es increíble!`);
-        }
-
-        // Explosiones masivas en cadena
-        for (let i = 0; i < 6; i++) {
-            setTimeout(() => {
-                const ox = (Math.random() - 0.5) * 150;
-                const oy = (Math.random() - 0.5) * 150;
-                createExplosion(target.x + ox, target.y + oy, i % 2 === 0 ? "#fff" : "#ffd166", { 
-                    count: giftValue >= 30000 ? 100 : 60, 
-                    speed: 22, 
-                    shake: 25 
-                });
-                playSound("heavyExplosion");
-            }, i * 110);
-        }
-
-        pushShockwave({ x: target.x, y: target.y, r: 40, opacity: 1, color: "#fff7d6" });
-        pushShockwave({ x: target.x, y: target.y, r: 120, opacity: 0.9, color: "#ffd166" });
-        pushShockwave({ x: target.x, y: target.y, r: 200, opacity: 0.7, color: "#ffedd5" });
-        for (let i = 0; i < 3; i++) {
-            setTimeout(() => {
-                pushLightningBolt({
-                    sx: attacker.x + ((Math.random() - 0.5) * 80),
-                    sy: attacker.y + ((Math.random() - 0.5) * 80),
-                    tx: target.x + ((Math.random() - 0.5) * 120),
-                    ty: target.y + ((Math.random() - 0.5) * 120),
-                    life: 1.3,
-                    color: "#fff7d6"
-                });
-            }, i * 70);
-        }
-        target.takeDamage(Math.max(220, diamondsTotal * 32), attacker.id);
-        atkType = "none";
-    } else if (giftEffect.type === "lightningStorm") {
-        playSound(data.sfx || "galaxyBlast");
-        screenShake = isSuddenDeath ? 40 : 32;
-        triggerOverlayFlash("90, 200, 255", 0.24);
-        triggerArenaBorderPulse("90, 200, 255", 0.72, 15);
-        triggerBackgroundGrade("70, 170, 255", 0.14);
-        spawnFloatingText(data.label || "GALAXIA", target.x, target.y, "#7dd3fc");
-        announce("Galaxia activada. Rayos premium enormes. La ronda puede cambiar por completo.");
-        for (let i = 0; i < 9; i++) {
-            setTimeout(() => {
-                pushLightningBolt({
-                    sx: attacker.x, sy: attacker.y,
-                    tx: target.x + (Math.random() - 0.5) * 100,
-                    ty: target.y + (Math.random() - 0.5) * 100,
-                    life: 1.0 + (sizeDominance * 0.85), color: "#0abde3"
-                });
-                createExplosion(target.x + (Math.random() - 0.5) * 24, target.y + (Math.random() - 0.5) * 24, "#7dd3fc", { count: 18, speed: 8, shake: 5 });
-                target.takeDamage(Math.max(90, diamondsTotal * 8), attacker.id);
-            }, i * 60);
-        }
-        atkType = "none";
-    } else if (giftEffect.type === "buzzsaw" || giftValue >= 500) {
-        // Power-up de Sierra (Aura)
-        playSound("buzzsaw");
-        attacker.sawLife = Math.max(attacker.sawLife, 1320); // 22s de aura
-        spawnFloatingText("SIERRA ACTIVA", attacker.x, attacker.y - 40, "#ff9f43");
-        createExplosion(attacker.x, attacker.y, "#ff9f43", { count: 36, speed: 10, shake: 10 });
-        triggerOverlayFlash("255, 170, 90", 0.2);
-        triggerArenaBorderPulse("255, 159, 67", 0.45, 10);
-        atkType = "none";
-    } else if (giftEffect.type === "projectile") {
-        playSound("roseShot");
-        atkType = "projectile";
-    } else if (giftEffect.type === "tapSpark") {
-        playSound("hit");
-        atkType = "projectile";
-    } else if (giftEffect.type === "fireBurst") {
-        playSound(data.sfx || "fire");
-        createFireBurst(target.x, target.y, attacker.currentRadius + 64);
-        createExplosion(target.x, target.y, "#ff8a00", { count: 42, speed: 13, shake: 14 });
-        createExplosion(target.x + 26, target.y - 20, "#ffd166", { count: 26, speed: 9, shake: 8 });
-        triggerOverlayFlash("255, 120, 40", 0.22);
-        triggerArenaBorderPulse("255, 120, 40", 0.62, 13);
-        triggerBackgroundGrade("255, 120, 40", 0.12);
-        screenShake = Math.max(screenShake, Math.max(screenShake, isSuddenDeath ? 36 : 28));
-        atkType = "lightning";
-    } else if (giftEffect.type === "shockwave") {
-        playSound(data.sfx || "heavyExplosion");
-        hitStopFrames = Math.max(hitStopFrames, 12);
-        focusCamera(target.x, target.y, Math.max(fxProfile.cameraScale, 1.38), Math.max(fxProfile.cameraFrames, 95));
-        createExplosion(target.x, target.y, color, { count: 44, speed: 14, shake: 18 });
-        createExplosion(target.x + 28, target.y - 18, "#fff3b0", { count: 24, speed: 10, shake: 10 });
-        createExplosion(target.x - 28, target.y + 18, "#f59e0b", { count: 24, speed: 10, shake: 10 });
-        const swScale = (data.sizeScale || 0.45) * 1.8;
-        pushShockwave({ x: target.x, y: target.y, r: 30 * swScale, opacity: 0.95, color });
-        pushShockwave({ x: target.x, y: target.y, r: 52 * swScale, opacity: 0.82, color: "#fff3b0" });
-        pushShockwave({ x: target.x, y: target.y, r: 72 * swScale, opacity: 0.62, color: "#fde68a" });
-        triggerOverlayFlash("255, 214, 120", 0.24);
-        triggerArenaBorderPulse("255, 214, 120", 0.56, 12);
-        screenShake = Math.max(screenShake, isSuddenDeath ? 42 : 34);
-        atkType = "lightning";
-    } else if (data.sfx) {
-        // Regalos de pago: volumen/pitch según valor para dopamina (pagos suenan más impactantes)
-        const paidPitch = diamondsTotal >= 1000 ? 1.15 : diamondsTotal >= 100 ? 1.08 : 1.0;
-        playSound(data.sfx, paidPitch);
-    }
-
-    // Shockwave al atacar
-    if (diamondsTotal > 10) {
-        pushShockwave({ x: attacker.x, y: attacker.y, r: fxProfile.shockwaveRadius, opacity: 0.8, color: color });
-    }
-
-    // Ejecución de Proyectiles/Efectos persistentes
-    if (atkType === "projectile") {
-        const pCount = Math.min(Math.max(count, giftValue >= 100 ? 4 : 1), giftValue >= 1000 ? 16 : 12);
-        for (let i = 0; i < pCount; i++) {
-            setTimeout(() => {
-                if (attacker && target && target.hp > 0) {
-                    playSound("shoot");
-                    const pRadius = 10 + (data.sizeScale || 0.2) * 20;
-                    spawnProjectileBurst(attacker, target, 1, damage / pCount, color, { 
-                        wobble: giftValue >= 100 ? 8 : 4, 
-                        life: giftValue >= 100 ? 120 : 100,
-                        radius: pRadius
+    const impactDelay = diamondsTotal >= 10 ? 1200 : 800;
+    setTimeout(() => {
+    
+        // Detección de tipos de ataque: utilizar tanto la clave sugerida como los fallbacks.
+        if (giftEffect.type === "megaBlast") {
+            // Sonido prioritario del servidor o fallback por nombre
+            const blastSfx = data.sfx || (data.giftName?.toLowerCase().includes("lion") ? "lionRoar" : "universeCrash");
+            playSound(blastSfx);
+            
+            hitStopFrames = giftValue >= 34999 ? 55 : (giftValue >= 1000 ? 40 : 28);
+            screenShake = giftValue >= 30000 ? 95 : (giftValue >= 1000 ? 70 : 50);
+            triggerOverlayFlash("255, 240, 200", giftValue >= 30000 ? 0.7 : 0.45);
+            triggerArenaBorderPulse("255, 214, 102", 0.95, 25);
+            triggerBackgroundGrade("255, 200, 100", 0.25);
+            
+            const epicLabel = giftValue >= 30000 ? "¡COLAPSO TOTAL!" : "¡SÚPER MEGA IMPACTO!";
+            spawnFloatingText(epicLabel, target.x, target.y, "#ffd166");
+            
+            if (giftValue >= 30000) {
+                announce(`¡DIOS MÍO! ${attacker.name} acaba de lanzar un UNIVERSO. ¡EL ARENA VA A EXPLOTAR!`, { volume: 1, pitch: 1.1, rate: 1.05 });
+                globalGlitchIntensity = 45; // Activar distorsión global
+                triggerOverlayFlash("255, 255, 255", 0.9);
+                // Lluvia de monedas para el universo
+                for (let i = 0; i < 50; i++) {
+                    ambientParticles.push({
+                        x: Math.random() * canvas.width,
+                        y: -20 - (Math.random() * 500),
+                        vx: (Math.random() - 0.5) * 4,
+                        vy: 5 + Math.random() * 10,
+                        size: 15 + Math.random() * 10,
+                        opacity: 1,
+                        isCoin: true,
+                        rot: Math.random() * Math.PI,
+                        rotV: (Math.random() - 0.5) * 0.2
                     });
                 }
-            }, i * 40);
+            } else {
+                announce(`¡RUGIDO LEGENDARIO! Impacto masivo de ${attacker.name}. ¡Es increíble!`);
+            }
+    
+            // Explosiones masivas en cadena
+            for (let i = 0; i < 6; i++) {
+                setTimeout(() => {
+                    const ox = (Math.random() - 0.5) * 150;
+                    const oy = (Math.random() - 0.5) * 150;
+                    createExplosion(target.x + ox, target.y + oy, i % 2 === 0 ? "#fff" : "#ffd166", { 
+                        count: giftValue >= 30000 ? 100 : 60, 
+                        speed: 22, 
+                        shake: 25 
+                    });
+                    playSound("heavyExplosion");
+                }, i * 110);
+            }
+    
+            pushShockwave({ x: target.x, y: target.y, r: 40, opacity: 1, color: "#fff7d6" });
+            pushShockwave({ x: target.x, y: target.y, r: 120, opacity: 0.9, color: "#ffd166" });
+            pushShockwave({ x: target.x, y: target.y, r: 200, opacity: 0.7, color: "#ffedd5" });
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => {
+                    pushLightningBolt({
+                        sx: attacker.x + ((Math.random() - 0.5) * 80),
+                        sy: attacker.y + ((Math.random() - 0.5) * 80),
+                        tx: target.x + ((Math.random() - 0.5) * 120),
+                        ty: target.y + ((Math.random() - 0.5) * 120),
+                        life: 1.3,
+                        color: "#fff7d6"
+                    });
+                }, i * 70);
+            }
+            target.takeDamage(Math.max(220, diamondsTotal * 32), attacker.id);
+            atkType = "none";
+        } else if (giftEffect.type === "lightningStorm") {
+            playSound(data.sfx || "galaxyBlast");
+            screenShake = isSuddenDeath ? 40 : 32;
+            triggerOverlayFlash("90, 200, 255", 0.24);
+            triggerArenaBorderPulse("90, 200, 255", 0.72, 15);
+            triggerBackgroundGrade("70, 170, 255", 0.14);
+            spawnFloatingText(data.label || "GALAXIA", target.x, target.y, "#7dd3fc");
+            announce("Galaxia activada. Rayos premium enormes. La ronda puede cambiar por completo.");
+            for (let i = 0; i < 9; i++) {
+                setTimeout(() => {
+                    pushLightningBolt({
+                        sx: attacker.x, sy: attacker.y,
+                        tx: target.x + (Math.random() - 0.5) * 100,
+                        ty: target.y + (Math.random() - 0.5) * 100,
+                        life: 1.0 + (sizeDominance * 0.85), color: "#0abde3"
+                    });
+                    createExplosion(target.x + (Math.random() - 0.5) * 24, target.y + (Math.random() - 0.5) * 24, "#7dd3fc", { count: 18, speed: 8, shake: 5 });
+                    target.takeDamage(Math.max(90, diamondsTotal * 8), attacker.id);
+                }, i * 60);
+            }
+            atkType = "none";
+        } else if (giftEffect.type === "buzzsaw" || giftValue >= 500) {
+            // Power-up de Sierra (Aura)
+            playSound("buzzsaw");
+            attacker.sawLife = Math.max(attacker.sawLife, 1320); // 22s de aura
+            spawnFloatingText("SIERRA ACTIVA", attacker.x, attacker.y - 40, "#ff9f43");
+            createExplosion(attacker.x, attacker.y, "#ff9f43", { count: 36, speed: 10, shake: 10 });
+            triggerOverlayFlash("255, 170, 90", 0.2);
+            triggerArenaBorderPulse("255, 159, 67", 0.45, 10);
+            atkType = "none";
+        } else if (giftEffect.type === "projectile") {
+            playSound("roseShot");
+            atkType = "projectile";
+        } else if (giftEffect.type === "tapSpark") {
+            playSound("hit");
+            atkType = "projectile";
+        } else if (giftEffect.type === "fireBurst") {
+            playSound(data.sfx || "fire");
+            createFireBurst(target.x, target.y, attacker.currentRadius + 64);
+            createExplosion(target.x, target.y, "#ff8a00", { count: 42, speed: 13, shake: 14 });
+            createExplosion(target.x + 26, target.y - 20, "#ffd166", { count: 26, speed: 9, shake: 8 });
+            triggerOverlayFlash("255, 120, 40", 0.22);
+            triggerArenaBorderPulse("255, 120, 40", 0.62, 13);
+            triggerBackgroundGrade("255, 120, 40", 0.12);
+            screenShake = Math.max(screenShake, Math.max(screenShake, isSuddenDeath ? 36 : 28));
+            atkType = "lightning";
+        } else if (giftEffect.type === "shockwave") {
+            playSound(data.sfx || "heavyExplosion");
+            hitStopFrames = Math.max(hitStopFrames, 12);
+            focusCamera(target.x, target.y, Math.max(fxProfile.cameraScale, 1.38), Math.max(fxProfile.cameraFrames, 95));
+            createExplosion(target.x, target.y, color, { count: 44, speed: 14, shake: 18 });
+            createExplosion(target.x + 28, target.y - 18, "#fff3b0", { count: 24, speed: 10, shake: 10 });
+            createExplosion(target.x - 28, target.y + 18, "#f59e0b", { count: 24, speed: 10, shake: 10 });
+            const swScale = (data.sizeScale || 0.45) * 1.8;
+            pushShockwave({ x: target.x, y: target.y, r: 30 * swScale, opacity: 0.95, color });
+            pushShockwave({ x: target.x, y: target.y, r: 52 * swScale, opacity: 0.82, color: "#fff3b0" });
+            pushShockwave({ x: target.x, y: target.y, r: 72 * swScale, opacity: 0.62, color: "#fde68a" });
+            triggerOverlayFlash("255, 214, 120", 0.24);
+            triggerArenaBorderPulse("255, 214, 120", 0.56, 12);
+            screenShake = Math.max(screenShake, isSuddenDeath ? 42 : 34);
+            atkType = "lightning";
+        } else if (data.sfx) {
+            // Regalos de pago: volumen/pitch según valor para dopamina (pagos suenan más impactantes)
+            const paidPitch = diamondsTotal >= 1000 ? 1.15 : diamondsTotal >= 100 ? 1.08 : 1.0;
+            playSound(data.sfx, paidPitch);
         }
-    } else if (atkType === "lightning") {
-        playSound("lightning");
-        pushLightningBolt({
-            sx: attacker.x,
-            sy: attacker.y,
-            tx: target.x,
-            ty: target.y,
-            life: 1.0 + (sizeDominance * 0.75),
-            color
-        });
-        target.takeDamage(damage, attacker.id);
-        createExplosion(target.x, target.y, color, { count: 24, speed: 9, shake: 7 });
-    } else if (atkType === "laser") {
-        playSound("lightning");
-        spawnFloatingText("LASER", attacker.x, attacker.y, "#a855f7");
-        pushHazard(new LaserBeam(attacker.x, attacker.y, attacker.id, 400));
-    }
+    
+        // Shockwave al atacar
+        if (diamondsTotal > 10) {
+            pushShockwave({ x: attacker.x, y: attacker.y, r: fxProfile.shockwaveRadius, opacity: 0.8, color: color });
+        }
+    
+        // Ejecución de Proyectiles/Efectos persistentes
+        if (giftEffect.type === "tapSpark" || giftEffect.type === "projectile") {
+            const pCount = Math.min(Math.max(count, giftValue >= 100 ? 4 : 1), giftValue >= 1000 ? 16 : 12);
+            for (let i = 0; i < pCount; i++) {
+                setTimeout(() => {
+                    if (attacker && target && target.hp > 0) {
+                        playSound("shoot");
+                        const pRadius = 10 + (data.sizeScale || 0.2) * 20;
+                        spawnProjectileBurst(attacker, target, 1, damage / pCount, color, { 
+                            wobble: giftValue >= 100 ? 8 : 4, 
+                            life: giftValue >= 100 ? 120 : 100,
+                            radius: pRadius
+                        });
+                    }
+                }, i * 40);
+            }
+        } else if (giftEffect.type === "lightningStorm" || giftEffect.type === "lightning") {
+            playSound("lightning");
+            pushLightningBolt({
+                sx: attacker.x,
+                sy: attacker.y,
+                tx: target.x,
+                ty: target.y,
+                life: 1.0 + (sizeDominance * 0.75),
+                color
+            });
+            target.takeDamage(damage, attacker.id);
+            createExplosion(target.x, target.y, color, { count: 24, speed: 9, shake: 7 });
+        } else if (giftEffect.type === "laser") {
+            playSound("lightning");
+            spawnFloatingText("LASER", attacker.x, attacker.y, "#a855f7");
+            pushHazard(new LaserBeam(attacker.x, attacker.y, attacker.id, 400));
+        }
+    }, impactDelay);
 });
 
 // ==========================================
