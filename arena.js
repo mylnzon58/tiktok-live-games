@@ -821,28 +821,25 @@ function scheduleNote(step, time) {
     if (!soundEnabled) return;
     const { arp, bass } = sequence[step];
     
-    // Volumen base bajo para que efectos se oigan; sube mucho en cuenta regresiva
+    // Volumen REDUCIDO para que sea muy finitamente de fondo (suave)
     let bgmEnergy, arpGain, bassGain;
     if (currentRoundSeconds <= 10) {
-        // CUENTA REGRESIVA: Música al máximo, muy rápida
-        bgmEnergy = 1.3;
-        arpGain = 0.045;
-        bassGain = 0.08;
-    } else if (currentRoundSeconds <= 30) {
-        // Últimos 30s: sube un poco
-        bgmEnergy = 1.1;
-        arpGain = 0.022;
+        // CUENTA REGRESIVA: Un poco más alto pero sin aturdir
+        bgmEnergy = 1.15;
+        arpGain = 0.022; // Reducido al 50%
         bassGain = 0.04;
+    } else if (currentRoundSeconds <= 30) {
+        bgmEnergy = 1.05;
+        arpGain = 0.011;
+        bassGain = 0.02;
     } else if (currentRoundSeconds <= 90) {
-        // Medio: moderado
-        bgmEnergy = 1.0;
-        arpGain = 0.014;
-        bassGain = 0.025;
+        bgmEnergy = 0.95;
+        arpGain = 0.007;
+        bassGain = 0.012;
     } else {
-        // Normal: música baja de fondo
-        bgmEnergy = 0.92;
-        arpGain = 0.010;
-        bassGain = 0.018;
+        bgmEnergy = 0.90;
+        arpGain = 0.005; // Muy suave de fondo
+        bassGain = 0.009;
     }
 
     // Synth Lead (Melodía Rápida Arpegiada)
@@ -3198,39 +3195,53 @@ socket.on("arena:chatWake", (data) => {
     playSound("hit", 1.08);
 });
 
-// EVENTO DE PODER POR CHAT (Aura Visual)
+// EVENTO DE PODER POR CHAT (Aura Visual Potente - Similar a Regalo Pago)
 socket.on("arena:chatPower", (data) => {
     const p = syncPlayerFromServer(data.player) || players[data.userId];
     if (p) {
-        // Efecto visual de "Aura"
+        // Feedback Visual y Sonoro Épico
         p.flash = 1;
-        if (data.heal > 0) {
-            p.heal(data.heal);
-        }
-        spawnFloatingText(`${data.keyword}`, p.x, p.y - 40, "#00f0ff");
+        if (data.heal > 0) p.heal(data.heal);
+        
+        const label = (data.keyword || "PODER").toUpperCase();
+        showAnnouncer(`🔥 ${p.name.toUpperCase()} ACTIVA ${label}!`, "#00f0ff");
+        announce(`¡Atención! ${p.name} acaba de escribir ${label} en el chat desatando su poder oculto.`, { gapMs: 600 });
+
+        spawnFloatingText(label, p.x, p.y - 70, "#00f0ff");
         if (data.scoreGain > 0) {
-            spawnFloatingText(`+${data.scoreGain} PTS`, p.x, p.y - 62, "#fef08a");
+            spawnFloatingText(`+${data.scoreGain} PTS`, p.x, p.y - 92, "#fef08a");
         }
 
-        // Pequeño impulso físico
-        p.vx += (Math.random() - 0.5) * 4;
-        p.vy += (Math.random() - 0.5) * 4;
+        focusCamera(p.x, p.y, 1.25, 45); // Zoom dramático
+        triggerOverlayFlash("0, 240, 255", 0.2);
 
-        // Partículas circulares tipo Aura
-        for (let i = 0; i < 12; i++) {
-            const angle = (i / 12) * Math.PI * 2;
+        // Pequeño impulso y Rayo visual
+        p.vx += (Math.random() - 0.5) * 6;
+        p.vy += (Math.random() - 0.5) * 6;
+
+        pushLightningBolt({
+            sx: p.x, sy: p.y - 800, // Del cielo
+            tx: p.x, ty: p.y,
+            life: 1.0, color: "#00f0ff"
+        });
+
+        // Partículas de Aura mucho más notables
+        for (let i = 0; i < 28; i++) {
+            const angle = (i / 28) * Math.PI * 2;
             pushParticle({
-                x: p.x + Math.cos(angle) * p.currentRadius,
-                y: p.y + Math.sin(angle) * p.currentRadius,
-                vx: Math.cos(angle) * 3,
-                vy: Math.sin(angle) * 3,
-                life: 0.8,
-                color: "#00f0ff"
+                x: p.x + (Math.random() - 0.5) * 20,
+                y: p.y + (Math.random() - 0.5) * 20,
+                vx: Math.cos(angle) * (4 + Math.random() * 4),
+                vy: Math.sin(angle) * (4 + Math.random() * 4),
+                life: 1.2,
+                size: 8 + Math.random() * 12,
+                color: i % 2 === 0 ? "#00f0ff" : "#ffffff"
             });
         }
 
-        playSound("heal", 0.45); // Sonido suave para el aura
-        screenShake = Math.max(screenShake, 1.8);
+        playSound("powerUp");
+        playSound("lightning", 0.6);
+        screenShake = Math.max(screenShake, 8);
     }
 });
 
