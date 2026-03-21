@@ -160,7 +160,7 @@ body.dramatic-vignette::before {
     width: var(--arena-area-width);
     height: 100%;
     pointer-events: none;
-    z-index: 100;
+    z-index: 200; /* Debe estar POR ENCIMA del canvas (z-index: 150) */
     overflow: hidden;
 }
 
