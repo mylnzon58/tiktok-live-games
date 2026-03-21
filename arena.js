@@ -1765,28 +1765,28 @@ class Player {
         const scorePulse = 1 + (Math.sin(Date.now() / 150) * 0.05) + (this.scorePop || 0);
         if (this.scorePop > 0) this.scorePop *= 0.85;
         const scoreText = formatScoreShort(this.score ?? 0);
-        const badgeFontSize = Math.min(26, Math.max(16, Math.floor(20 * scorePulse)));
-        const badgeH = 24;
-        const badgeW = Math.max(56, Math.min(90, scoreText.length * (badgeFontSize * 0.65)));
+        const badgeFontSize = Math.min(32, Math.max(22, Math.floor(28 * scorePulse)));
+        const badgeH = 32;
+        const badgeW = Math.max(70, Math.min(120, scoreText.length * (badgeFontSize * 0.68)));
         const badgeY = this.y + this.currentRadius * 0.72;
         const badgeX = this.x - badgeW / 2;
         ctx.fillStyle = "rgba(0, 0, 0, 0.88)";
         ctx.beginPath();
         if (ctx.roundRect) {
-            ctx.roundRect(badgeX, badgeY - badgeH / 2, badgeW, badgeH, 12);
+            ctx.roundRect(badgeX, badgeY - badgeH / 2, badgeW, badgeH, 14);
         } else {
             ctx.rect(badgeX, badgeY - badgeH / 2, badgeW, badgeH);
         }
         ctx.fill();
         ctx.strokeStyle = "rgba(255, 215, 0, 0.6)";
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 2;
         ctx.stroke();
         ctx.fillStyle = "#fff";
         ctx.font = `bold ${badgeFontSize}px Rajdhani`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.shadowColor = "#000";
-        ctx.shadowBlur = 2;
+        ctx.shadowBlur = 3;
         ctx.fillText(scoreText, this.x, badgeY);
         ctx.shadowBlur = 0;
 
