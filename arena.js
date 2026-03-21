@@ -2007,8 +2007,7 @@ class Player {
         ctx.stroke();
         ctx.shadowBlur = 0;
 
-        // Nombre e Indicadores (escala con el tamaño de la bola)
-        const sizeScale = this.currentRadius / PLAYER_RADIUS;
+        // Nombre e Indicadores (escala con el tamaño de la bola) (Ya calculamos sizeScale arriba)
         const nameFontSize = Math.max(16, Math.floor(16 * sizeScale));
         
         // Racha de Victorias (Streak histórico/Rondas Ganadas)
