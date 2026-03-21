@@ -798,9 +798,30 @@ const sequence = [
 function scheduleNote(step, time) {
     if (!soundEnabled) return;
     const { arp, bass } = sequence[step];
-    const bgmEnergy = currentRoundSeconds <= 45 ? 1.18 : currentRoundSeconds <= 90 ? 1.06 : 0.96;
-    const arpGain = currentRoundSeconds <= 45 ? 0.036 : currentRoundSeconds <= 90 ? 0.031 : 0.026;
-    const bassGain = currentRoundSeconds <= 45 ? 0.065 : currentRoundSeconds <= 90 ? 0.056 : 0.046;
+    
+    // Volumen base bajo para que efectos se oigan; sube mucho en cuenta regresiva
+    let bgmEnergy, arpGain, bassGain;
+    if (currentRoundSeconds <= 10) {
+        // CUENTA REGRESIVA: Música al máximo, muy rápida
+        bgmEnergy = 1.3;
+        arpGain = 0.045;
+        bassGain = 0.08;
+    } else if (currentRoundSeconds <= 30) {
+        // Últimos 30s: sube un poco
+        bgmEnergy = 1.1;
+        arpGain = 0.022;
+        bassGain = 0.04;
+    } else if (currentRoundSeconds <= 90) {
+        // Medio: moderado
+        bgmEnergy = 1.0;
+        arpGain = 0.014;
+        bassGain = 0.025;
+    } else {
+        // Normal: música baja de fondo
+        bgmEnergy = 0.92;
+        arpGain = 0.010;
+        bassGain = 0.018;
+    }
 
     // Synth Lead (Melodía Rápida Arpegiada)
     const oscArp = audioCtx.createOscillator();
@@ -837,7 +858,8 @@ function scheduleNote(step, time) {
         oscSnare.frequency.setValueAtTime(400, time);
         oscSnare.frequency.exponentialRampToValueAtTime(10, time + 0.1);
 
-        gainSnare.gain.setValueAtTime(0.03, time);
+        const snareVol = currentRoundSeconds <= 10 ? 0.05 : 0.015;
+        gainSnare.gain.setValueAtTime(snareVol, time);
         gainSnare.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
 
         oscSnare.connect(gainSnare); gainSnare.connect(audioCtx.destination);
@@ -850,7 +872,8 @@ function scheduler() {
     // Programa notas hasta 100ms en el futuro para mantener la cadencia exacta
     while (nextNoteTime < audioCtx.currentTime + 0.1) {
         scheduleNote(currentNote, nextNoteTime);
-        const secondsPerBeat = currentRoundSeconds <= 45 ? 0.094 : currentRoundSeconds <= 90 ? 0.102 : 0.116;
+        // Tempo: muy rápido en countdown, normal el resto
+        const secondsPerBeat = currentRoundSeconds <= 10 ? 0.075 : (currentRoundSeconds <= 30 ? 0.094 : (currentRoundSeconds <= 90 ? 0.102 : 0.116));
         nextNoteTime += secondsPerBeat;
         currentNote = (currentNote + 1) % sequence.length;
     }
