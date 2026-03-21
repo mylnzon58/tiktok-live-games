@@ -3326,50 +3326,45 @@ function resolveArenaGiftEffect(data, attacker, target, diamondsTotal, giftValue
 }
 
 function describeArenaGiftImpact(data, attacker, target, giftEffect) {
-    const attackerName = attacker?.name || "Alguien";
-    const targetName = target?.name || "un rival";
-    const giftName = String(data?.giftName || "regalo").trim();
-    const effectLabel = String(data?.label || "").trim();
+    const attackerName = (attacker?.name || "Alguien").toUpperCase();
+    const targetName = (target?.name || "un rival").toUpperCase();
+    const giftName = String(data?.giftName || "un regalo").trim();
+    
+    const variants = {
+        megaBlast: [
+            { overlay: `💥 ${attackerName}: MEGA IMPACTO CON ${giftName}!`, voice: `¡Increíble! ${attackerName} ha lanzado un ${giftName} desencadenando un Megablast contra ${targetName}. ¡El arena está temblando!` },
+            { overlay: `🔥 IMPACTO LEGENDARIO: ${attackerName} LANZA ${giftName}!`, voice: `¡Dopamina pura! ${attackerName} dio ${giftName} desatando un impacto total sobre ${targetName}.` }
+        ],
+        lightningStorm: [
+            { overlay: `⚡ ${attackerName}: LLUVIA DE RAYOS CON ${giftName}!`, voice: `¡Cuidado abajo! ${attackerName} invoca una lluvia de rayos sobre ${targetName} con su ${giftName}. ¡El impacto es masivo!` },
+            { overlay: `🌩️ TORMENTA GALÁCTICA DE ${attackerName}!`, voice: `¡${attackerName} acaba de lanzar una tormenta galáctica usando ${giftName}! Los rayos están cayendo sobre ${targetName}.` }
+        ],
+        lightning: [
+            { overlay: `⚡ ${attackerName} GOLPEA CON UN RAYO DE FUEGO!`, voice: `¡Zas! ${attackerName} ha lanzado un rayo destructor con su ${giftName} contra ${targetName}.` },
+            { overlay: `🔌 IMPACTO ELÉCTRICO DE ${attackerName}!`, voice: `¡Conexión letal! ${attackerName} dio ${giftName} desatando un latigazo eléctrico sobre ${targetName}.` }
+        ],
+        fireBurst: [
+            { overlay: `🔥 ${attackerName} INCENDIA EL ARENA CON ${giftName}!`, voice: `¡Esto está que arde! ${attackerName} acaba de prender fuego al arena usando ${giftName} sobre ${targetName}.` },
+            { overlay: `🌋 EXPLOSIÓN VOLCÁNICA DE ${attackerName}!`, voice: `¡Fuego de área de ${attackerName}! Su ${giftName} ha dejado a ${targetName} en llamas.` }
+        ],
+        shockwave: [
+            { overlay: `🌊 ONDA DE CHOQUE EXPANSIVA DE ${attackerName}!`, voice: `¡Retumben los tambores! ${attackerName} dio ${giftName} desatando una onda de choque imparable contra ${targetName}.` },
+            { overlay: `💥 ${attackerName} GENERA UN IMPACTO SÍSMICO!`, voice: `¡Atención! ${attackerName} acaba de generar un impacto sísmico con ${giftName} lanzando a ${targetName} por los aires.` }
+        ],
+        buzzsaw: [
+            { overlay: `⚙️ ${attackerName} ACTIVA SIERRA MORTAL CON ${giftName}!`, voice: `¡Sierra activada! ${attackerName} ha usado su ${giftName} para rodearse de hojas de acero. ¡Nadie se le acerque!` }
+        ],
+        projectile: [
+            { overlay: `🎯 ${attackerName} LANZA RÁFAGA DE ${giftName}!`, voice: `¡Ataque rápido! ${attackerName} dispara una ráfaga de ${giftName} buscando a ${targetName}.` },
+            { overlay: `🌸 DISPARO PRECISIÓN DE ${attackerName}!`, voice: `¡Buen tiro! ${attackerName} acaba de lanzar su ${giftName} directo hacia ${targetName}.` }
+        ]
+    };
 
-    switch (giftEffect?.type) {
-        case "megaBlast":
-            return {
-                overlay: `${attackerName} lanza ${giftName} contra ${targetName} · MEGABLAST TOTAL`,
-                voice: `¡${attackerName} dio ${giftName} desencadenando un Megablast!`
-            };
-        case "lightningStorm":
-            return {
-                overlay: `${attackerName} lanza ${giftName} sobre ${targetName} · LLUVIA DE RAYOS`,
-                voice: `¡${attackerName} dio ${giftName} desencadenando una lluvia de rayos sobre ${targetName}!`
-            };
-        case "lightning":
-            return {
-                overlay: `${attackerName} lanza ${giftName} · IMPACTO DE RAYO`,
-                voice: `¡${attackerName} dio ${giftName} desencadenando un gran rayo contra ${targetName}!`
-            };
-        case "fireBurst":
-            return {
-                overlay: `${attackerName} prende ${giftName} sobre ${targetName} · FUEGO DE AREA`,
-                voice: `¡${attackerName} dio ${giftName} desencadenando fuego de área!`
-            };
-        case "shockwave":
-            return {
-                overlay: `${attackerName} golpea con ${giftName} a ${targetName} · ONDA DE CHOQUE`,
-                voice: `¡${attackerName} dio ${giftName} desencadenando una onda de choque!`
-            };
-        case "buzzsaw":
-            return {
-                overlay: `${attackerName} activa ${giftName} · SIERRA DE PODER`,
-                voice: `¡${attackerName} dio ${giftName} desencadenando la sierra de poder!`
-            };
-        case "tapSpark":
-        case "projectile":
-        default:
-            return {
-                overlay: `${attackerName} lanza ${giftName} a ${targetName}${effectLabel ? ` · ${effectLabel.toUpperCase()}` : ""}`,
-                voice: `${attackerName} envió ${giftName} desencadenando un ataque contra ${targetName}!`
-            };
-    }
+    const type = giftEffect?.type || "projectile";
+    const selectedVariants = variants[type] || variants.projectile;
+    const variant = selectedVariants[Math.floor(Math.random() * selectedVariants.length)];
+
+    return variant;
 }
 
 // Perfil de efectos por valor del regalo. Los GRATIS (tap/like/chat) usan siempre menos que el mínimo pagado.
