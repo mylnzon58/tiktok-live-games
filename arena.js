@@ -303,7 +303,7 @@ function speakImmediate(text, options = {}) {
     const isFemale = voiceInfo?.isFemale;
     msg.rate = options.rate ?? (isFemale ? 1.18 : 1.25);
     msg.pitch = options.pitch ?? (isFemale ? 1.45 : 1.8);
-    msg.volume = options.volume ?? 0.9;
+    msg.volume = options.volume ?? 1.0; // Volumen al máximo siempre
     msg.onend = () => {
         lastSpeechAt = Date.now();
     };
@@ -314,7 +314,7 @@ function speakImmediate(text, options = {}) {
 }
 
 function announceEs(text, options = {}) {
-    queueAnnouncement(text, { lang: "es", rate: 0.88, pitch: 0.86, volume: 0.84, gapMs: 1200, ...options });
+    queueAnnouncement(text, { lang: "es", rate: 0.88, pitch: 0.86, volume: 1.0, gapMs: 1200, ...options });
 }
 
 function announce(spanishText, options = {}) {
@@ -1504,6 +1504,18 @@ class Player {
             this.currentRadius += ((PLAYER_RADIUS * 0.86) - this.currentRadius) * 0.08;
             this.vx *= 0.96;
             this.vy *= 0.96;
+            // Explotar continuamente mientras está eliminado
+            if (Math.random() < 0.15) {
+                pushParticle({
+                    x: this.x + (Math.random() - 0.5) * this.currentRadius * 2,
+                    y: this.y + (Math.random() - 0.5) * this.currentRadius * 2,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: -Math.random() * 5 - 1,
+                    life: 0.6,
+                    size: Math.random() * 8 + 3,
+                    color: Math.random() > 0.5 ? "#ff4444" : "#ff8800"
+                });
+            }
         } else if (this.state === "IDLE") {
             // Inactividad: achicarse progresivamente según tiempo sin actividad
             const idleFor = (Date.now() - (this.lastActive || Date.now())) / 1000; // segundos
@@ -3047,6 +3059,46 @@ socket.on("arena:likeStrike", (data) => {
         });
     }
     pushShockwave({ x: target.x, y: target.y, r: 16, opacity: 0.8, color: "#bbf7d0" });
+
+socket.on("connect", () => {
+    console.log("Conectado al servidor Socket.IO");
+    spawnFloatingText("¡SERVIDOR CONECTADO!", canvas.width / 2, canvas.height / 2 - 100, "#00ff00");
+    playSound("heal", 0.6);
+    screenShake = Math.max(screenShake, 10);
+});
+
+socket.on("arena:chatWake", (data) => {
+    const p = syncPlayerFromServer(data.player) || players[data.userId];
+    if (p) {
+        // Efecto visual extremo para cuando entran con "YO"
+        p.flash = 1;
+        p.opacity = 1;
+        p.state = "ACTIVE";
+        p.lastActive = Date.now();
+        
+        // Empuje épico y shake
+        p.vx += (Math.random() - 0.5) * 20;
+        p.vy += (Math.random() - 0.5) * 20 + 5;
+        screenShake = Math.max(screenShake, 8);
+        
+        // Texto flotante grande
+        spawnFloatingText("¡AQUÍ ESTOY!", p.x, p.y - p.currentRadius - 20, "#fbbf24");
+        
+        // Sonido y partículas
+        playSound("heal", 0.8);
+        for (let i = 0; i < 15; i++) {
+            pushParticle({
+                x: p.x + (Math.random() - 0.5) * p.currentRadius * 1.5,
+                y: p.y + (Math.random() - 0.5) * p.currentRadius * 1.5,
+                vx: (Math.random() - 0.5) * 8,
+                vy: (Math.random() - 0.5) * 8,
+                life: 1.0,
+                size: Math.random() * 8 + 4,
+                color: "#fbbf24"
+            });
+        }
+    }
+});
     target.flash = 1;
     spawnFloatingText(`-${Math.floor(data.damage || 0)}`, target.x, target.y - 24, "#bbf7d0");
     if ((data.scoreLoss || 0) > 0) {

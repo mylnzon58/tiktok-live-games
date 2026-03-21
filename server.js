@@ -594,7 +594,15 @@ function handleArenaChat(event) {
         }
     }
 
-    if (text.includes(GAME_CONFIG.arena.chatWakeKeyword) || activity?.respawned) {
+    const isWake = text.includes(GAME_CONFIG.arena.chatWakeKeyword) || text === "YO";
+    if (isWake || activity?.respawned) {
+        if (isWake && activity && activity.player) {
+            io.emit("arena:chatWake", {
+                userId: player.id,
+                name: player.name,
+                player: activity.player
+            });
+        }
         queueArenaState();
     }
     if (activity?.respawned) {
