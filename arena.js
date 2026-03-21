@@ -2180,15 +2180,21 @@ class Projectile {
         if (dist < target.currentRadius) {
             this.active = false; // Impactó
             
-            // EFECTO DE IMPACTO SEGÚN TIPO
-            if (this.label === "🦁" || this.label === "🌌") {
-                playSound("heavyExplosion", 1.2);
-                createExplosion(this.x, this.y, this.color, { count: 40, speed: 18, shake: 25 });
-                pushShockwave({ x: this.x, y: this.y, r: 250, opacity: 0.9, color: this.color });
-                triggerOverlayFlash(this.color.replace("#", ""), 0.3);
+            // EFECTO DE IMPACTO SEGÚN TIPO (Diferenciación Notable)
+            if (this.label === "🦁" || this.label === "🌌" || this.radius > 25) {
+                playSound("heavyExplosion", 1.4);
+                createExplosion(this.x, this.y, this.color, { count: 80, speed: 22, shake: 65 });
+                pushShockwave({ x: this.x, y: this.y, r: 350, opacity: 1, color: this.color });
+                pushShockwave({ x: this.x, y: this.y, r: 150, opacity: 0.8, color: "#fff" });
+                triggerOverlayFlash(this.color, 0.4);
+                screenShake = Math.max(screenShake, 45); // Vibración monstruosa notable
+            } else if (this.label === "🌹" || this.label === "💖" || this.label === "🍩") {
+                playSound("hit", 1.2);
+                createExplosion(this.x, this.y, this.color, { count: 24, speed: 10, shake: 8 });
+                pushShockwave({ x: this.x, y: this.y, r: 80, opacity: 0.6, color: this.color });
             } else {
                 playSound("hit");
-                createExplosion(this.x, this.y, this.color, { count: 8, speed: 6 });
+                createExplosion(this.x, this.y, this.color, { count: 12, speed: 7, shake: 4 });
             }
             
             target.takeDamage(this.damage, this.attackerId);
@@ -3623,8 +3629,10 @@ socket.on("arena:gift", (data) => {
             }
     
             pushShockwave({ x: target.x, y: target.y, r: 40, opacity: 1, color: "#fff7d6" });
-            pushShockwave({ x: target.x, y: target.y, r: 120, opacity: 0.9, color: "#ffd166" });
-            pushShockwave({ x: target.x, y: target.y, r: 200, opacity: 0.7, color: "#ffedd5" });
+            pushShockwave({ x: target.x, y: target.y, r: 200, opacity: 0.95, color: "#ffd166" });
+            pushShockwave({ x: target.x, y: target.y, r: 350, opacity: 0.85, color: "#ffedd5" });
+            pushShockwave({ x: target.x, y: target.y, r: 500, opacity: 0.75, color: "#00f0ff" }); 
+            pushShockwave({ x: target.x, y: target.y, r: 650, opacity: 0.6, color: "#f0f" }); // Onda final monstruosa notable
             for (let i = 0; i < 3; i++) {
                 setTimeout(() => {
                     pushLightningBolt({
@@ -3671,10 +3679,20 @@ socket.on("arena:gift", (data) => {
             atkType = "none";
         } else if (giftEffect.type === "projectile") {
             playSound("roseShot");
-            atkType = "projectile";
+            const pColor = color || (data.giftName?.toLowerCase().includes("rose") ? "#ff4757" : "#00f0ff");
+            spawnProjectileBurst(attacker, target, Math.min(6, 1 + Math.floor(diamondsTotal/2)), damage, pColor, {
+                spread: 12,
+                speed: 16,
+                wobble: 10,
+                radius: 14,
+                trail: true // Ahora tienen estela para ser NOTABLES
+            });
+            atkType = "none"; // Ya manejado por burst
         } else if (giftEffect.type === "tapSpark") {
-            playSound("hit");
-            atkType = "projectile";
+            playSound("hit", 1.2);
+            createExplosion(target.x, target.y, "#fef08a", { count: 12, speed: 6, shake: 2 });
+            target.takeDamage(damage, attacker.id);
+            atkType = "none";
         } else if (giftEffect.type === "fireBurst") {
             playSound(data.sfx || "fire");
             createFireBurst(target.x, target.y, attacker.currentRadius + 64);
