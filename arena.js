@@ -305,7 +305,10 @@ function queueAnnouncement(text, options = {}) {
         
         if (options.priority) {
             speechQueue.unshift(newEntry);
-            // Ya no cancelamos bruscamente; dejamos que fluya o el navegador se bloquea
+            // Interrupción controlada solo para eventos críticos (Grandes regalos)
+            if (options.interrupt) {
+                try { window.speechSynthesis.cancel(); } catch (e) {}
+            }
         } else {
             speechQueue.push(newEntry);
         }
@@ -3619,8 +3622,15 @@ socket.on("arena:gift", (data) => {
     let color = giftEffect.color;
 
     showAnnouncer(giftNarration.overlay, giftValue >= 500 ? "#ffd166" : (giftValue >= 20 ? "#7dd3fc" : "#f8fafc"));
-    if (diamondsTotal >= 1) { // AHORA TODOS los regalos se leen por voz.
-        announce(giftNarration.voice, { gapMs: 700, isGift: true, force: true });
+    if (diamondsTotal >= 1) { 
+        // PRIORIDAD: Regalos >= 10 monedas van al principio de la cola. Regalos >= 1000 interrumpen.
+        announce(giftNarration.voice, { 
+            gapMs: 800, 
+            isGift: true, 
+            force: true, 
+            priority: giftValue >= 10,
+            interrupt: giftValue >= 1000 
+        });
     }
     const impactDelay = diamondsTotal >= 10 ? 1200 : 800;
     setTimeout(() => {
