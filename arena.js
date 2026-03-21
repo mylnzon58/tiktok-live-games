@@ -75,7 +75,7 @@ let sessionChampions = [];
 // ==========================================
 let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 let masterAudioGain = audioCtx.createGain();
-masterAudioGain.gain.value = 0.30;
+masterAudioGain.gain.value = 0.10; // Reducido drásticamente para que la voz no tenga competencia
 masterAudioGain.connect(audioCtx.destination);
 let soundEnabled = true; // REVERTIDO: Por defecto activado (OBS / TikTok Studio lo permiten)
 let preferredVoices = { es: null, en: null };
@@ -1764,6 +1764,14 @@ class Player {
         ctx.save();
         ctx.globalAlpha = opacity;
 
+        // --- EFECTO ZOOM LATENTE PARA EL LIDER #1 ---
+        if (this === currentTopArenaLeader || (roundRanking[0] && roundRanking[0].id === this.id)) {
+            const zoomPulse = 1.0 + (Math.sin(Date.now() / 200) * 0.08); // Crece y decrece un 8%
+            ctx.translate(this.x, this.y);
+            ctx.scale(zoomPulse, zoomPulse);
+            ctx.translate(-this.x, -this.y);
+        }
+
         if (this.flash > 0) {
             // Brillo simplificado sin shadowBlur pesado para evitar lag
             ctx.globalAlpha = this.opacity * 0.8;
@@ -1974,30 +1982,41 @@ class Player {
         ctx.stroke();
         ctx.shadowBlur = 0;
 
-        // Nombre (escala con el tamaño de la bola)
-        const nameFontSize = Math.max(14, Math.floor(14 * sizeScale));
-        ctx.fillStyle = "white";
-        ctx.font = `bold ${nameFontSize}px Rajdhani`;
-        ctx.textAlign = "center";
+        // Nombre e Indicadores (escala con el tamaño de la bola)
+        const sizeScale = this.currentRadius / PLAYER_RADIUS;
+        const nameFontSize = Math.max(16, Math.floor(16 * sizeScale));
         
-        // Racha de Victorias (Streak)
+        // Racha de Victorias (Streak histórico/Rondas Ganadas)
         const victories = Number(this.victories || (window.playerStreaks && window.playerStreaks[this.id]) || 0);
         let displayName = this.name || "Guerrero";
-        if (victories > 1) {
-            displayName = `🔥x${victories} ${displayName}`;
-            ctx.fillStyle = "#ffecd2";
+        
+        if (victories > 0) {
+            const vicFontSize = Math.max(30, Math.floor(26 * sizeScale));
+            const floatY = Math.sin(Date.now() / 300) * 8; // Flota suavemente
+            ctx.fillStyle = "#FFC82C";
+            ctx.font = `bold ${vicFontSize}px Rajdhani`;
+            ctx.shadowColor = "black";
+            ctx.shadowBlur = 10;
+            // Dibuja trofeo grande que flota sobre la cabeza
+            ctx.fillText(`🏆 x${victories}`, this.x, this.y - this.currentRadius - (35 * sizeScale) - 25 + floatY);
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = "#ffecd2"; // Nombre color dorado suave
+        } else {
+            ctx.fillStyle = "white"; 
         }
         
-        // Corona grande para el líder
+        // Corona gigante dorada para el líder
         if (this === currentTopArenaLeader || (roundRanking[0] && roundRanking[0].id === this.id)) {
-            const crownSize = Math.max(22, Math.floor(22 * sizeScale));
+            const crownSize = Math.max(32, Math.floor(32 * sizeScale));
             ctx.font = `${crownSize}px serif`;
-            ctx.fillText("👑", this.x, this.y - this.currentRadius - (12 * sizeScale) - crownSize * 0.6);
+            ctx.fillText("👑", this.x, this.y - this.currentRadius - (victories > 0 ? (65 * sizeScale) : (18 * sizeScale)) - crownSize * 0.8);
             ctx.font = `bold ${nameFontSize}px Rajdhani`;
         }
         
-        ctx.shadowBlur = 5;
+        ctx.shadowBlur = 6;
         ctx.shadowColor = "black";
+        ctx.font = `bold ${nameFontSize}px Rajdhani`;
+        ctx.textAlign = "center";
         ctx.fillText(displayName, this.x, this.y - this.currentRadius - (12 * sizeScale));
         ctx.shadowBlur = 0;
 
