@@ -156,12 +156,14 @@ function tryUnlockAudio() {
 function checkAudioState() {
     if (audioCtx.state === 'running' || audioCtx.state === 'closed') {
         if (!isBgmPlaying && typeof startBgm === 'function' && soundEnabled) {
+            console.log("🔊 Reactivando BGM...");
             startBgm();
         }
-        // Limpiar hooks globales si ya arrancó
         document.removeEventListener('click', tryUnlockAudio);
         document.removeEventListener('touchstart', tryUnlockAudio);
         document.removeEventListener('keydown', tryUnlockAudio);
+    } else if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
     }
 }
 
@@ -4017,53 +4019,36 @@ function loop() {
     const leader = leaderData ? (players[leaderData.id] || Object.values(players).find(p => p.name === leaderData.name)) : null;
     const runnerUp = runnerUpData ? (players[runnerUpData.id] || Object.values(players).find(p => p.name === runnerUpData.name)) : null;
 
-    if (camera.zoomTimer > 0) {
-        camera.zoomTimer--;
-        camera.scale += (camera.targetScale - camera.scale) * 0.1;
-        camera.x += (camera.targetX - camera.x) * 0.1;
-        camera.y += (camera.targetY - camera.y) * 0.1;
-    } else {
-        if (leader && leader.opacity > 0 && leader.hp > 0) {
-            if (runnerUp && runnerUp.opacity > 0 && runnerUp.hp > 0 && Math.abs((leader.score || 0) - (runnerUp.score || 0)) < 600) {
-                // PELEA CERCANA: Centrar cámara entre el 1º y el 2º
-                camera.targetX = (leader.x + runnerUp.x) / 2;
-                camera.targetY = (leader.y + runnerUp.y) / 2;
-                camera.targetScale = 0.90; // Abrir un poco para ver a ambos
-            } else {
-                // LÍDER CLARO: Seguir solo al 1º
-                camera.targetX = leader.x;
-                camera.targetY = leader.y;
-                camera.targetScale = 1.05; // Zoom más cerrado en el campeón
-            }
-        } else {
-            // REPOSO: Centrar en la Zona Rey
-            camera.targetX = canvas.width / 2;
-            camera.targetY = canvas.height / 2;
-            camera.targetScale = 0.82;
-        }
-        camera.scale += (camera.targetScale - camera.scale) * 0.05;
-        camera.x += (camera.targetX - camera.x) * 0.05;
-        camera.y += (camera.targetY - camera.y) * 0.05;
-    }
+    // --- CÁMARA ESTÁTICA (FIJA EN LA ARENA) ---
+    // El usuario prefiere que la línea de la arena esté fija en pantalla.
+    camera.targetX = canvas.width / 2;
+    camera.targetY = canvas.height / 2;
+    camera.targetScale = 1.0; 
 
-    ctx.save(); // Save para transformación de CÁMARA
+    camera.scale += (camera.targetScale - camera.scale) * 0.05;
+    camera.x += (camera.targetX - camera.x) * 0.05;
+    camera.y += (camera.targetY - camera.y) * 0.05;
+
+
+    // Dibujar muros ANTES de la cámara para que estén en espacio fijo (Línea Fija)
+    drawArenaWalls();
+
+    // --- APLICAR TRANSFORMACIÓN DE CÁMARA (Solo afecta a jugadores y efectos) ---
+    ctx.save(); 
     ctx.translate(canvas.width / 2, canvas.height / 2);
     
-    // Phase 4: Distorsión Global (Universe Gift / Epic Events)
+    // Phase 4: Distorsión Global
     if (globalGlitchIntensity > 0) {
         const gx = (Math.random() - 0.5) * globalGlitchIntensity;
         ctx.translate(gx, 0);
-        globalGlitchIntensity *= 0.88; // Decaimiento más rápido para no agobiar
+        globalGlitchIntensity *= 0.88;
         if (globalGlitchIntensity < 0.1) globalGlitchIntensity = 0;
     }
 
     ctx.scale(camera.scale, camera.scale);
     ctx.translate(-camera.x, -camera.y);
 
-    // DENTRO DE CÁMARA: Los muros deben moverse con los jugadores
-    drawArenaWalls();
-
-    // Dibujar Partículas Ambientales (Siempre se mueven y dibujan, independiente del Hit Stop)
+    // Dibujar Partículas Ambientales (Se mueven y escalan)
     ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
     ambientParticles.forEach(p => {
         p.y += p.vy;
