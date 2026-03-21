@@ -245,12 +245,14 @@ function flushSpeechQueue() {
     msg.rate = next.rate ?? (isFemale ? 1.18 : 1.25); 
     msg.pitch = next.pitch ?? (isFemale ? 1.45 : 1.8); // Pitch agresivo si es hombre para que parezca joven/femenina
     msg.volume = next.volume ?? 1;
-    msg.onstart = () => { if (audioCtx && masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.04, audioCtx.currentTime, 0.1); };
+    msg.onstart = () => { if (audioCtx && masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.06, audioCtx.currentTime, 0.1); };
     msg.onend = () => {
-        if (audioCtx && masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.12, audioCtx.currentTime, 0.15);
+        if (audioCtx && masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.15, audioCtx.currentTime, 0.15);
         lastSpeechAt = Date.now();
+        speechTimer = window.setTimeout(flushSpeechQueue, next.gapMs ?? 250);
     };
     msg.onerror = () => {
+        if (audioCtx && masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.15, audioCtx.currentTime, 0.15);
         lastSpeechAt = Date.now();
         speechTimer = window.setTimeout(flushSpeechQueue, 400);
     };
@@ -318,13 +320,13 @@ function speakImmediate(text, options = {}) {
     msg.rate = options.rate ?? (isFemale ? 1.18 : 1.25);
     msg.pitch = options.pitch ?? (isFemale ? 1.45 : 1.8);
     msg.volume = options.volume ?? 1.0; // Volumen al máximo siempre
-    msg.onstart = () => { if (audioCtx && masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.04, audioCtx.currentTime, 0.1); };
+    msg.onstart = () => { if (audioCtx && masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.06, audioCtx.currentTime, 0.1); };
     msg.onend = () => {
-        if (audioCtx && masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.12, audioCtx.currentTime, 0.15);
+        if (audioCtx && masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.15, audioCtx.currentTime, 0.15);
         lastSpeechAt = Date.now();
     };
     msg.onerror = () => {
-        if (audioCtx && masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.12, audioCtx.currentTime, 0.1);
+        if (audioCtx && masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.15, audioCtx.currentTime, 0.1);
         lastSpeechAt = Date.now();
     };
     window.speechSynthesis.speak(msg);
