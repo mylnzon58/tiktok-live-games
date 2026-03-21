@@ -469,7 +469,7 @@ body.dramatic-vignette::before {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 60px 10px 20px 10px;
+    padding: 105px 10px 20px 10px; /* Aumentado de 60px a 105px para dar aire al título */
     box-shadow: -10px 0 30px rgba(0,0,0,0.8);
     pointer-events: none;
 }
