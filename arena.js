@@ -268,7 +268,7 @@ function queueAnnouncement(text, options = {}) {
         }
         lastAnnouncementText = normalizedText;
         lastAnnouncementQueuedAt = now;
-        speechQueue.push({
+        const newEntry = {
             text,
             getText: options.getText,
             lang: "es",
@@ -277,7 +277,15 @@ function queueAnnouncement(text, options = {}) {
             volume: options.volume,
             gapMs: options.gapMs,
             queueKey: options.queueKey || null
-        });
+        };
+        
+        if (options.priority) {
+            speechQueue.unshift(newEntry);
+            try { window.speechSynthesis.cancel(); } catch (e) {} // Interrumpe lo que está hablando ahora para leer al ganador!
+        } else {
+            speechQueue.push(newEntry);
+        }
+
         if (!speechTimer) {
             flushSpeechQueue();
         }
@@ -395,7 +403,8 @@ function speakLeaderChat(name, comment) {
     const cleanName = String(name || "Ganador del arena").trim().slice(0, 32);
     const cleanComment = String(comment || "").replace(/\s+/g, " ").trim().slice(0, 110);
     if (!cleanComment) return;
-    announce(`Numero uno del arena. ${cleanName} dice: ${cleanComment}`, { gapMs: 700 });
+    announce(`El líder de la arena. ${cleanName} dice: ${cleanComment}`, { gapMs: 700, priority: true });
+
 }
 
 // --- 🎙️ DOPAMINE ANNOUNCER (Voice Lines) ---
@@ -3271,7 +3280,7 @@ function describeArenaGiftImpact(data, attacker, target, giftEffect) {
         default:
             return {
                 overlay: `${attackerName} lanza ${giftName} a ${targetName}${effectLabel ? ` · ${effectLabel.toUpperCase()}` : ""}`,
-                voice: `${attackerName} lanza ${giftName} a ${targetName}.`
+                voice: `${attackerName} envió ${giftName}. Efecto: Ataque contra ${targetName}!`
             };
     }
 }
@@ -3291,69 +3300,81 @@ function getPaidGiftFxProfile(giftValue, diamondsTotal) {
             burstSpeed: 4
         };
     }
+    if (totalValue >= 50000) {
+        return {
+            cameraScale: 2.5,
+            cameraFrames: 360,
+            flashAlpha: 0.55,
+            shake: 150,
+            shockwaveRadius: 280,
+            burstCount: 220,
+            burstSpeed: 38
+        };
+    }
     if (totalValue >= 35000) {
         return {
-            cameraScale: 2.2,
+            cameraScale: 2.35,
             cameraFrames: 300,
-            flashAlpha: 0.45,
-            shake: 90,
-            shockwaveRadius: 180,
-            burstCount: 160,
-            burstSpeed: 28
+            flashAlpha: 0.48,
+            shake: 130,
+            shockwaveRadius: 220,
+            burstCount: 180,
+            burstSpeed: 32
         };
     }
     if (totalValue >= 20000) {
         return {
-            cameraScale: 2.05,
+            cameraScale: 2.2,
             cameraFrames: 240,
-            flashAlpha: 0.38,
-            shake: 70,
-            shockwaveRadius: 130,
-            burstCount: 110,
-            burstSpeed: 22
+            flashAlpha: 0.42,
+            shake: 110,
+            shockwaveRadius: 170,
+            burstCount: 140,
+            burstSpeed: 28
         };
     }
     if (totalValue >= 5000) {
         return {
-            cameraScale: 1.85,
+            cameraScale: 2.0,
             cameraFrames: 190,
-            flashAlpha: 0.3,
-            shake: 50,
-            shockwaveRadius: 85,
-            burstCount: 65,
-            burstSpeed: 18
+            flashAlpha: 0.35,
+            shake: 80,
+            shockwaveRadius: 130,
+            burstCount: 100,
+            burstSpeed: 24
         };
     }
     if (totalValue >= 1000) {
         return {
-            cameraScale: 1.58,
+            cameraScale: 1.7,
             cameraFrames: 145,
-            flashAlpha: 0.22,
-            shake: 26,
-            shockwaveRadius: 40,
-            burstCount: 36,
-            burstSpeed: 12
+            flashAlpha: 0.28,
+            shake: 55,
+            shockwaveRadius: 80,
+            burstCount: 70,
+            burstSpeed: 18
         };
     }
     if (totalValue >= 100) {
         return {
-            cameraScale: 1.42,
+            cameraScale: 1.55,
             cameraFrames: 112,
-            flashAlpha: 0.16,
-            shake: 18,
-            shockwaveRadius: 30,
-            burstCount: 30,
-            burstSpeed: 10
+            flashAlpha: 0.2,
+            shake: 35,
+            shockwaveRadius: 60,
+            burstCount: 50,
+            burstSpeed: 14
         };
     }
     return {
-        cameraScale: 1.24,
-        cameraFrames: 68,
-        flashAlpha: 0.1,
-        shake: 8,
-        shockwaveRadius: 20,
-        burstCount: 18,
-        burstSpeed: 7
+        // PERFIL BASE (Rosa 1 moneda). Aumentado 250% al original.
+        cameraScale: 1.35,
+        cameraFrames: 85,
+        flashAlpha: 0.15,
+        shake: 25,
+        shockwaveRadius: 45,
+        burstCount: 35,
+        burstSpeed: 12
     };
 }
 
@@ -3451,8 +3472,8 @@ socket.on("arena:gift", (data) => {
     let color = giftEffect.color;
 
     showAnnouncer(giftNarration.overlay, giftValue >= 500 ? "#ffd166" : (giftValue >= 20 ? "#7dd3fc" : "#f8fafc"));
-    if (diamondsTotal >= 20) {
-        announce(giftNarration.voice, { gapMs: 900 });
+    if (diamondsTotal >= 1) { // AHORA TODOS los regalos se leen por voz.
+        announce(giftNarration.voice, { gapMs: 700 });
     }
 
     // Detección de tipos de ataque: utilizar tanto la clave sugerida como los fallbacks.
