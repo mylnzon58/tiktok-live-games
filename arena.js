@@ -1639,10 +1639,28 @@ class Player {
 
         // --- MOTIVACIÓN: ZONA REY ---
         const coreRadius = 120;
+        const isLeader = (roundRanking[0]?.id === this.id) || (currentTopArenaLeader?.id === this.id);
+
         if (this.opacity > 0.5 && distToCenter < coreRadius) {
             if (Math.random() < 0.02) {
                 spawnFloatingText("👑 +Poder", this.x, this.y - this.currentRadius, "#ffd700");
                 this.flash = Math.max(this.flash, 0.5);
+            }
+        }
+
+        // Efecto latente de corazones para el líder #1
+        if (isLeader && this.opacity > 0.6 && this.hp > 0) {
+            if (Math.random() < 0.05) {
+                pushParticle({
+                    x: this.x + (Math.random() - 0.5) * this.currentRadius * 1.8,
+                    y: this.y + (Math.random() - 0.5) * this.currentRadius * 1.8,
+                    vx: (Math.random() - 0.5) * 1.2,
+                    vy: -1.5 - Math.random() * 2,
+                    life: 1.4,
+                    size: 14 + Math.random() * 12,
+                    color: "#ff3e6d",
+                    isHeart: true
+                });
             }
         }
         // ----------------------------

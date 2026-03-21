@@ -460,7 +460,8 @@ body.dramatic-vignette::before {
     top: 75px; /* Bajamos un poco para el header */
     right: 10px;
     width: 140px;
-    height: 440px; /* Suficiente para 3 jugadores con avatares de 70px */
+    height: max-content; /* Se ajusta a los 3 jugadores automáticamente */
+    min-height: 480px;
     background: linear-gradient(180deg, rgba(255, 215, 0, 0.15) 0%, rgba(20, 20, 40, 0.9) 50%, rgba(0, 240, 255, 0.15) 100%);
     border: 3px solid rgba(255, 215, 0, 0.5);
     border-radius: 20px;
@@ -515,8 +516,8 @@ body.dramatic-vignette::before {
 
 .rank-1 .top-player-avatar { 
     border-color: #ffd700; 
-    box-shadow: 0 0 25px rgba(255, 215, 0, 0.5);
-    animation: pulseGoldBorder 1.5s infinite alternate;
+    box-shadow: 0 0 25px rgba(255, 215, 0, 0.8), 0 0 10px rgba(255, 255, 255, 0.5) inset;
+    animation: pulseGoldBorder 1.2s infinite alternate;
 }
 
 @keyframes pulseGoldBorder {
