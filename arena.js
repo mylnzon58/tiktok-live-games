@@ -607,7 +607,7 @@ const sfx = {
         osc.start(audioCtx.currentTime);
         osc.stop(audioCtx.currentTime + 0.05);
     },
-    buzzsaw: () => {
+    buzzsaw: (vol = 1) => {
         if (!soundEnabled) return;
         const now = audioCtx.currentTime;
         const pulseOffsets = [0, 0.032, 0.064, 0.096];
@@ -629,8 +629,8 @@ const sfx = {
             oscNoise.frequency.setValueAtTime(310 + (index * 45), now + offset);
             oscNoise.frequency.linearRampToValueAtTime(510 + (index * 50), now + offset + 0.04);
 
-            gain.gain.setValueAtTime(0.06, now + offset);
-            gain.gain.exponentialRampToValueAtTime(0.002, now + offset + 0.05);
+            gain.gain.setValueAtTime(0.06 * vol, now + offset);
+            gain.gain.exponentialRampToValueAtTime(0.002 * Math.max(0.1, vol), now + offset + 0.05);
 
             osc.start(now + offset);
             oscNoise.start(now + offset);
@@ -1590,7 +1590,7 @@ class Player {
             const sawPulseEveryMs = Math.max(60, 118 - Math.min(42, this.engagement * 1.6));
             if (now - (this.lastSawAudioAt || 0) >= sawPulseEveryMs) {
                 this.lastSawAudioAt = now;
-                playSound("buzzsaw");
+                playSound("buzzsaw", 0.1); // Solo al 10% de volumen para no molestar la voz
             }
         }
 
