@@ -4310,6 +4310,7 @@ function loop() {
     // Ahora los avatares se dibujan en World Space (dentro del transform de cámara) en Player.draw().
 
     updateBubblesLayer();
+    updateRankingDOM();
 
     requestAnimationFrame(loop);
 }
