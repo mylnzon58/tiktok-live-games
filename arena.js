@@ -3274,24 +3274,28 @@ function resolveArenaGiftEffect(data, attacker, target, diamondsTotal, giftValue
 
     // 1. Mapeo directo por clave de efecto (Prioridad servidor)
     if (effectKey === "megaBlast" || category === "mega") return { type: "megaBlast", color: "#ffd166" };
-    if (effectKey === "orbitalStrike" || effectKey === "tripleLightning" || category === "lightning") return { type: "lightningStorm", color: "#7dd3fc" };
+    if (effectKey === "orbitalStrike" || effectKey === "tripleLightning" || category === "lightning" || category === "storm") return { type: "lightningStorm", color: "#7dd3fc" };
     if (effectKey === "fireBurst" || effectKey === "fireStorm" || category === "fire") return { type: "fireBurst", color: "#ff6b00" };
     if (effectKey === "shockwave" || category === "shockwave") return { type: "shockwave", color: "#fbbf24" };
-    if (effectKey === "buzzsaw") return { type: "buzzsaw", color: "#ff9f43" };
+    if (effectKey === "buzzsaw" || effectKey === "saw") return { type: "buzzsaw", color: "#ff9f43" };
     if (effectKey === "tapSpark") return { type: "tapSpark", color: "#fef08a" };
     if (effectKey === "iceShot" || effectKey === "projectile") return { type: "projectile", color: effectKey === "iceShot" ? "#9be7ff" : "#ff4757" };
+    if (effectKey === "lightning") return { type: "lightning", color: "#00f0ff" };
 
     // 2. Fallbacks basados en nombre o valor (Compatibilidad)
     if (lowerName.includes("universe") || lowerName.includes("universo") || lowerName.includes("lion") || lowerName.includes("león") || giftValue >= 10000) {
         return { type: "megaBlast", color: "#ffd166" };
     }
-    if (lowerName.includes("galaxy") || lowerName.includes("galaxia") || lowerName.includes("planet") || lowerName.includes("planeta") || giftValue >= 500) {
+    if (lowerName.includes("galaxy") || lowerName.includes("galaxia") || lowerName.includes("planet") || lowerName.includes("planeta") || lowerName.includes("thunder") || lowerName.includes("tormenta") || giftValue >= 500) {
         return { type: "lightningStorm", color: "#7dd3fc" };
+    }
+    if (lowerName.includes("rayo") || lowerName.includes("lightning") || lowerName.includes("trueno") || lowerName.includes("relámpago") || lowerName.includes("bolt")) {
+        return { type: "lightning", color: "#a5f3fc" };
     }
     if (lowerName.includes("fire") || lowerName.includes("fuego") || lowerName.includes("flame") || lowerName.includes("fireworks") || lowerName.includes("drac")) {
         return { type: "fireBurst", color: "#ff6b00" };
     }
-    if (lowerName.includes("donut") || lowerName.includes("dona") || lowerName.includes("perfume") || lowerName.includes("capy") || lowerName.includes("relámpago")) {
+    if (lowerName.includes("donut") || lowerName.includes("dona") || lowerName.includes("perfume") || lowerName.includes("capy") || lowerName.includes("shock")) {
         return { type: "shockwave", color: "#fbbf24" };
     }
     if (lowerName.includes("rose") || lowerName.includes("rosa") || lowerName.includes("ice")) {
@@ -3317,6 +3321,11 @@ function describeArenaGiftImpact(data, attacker, target, giftEffect) {
             return {
                 overlay: `${attackerName} lanza ${giftName} sobre ${targetName} · LLUVIA DE RAYOS`,
                 voice: `¡${attackerName} dio ${giftName} desencadenando una lluvia de rayos sobre ${targetName}!`
+            };
+        case "lightning":
+            return {
+                overlay: `${attackerName} lanza ${giftName} · IMPACTO DE RAYO`,
+                voice: `¡${attackerName} dio ${giftName} desencadenando un gran rayo contra ${targetName}!`
             };
         case "fireBurst":
             return {
