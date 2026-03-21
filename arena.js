@@ -2838,7 +2838,10 @@ function updateTopShowcase() {
                 <div class="top-rank-badge">${rank}</div>
             </div>
             <div class="top-player-name">${p.name}</div>
-            ${!p.isPlaceholder ? `<div class="top-player-score">WINS: ${Math.floor(p.victories || 0)}</div>` : ''}
+            ${!p.isPlaceholder ? `
+                <div class="top-player-victories-badge">VICS: ${Math.floor(p.victories || 0)}</div>
+                <div class="top-player-score">${p.currentScore > 0 ? `${p.currentScore} PTS` : ''}</div>
+            ` : ''}
         `;
         topShowcaseEl.appendChild(item);
     });

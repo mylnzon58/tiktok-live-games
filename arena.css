@@ -543,14 +543,25 @@ body.dramatic-vignette::before {
     white-space: nowrap;
 }
 
-.top-player-score {
-    background: rgba(0,0,0,0.7);
-    color: #ffd700; /* Color amarillito solicitado */
+/* Etiqueta de Victorias (Capsula Amarilla Notable) */
+.top-player-victories-badge {
+    background: #ffd700;
+    color: #000;
     font-size: 11px;
-    font-weight: 800;
-    padding: 2px 8px;
-    border-radius: 5px;
-    margin-top: 4px;
+    font-weight: 900;
+    padding: 3px 10px;
+    border-radius: 12px;
+    margin-top: 6px;
+    box-shadow: 0 2px 8px rgba(255, 215, 0, 0.4);
+    text-transform: uppercase;
+}
+
+/* Etiqueta de Puntos (Texto Amarillito Suave) */
+.top-player-score {
+    color: #fef08a; 
+    font-size: 10px;
+    font-weight: 700;
+    margin-top: 2px;
 }
 
 .top-rank-badge {
