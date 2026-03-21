@@ -31,23 +31,25 @@ let camera = {
 function getArenaBounds() {
     const cx = canvas.width / 2;
     const cy = canvas.height / 2;
-    // Ahora rectangular: Ocupa casi todo el ancho y alto libre
-    const width = 740; // Deja margen lateral
-    const height = 1100; // Deja espacio para el header y footer widgets
+    const width = 780; 
+    const height = 1220; 
     return {
-        cx, cy,
-        width, height,
+        cx, cy, width, height,
         left: cx - width / 2,
         right: cx + width / 2,
-        top: cy - height / 2 + 60, // Bajamos un poco por el header nuevo
-        bottom: cy + height / 2
+        top: 80,
+        bottom: canvas.height - 85
     };
 }
 
 function clampToArena(x, y, margin = 20) {
     const b = getArenaBounds();
+    let rBound = b.right - margin;
+    // Bloqueo superior derecho (L) - Donde está el showcase
+    if (y < 530) rBound = Math.min(rBound, 645 - margin);
+
     return {
-        x: Math.max(b.left + margin, Math.min(b.right - margin, x)),
+        x: Math.max(b.left + margin, Math.min(rBound, x)),
         y: Math.max(b.top + margin, Math.min(b.bottom - margin, y))
     };
 }
@@ -1077,7 +1079,16 @@ function drawBackground() {
     gradient.addColorStop(1, "rgba(255, 46, 126, 0.6)");
     
     ctx.strokeStyle = gradient;
-    ctx.strokeRect(arenaB.left, arenaB.top, arenaB.width, arenaB.height);
+    // Marco en forma de L para rodear el Showcase (Panel derecho)
+    ctx.beginPath();
+    ctx.moveTo(arenaB.left, arenaB.top);
+    ctx.lineTo(645, arenaB.top);
+    ctx.lineTo(645, 530); // Límite inferior del panel
+    ctx.lineTo(arenaB.right, 530);
+    ctx.lineTo(arenaB.right, arenaB.bottom);
+    ctx.lineTo(arenaB.left, arenaB.bottom);
+    ctx.closePath();
+    ctx.stroke();
 
     // Efecto de "Ruido Eléctrico" en el marco rectangular
     for (let i = 0; i < 15; i++) {
@@ -1637,8 +1648,11 @@ class Player {
         // ----------------------------
 
         let bounced = false;
-        if (this.x + this.currentRadius > right) {
-            this.x = right - this.currentRadius;
+        let curRight = right;
+        if (this.y < 530) curRight = Math.min(curRight, 645);
+
+        if (this.x + this.currentRadius > curRight) {
+            this.x = curRight - this.currentRadius;
             this.vx = -Math.abs(this.vx);
             bounced = true;
         } else if (this.x - this.currentRadius < left) {
@@ -1655,6 +1669,13 @@ class Player {
             this.y = top + this.currentRadius;
             this.vy = Math.abs(this.vy);
             bounced = true;
+        }
+        
+        // Bloqueo horizontal del panel (techo de la extensión L)
+        if (this.y - this.currentRadius < 530 && this.x + this.currentRadius > 645 && this.vy < 0) {
+             this.y = 530 + this.currentRadius;
+             this.vy = Math.abs(this.vy);
+             bounced = true;
         }
 
         if (bounced) {

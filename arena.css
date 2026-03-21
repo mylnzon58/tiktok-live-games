@@ -457,10 +457,10 @@ body.dramatic-vignette::before {
    ========================================= */
 #top-arena-showcase {
     position: absolute;
-    top: 10px;
+    top: 75px; /* Bajamos un poco para el header */
     right: 10px;
     width: 140px;
-    height: calc(100% - 20px);
+    height: 440px; /* Suficiente para 3 jugadores con avatares de 70px */
     background: linear-gradient(180deg, rgba(255, 215, 0, 0.15) 0%, rgba(20, 20, 40, 0.9) 50%, rgba(0, 240, 255, 0.15) 100%);
     border: 3px solid rgba(255, 215, 0, 0.5);
     border-radius: 20px;
@@ -568,9 +568,9 @@ body.dramatic-vignette::before {
     border: 2px solid #ffd700;
 }
 
-/* Ajustar el canvas para dejar espacio a la derecha */
+/* El canvas ahora ocupa todo el ancho, pero los límites de juego se manejan por JS en forma de L */
 #gameCanvas {
-    width: calc(100% - 160px) !important;
+    width: 100% !important;
     left: 0 !important;
 }
 
