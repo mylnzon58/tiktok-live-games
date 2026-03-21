@@ -3404,7 +3404,7 @@ socket.on("arena:gift", (data) => {
         }
     }
 
-    // Buscar el objetivo más cercano
+    // Buscar el objetivo más cercano (Si no hay, el objetivo es él mismo o el centro para que el efecto visual SÍ o SÍ suceda)
     let target = syncPlayerFromServer(data.target) || players[data.targetId];
     if (!target) {
         let minDist = Infinity;
@@ -3416,8 +3416,18 @@ socket.on("arena:gift", (data) => {
         }
     }
 
-    if (!target) return; // No hay a quien atacar
-    if ((data.scoreLoss || 0) > 0) {
+    // SI NO HAY NADIE A QUIEN ATACAR, el regalador desata el poder en su posición
+    if (!target) {
+        target = {
+            id: 'dummy',
+            name: "la arena",
+            x: attacker.x + (Math.random() - 0.5) * 20,
+            y: attacker.y - 120, // Hacia arriba
+            currentRadius: 20
+        };
+    }
+
+    if ((data.scoreLoss || 0) > 0 && target.id !== 'dummy') {
         spawnFloatingText(`-${Math.floor(data.scoreLoss)} PTS`, target.x, target.y - 48, "#fca5a5");
     }
 
