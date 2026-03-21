@@ -59,6 +59,7 @@ function normalizeChampionStandings(entries = [], options = {}) {
 }
 
 let lastWinners = normalizeChampionStandings(championsStorage.load() || []);
+arena.seedVictories(lastWinners); // <--- NUEVO: Salva el historial en la arena tras reiniciar
 
 if (lastWinners[0]?.id) {
     arena.setLastWinnerId(lastWinners[0].id);
