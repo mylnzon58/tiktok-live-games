@@ -1707,10 +1707,32 @@ class Player {
             const toothDepth = 6 + (10 + activityBoost) * (0.5 + engagementFactor * 0.5);
             
             ctx.beginPath();
-            for (let i = 0; i < teethCount * 2; i++) {
-                const angle = (i / (teethCount * 2)) * Math.PI * 2;
-                const r = (i % 2 === 0) ? sawRadius + toothDepth : sawRadius;
-                ctx.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
+            for (let i = 0; i < teethCount; i++) {
+                const a0 = (i / teethCount) * Math.PI * 2;           // Base izquierda del diente
+                const a1 = ((i + 0.35) / teethCount) * Math.PI * 2; // Punta inclinada (pliegue)
+                const a2 = ((i + 0.5) / teethCount) * Math.PI * 2;  // Centro del diente
+                const a3 = ((i + 1) / teethCount) * Math.PI * 2;    // Base derecha (valle)
+
+                const rBase = sawRadius;
+                const rTip = sawRadius + toothDepth;
+
+                // Base del diente
+                if (i === 0) {
+                    ctx.moveTo(Math.cos(a0) * rBase, Math.sin(a0) * rBase);
+                } else {
+                    ctx.lineTo(Math.cos(a0) * rBase, Math.sin(a0) * rBase);
+                }
+                // Filo recto subiendo a la punta (borde de ataque)
+                ctx.lineTo(Math.cos(a1) * rTip, Math.sin(a1) * rTip);
+                // Curva del pliegue bajando (filo curvado hacia el lado de giro)
+                const cpAngle = (a1 + a2) / 2;
+                const cpR = rTip * 0.88;
+                ctx.quadraticCurveTo(
+                    Math.cos(cpAngle) * cpR, Math.sin(cpAngle) * cpR,
+                    Math.cos(a2) * (rBase + toothDepth * 0.15), Math.sin(a2) * (rBase + toothDepth * 0.15)
+                );
+                // Valle entre dientes
+                ctx.lineTo(Math.cos(a3) * rBase, Math.sin(a3) * rBase);
             }
             ctx.closePath();
 
