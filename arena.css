@@ -517,7 +517,7 @@ body.dramatic-vignette::before {
 .rank-1 .top-player-avatar { 
     border-color: #ffd700; 
     box-shadow: 0 0 35px rgba(255, 50, 50, 0.8), 0 0 20px rgba(255, 255, 255, 0.5) inset;
-    animation: heartbeatLatent 1.2s infinite; /* EFECTO LATIDO SOLICITADO */
+    animation: heartbeatLatent 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite; /* EFECTO LATIDO MÁS LENTO Y NATURAL */
     position: relative;
     z-index: 2;
 }
