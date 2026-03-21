@@ -77,9 +77,17 @@ let sessionChampions = [];
 // ==========================================
 let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 let masterAudioGain = audioCtx.createGain();
-masterAudioGain.gain.value = 0.10; // Reducido drásticamente para que la voz no tenga competencia
+masterAudioGain.gain.value = 0.45; // Aumentado significativamente para audibilidad clara
 masterAudioGain.connect(audioCtx.destination);
-let soundEnabled = true; // REVERTIDO: Por defecto activado (OBS / TikTok Studio lo permiten)
+let soundEnabled = true;
+
+// Reinicialización de voces cuando el sistema las cargue
+if (window.speechSynthesis) {
+    window.speechSynthesis.onvoiceschanged = () => {
+        preferredVoices.es = resolvePreferredVoice();
+        console.log("Voces de Arena sincronizadas:", preferredVoices.es?.voice?.name);
+    };
+}
 let preferredVoices = { es: null, en: null };
 let speechQueue = [];
 let speechTimer = null;
@@ -237,22 +245,23 @@ function flushSpeechQueue() {
     preferredVoices[next.lang] = voiceInfo;
 
     const msg = new window.SpeechSynthesisUtterance(resolvedText);
-    msg.lang = "es-ES";
+    msg.lang = "es"; // Más compatible
     if (voiceInfo?.voice) msg.voice = voiceInfo.voice;
     
     // Si no detectamos que es mujer, forzamos un pitch muy alto para "juvenilizar" la voz
     const isFemale = voiceInfo?.isFemale;
     msg.rate = next.rate ?? (isFemale ? 1.18 : 1.25); 
-    msg.pitch = next.pitch ?? (isFemale ? 1.45 : 1.8); // Pitch agresivo si es hombre para que parezca joven/femenina
+    msg.pitch = next.pitch ?? (isFemale ? 1.45 : 1.8); 
     msg.volume = next.volume ?? 1;
-    msg.onstart = () => { if (audioCtx && masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.06, audioCtx.currentTime, 0.1); };
+
+    msg.onstart = () => { if (audioCtx && masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.12, audioCtx.currentTime, 0.1); };
     msg.onend = () => {
-        if (audioCtx && masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.15, audioCtx.currentTime, 0.15);
+        if (audioCtx && masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.45, audioCtx.currentTime, 0.15);
         lastSpeechAt = Date.now();
         speechTimer = window.setTimeout(flushSpeechQueue, next.gapMs ?? 250);
     };
     msg.onerror = () => {
-        if (audioCtx && masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.15, audioCtx.currentTime, 0.15);
+        if (audioCtx && masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.45, audioCtx.currentTime, 0.15);
         lastSpeechAt = Date.now();
         speechTimer = window.setTimeout(flushSpeechQueue, 400);
     };
@@ -264,13 +273,19 @@ function queueAnnouncement(text, options = {}) {
     try {
         if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
         const now = Date.now();
-        const minIntervalMs = options.minIntervalMs ?? 1800;
+        // INTERVALOS RELAJADOS: Para que se mencione TODO lo importante
+        const minIntervalMs = options.minIntervalMs ?? 600; 
         const dedupeBase = options.dedupeKey || (typeof text === "string" ? text : options.queueKey || "");
         const normalizedText = String(dedupeBase || "").trim().toLowerCase();
-        if (!options.force && normalizedText && normalizedText === lastAnnouncementText && (now - lastAnnouncementQueuedAt) < 12000) {
+        
+        // Evitaremos el deduplicado agresivo para regalos
+        if (!options.force && !options.isGift && normalizedText && normalizedText === lastAnnouncementText && (now - lastAnnouncementQueuedAt) < 3000) {
             return;
         }
-        if (!options.force && now - lastSpeechAt < minIntervalMs && speechQueue.length > 2) return;
+        
+        // Cola más permisiva (12 mensajes en lugar de 2) para no perder menciones en momentos intensos
+        if (!options.force && now - lastSpeechAt < minIntervalMs && speechQueue.length > 12) return;
+
         if (options.queueKey) {
             speechQueue = speechQueue.filter((entry) => entry.queueKey !== options.queueKey);
         }
@@ -284,12 +299,13 @@ function queueAnnouncement(text, options = {}) {
             pitch: options.pitch,
             volume: options.volume,
             gapMs: options.gapMs,
-            queueKey: options.queueKey || null
+            queueKey: options.queueKey || null,
+            isGift: options.isGift
         };
         
         if (options.priority) {
             speechQueue.unshift(newEntry);
-            try { window.speechSynthesis.cancel(); } catch (e) {} // Interrumpe lo que está hablando ahora para leer al ganador!
+            // Ya no cancelamos bruscamente; dejamos que fluya o el navegador se bloquea
         } else {
             speechQueue.push(newEntry);
         }
@@ -314,19 +330,19 @@ function speakImmediate(text, options = {}) {
         console.error("Speech cancel error:", error);
     }
     const msg = new window.SpeechSynthesisUtterance(text);
-    msg.lang = "es-ES";
+    msg.lang = "es";
     if (voiceInfo?.voice) msg.voice = voiceInfo.voice;
     const isFemale = voiceInfo?.isFemale;
     msg.rate = options.rate ?? (isFemale ? 1.18 : 1.25);
     msg.pitch = options.pitch ?? (isFemale ? 1.45 : 1.8);
-    msg.volume = options.volume ?? 1.0; // Volumen al máximo siempre
-    msg.onstart = () => { if (audioCtx && masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.06, audioCtx.currentTime, 0.1); };
+    msg.volume = options.volume ?? 1.0; 
+    msg.onstart = () => { if (audioCtx && masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.12, audioCtx.currentTime, 0.1); };
     msg.onend = () => {
-        if (audioCtx && masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.15, audioCtx.currentTime, 0.15);
+        if (audioCtx && masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.45, audioCtx.currentTime, 0.15);
         lastSpeechAt = Date.now();
     };
     msg.onerror = () => {
-        if (audioCtx && masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.15, audioCtx.currentTime, 0.1);
+        if (audioCtx && masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.45, audioCtx.currentTime, 0.1);
         lastSpeechAt = Date.now();
     };
     window.speechSynthesis.speak(msg);
@@ -3572,7 +3588,7 @@ socket.on("arena:gift", (data) => {
 
     showAnnouncer(giftNarration.overlay, giftValue >= 500 ? "#ffd166" : (giftValue >= 20 ? "#7dd3fc" : "#f8fafc"));
     if (diamondsTotal >= 1) { // AHORA TODOS los regalos se leen por voz.
-        announce(giftNarration.voice, { gapMs: 700 });
+        announce(giftNarration.voice, { gapMs: 700, isGift: true, force: true });
     }
     const impactDelay = diamondsTotal >= 10 ? 1200 : 800;
     setTimeout(() => {
