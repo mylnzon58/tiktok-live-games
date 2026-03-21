@@ -366,7 +366,7 @@ function announceCurrentRoundLeader() {
         getText: () => {
             const currentLeader = roundRanking[0];
             if (!currentLeader?.id) return "";
-            return `¡Atención! ${currentLeader.name} domina con ${Math.floor(currentLeader.score || 0)} puntos. ¡Sigan al líder ahora!`;
+            return `¡Dopamina pura! ${currentLeader.name} está dominando con ${Math.floor(currentLeader.score || 0)} puntos. ¡Sigan al líder ahora!`;
         }
     });
 }
