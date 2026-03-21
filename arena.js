@@ -7,12 +7,19 @@ const leaderboardEl = document.getElementById("arena-leaderboard");
 const floatingLayer = document.getElementById("floating-ui-layer");
 
 const DEBUG_MODE = new window.URLSearchParams(window.location.search).get("debug") === "1";
+const CLEAR_CACHE = new window.URLSearchParams(window.location.search).get("clearCache") === "1";
 
 // Ajustar Canvas a dimensiones 800x1350 para TikTok Live
 canvas.width = 800;
 canvas.height = 1350;
+
+// LIMPIEZA DE CACHE SI SE SOLICITA
+if (CLEAR_CACHE) {
+    console.warn("🧹 Limpiando caché local...");
+    localStorage.clear();
+    sessionStorage.clear();
+}
 window.addEventListener("resize", () => {
-    // Mantener dimensiones fijas solicitadas para evitar que se rompa el layout de widgets
     camera.x = camera.targetX = canvas.width / 2;
     camera.y = camera.targetY = canvas.height / 2;
 });
@@ -2793,6 +2800,7 @@ function renderLastRoundWinner() {
 // Escuchamos el Hall of Fame persistente del servidor (Top 10 real de 12 horas)
 socket.on("arena:hallOfFameUpdate", (list) => {
     console.log("🏆 Recibido Hall of Fame:", list);
+    if (CLEAR_CACHE) playerStreaks = {}; // Resetear rachas locales
     persistentHOF = Array.isArray(list) ? list : [];
     arenaHallOfFame = persistentHOF.reduce((acc, player) => {
         if (player?.id) acc[player.id] = player;
