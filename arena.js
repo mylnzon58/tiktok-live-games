@@ -960,13 +960,13 @@ let arenaBorderPulse = { color: "0, 240, 255", alpha: 0, width: 0 };
 let backgroundGrade = { color: "255, 255, 255", alpha: 0 };
 let lastFloatingTextAt = 0;
 let lastAnnouncerAt = 0;
-const MAX_PARTICLES = 900;
-const MAX_AMBIENT_PARTICLES = 220;
-const MAX_LIGHTNING_BOLTS = 18;
-const MAX_FLOATING_TEXTS = 40;
-const MAX_PROJECTILES = 32;
-const MAX_HAZARDS = 12;
-const MAX_SHOCKWAVES = 12;
+const MAX_PARTICLES = 650;
+const MAX_AMBIENT_PARTICLES = 160;
+const MAX_LIGHTNING_BOLTS = 12;
+const MAX_FLOATING_TEXTS = 30;
+const MAX_PROJECTILES = 28;
+const MAX_HAZARDS = 10;
+const MAX_SHOCKWAVES = 10;
 const FLOATING_TEXT_INTERVAL_MS = 90;
 const ANNOUNCER_INTERVAL_MS = 240;
 
@@ -1077,17 +1077,17 @@ function drawBackground() {
         backgroundGrade.alpha = 0;
     }
 
-    ctx.fillStyle = "rgba(255, 255, 255, 0.18)"; // Blanco puro sutil para evitar parpadeo amarillento
-    bgStars.forEach(s => {
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
-        ctx.fill();
-        s.y -= s.speedY * (1 + intensity * 2); // Estrellas más rápidas en combate
+    ctx.fillStyle = "rgba(255, 255, 255, 0.22)"; // Blanco sutil
+    // OPTIMIZACIÓN: Dibujar todas las estrellas en un solo lote de rects (más rápido que arcs individuales)
+    for (let i = 0; i < bgStars.length; i++) {
+        const s = bgStars[i];
+        ctx.fillRect(s.x, s.y, s.size, s.size);
+        s.y -= s.speedY * (1 + intensity * 1.5);
         if (s.y < 0) {
             s.y = canvas.height;
             s.x = Math.random() * canvas.width;
         }
-    });
+    }
 
     // --- ARENA RECTANGULAR Y MARCO NEÓN ---
     const arenaB = getArenaBounds();
@@ -1097,13 +1097,9 @@ function drawBackground() {
     ctx.lineWidth = 14;
     ctx.lineJoin = "round";
     
-    // Gradiente dinámico para el marco
-    const gradient = ctx.createLinearGradient(arenaB.left, arenaB.top, arenaB.right, arenaB.bottom);
-    gradient.addColorStop(0, "rgba(255, 46, 126, 0.6)");
-    gradient.addColorStop(0.5, "rgba(102, 231, 255, 0.6)");
-    gradient.addColorStop(1, "rgba(255, 46, 126, 0.6)");
-    
-    ctx.strokeStyle = gradient;
+    // Caching de gradiente (Solo recrear si es necesario, pero aquí usamos colores fijos con opacidad para velocidad)
+    ctx.strokeStyle = "rgba(102, 231, 255, 0.7)"; 
+    ctx.shadowBlur = 0; // Apagar sombras en el fondo para ganar FPS
     // Marco en forma de L para rodear el Showcase (Panel derecho)
     ctx.beginPath();
     ctx.moveTo(arenaB.left, arenaB.top);
@@ -1392,32 +1388,18 @@ function drawLightningBolt(bolt) {
     }
     ctx.strokeStyle = "rgba(125, 211, 252, 0.22)";
     ctx.lineWidth = Math.max(8, bolt.life * 12);
-    ctx.shadowBlur = 28;
-    ctx.shadowColor = bolt.color;
-    ctx.stroke();
-
-    // Core beam
-    ctx.beginPath();
-    ctx.moveTo(mainPath[0].x, mainPath[0].y);
-    for (let i = 1; i < mainPath.length; i++) {
-        ctx.lineTo(mainPath[i].x, mainPath[i].y);
-    }
+    // Fake Glow: Múltiples trazados con opacidad parcial (Mucho más rápido que shadowBlur)
     ctx.strokeStyle = bolt.color;
-    ctx.lineWidth = Math.max(2.5, bolt.life * 4.2);
-    ctx.shadowBlur = 14;
-    ctx.shadowColor = "#ffffff";
+    ctx.lineWidth = Math.max(8, bolt.life * 12);
+    ctx.globalAlpha = 0.3 * bolt.life;
     ctx.stroke();
 
-    // White hot center
-    ctx.beginPath();
-    ctx.moveTo(mainPath[0].x, mainPath[0].y);
-    for (let i = 1; i < mainPath.length; i++) {
-        ctx.lineTo(mainPath[i].x, mainPath[i].y);
-    }
-    ctx.strokeStyle = "rgba(255,255,255,0.92)";
-    ctx.lineWidth = Math.max(1.2, bolt.life * 1.9);
-    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1.0;
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = Math.max(1.8, bolt.life * 2.5);
     ctx.stroke();
+    
+    ctx.shadowBlur = 0; // Asegurarse de apagar sombra para resto del loop
 
     // Small branches
     const branchCount = 2;
@@ -2088,15 +2070,19 @@ class Player {
             const crownSize = Math.max(34, Math.floor(34 * sizeScale));
             const icon = isHistoricLeader ? "🏆" : "👑";
             
-            // Halo de gloria para el líder de ronda
+            // Halo de gloria para el líder de ronda (Fake Glow sin shadowBlur)
             if (isLiveLeader) {
                 ctx.save();
-                ctx.shadowBlur = 45;
-                ctx.shadowColor = "#ffd700";
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.currentRadius + 8, 0, Math.PI * 2);
-                ctx.strokeStyle = "rgba(255, 215, 0, 0.6)";
-                ctx.lineWidth = 10;
+                ctx.strokeStyle = "rgba(255, 215, 0, 0.4)";
+                ctx.lineWidth = 14;
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.currentRadius + 12, 0, Math.PI * 2);
+                ctx.strokeStyle = "rgba(255, 215, 0, 0.2)";
+                ctx.lineWidth = 20;
                 ctx.stroke();
                 ctx.restore();
             }
@@ -4331,24 +4317,13 @@ function loop() {
         ctx.fillStyle = p.color;
         
         if (p.isHeart) {
-            // Dibujar un corazón simple
-            const s = p.size || 10;
             ctx.beginPath();
-            ctx.moveTo(p.x, p.y + s / 4);
-            ctx.bezierCurveTo(p.x, p.y, p.x - s / 2, p.y, p.x - s / 2, p.y + s / 4);
-            ctx.bezierCurveTo(p.x - s / 2, p.y + s / 2, p.x, p.y + s * 0.75, p.x, p.y + s);
-            ctx.bezierCurveTo(p.x, p.y + s * 0.75, p.x + s / 2, p.y + s / 2, p.x + s / 2, p.y + s / 4);
-            ctx.bezierCurveTo(p.x + s / 2, p.y, p.x, p.y, p.x, p.y + s / 4);
+            ctx.arc(p.x, p.y, (p.size || 10) / 2, 0, Math.PI * 2);
             ctx.fill();
         } else if (p.isCoin) {
-            // Dibujar una moneda (círculo dorado con brillo)
-            const s = p.size || 8;
             ctx.beginPath();
-            ctx.arc(p.x, p.y, s, 0, Math.PI * 2);
+            ctx.arc(p.x, p.y, p.size || 8, 0, Math.PI * 2);
             ctx.fill();
-            ctx.strokeStyle = "#fff7d6";
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
         } else {
             ctx.beginPath(); 
             ctx.arc(p.x, p.y, p.size || 3, 0, Math.PI * 2); 
