@@ -1433,9 +1433,21 @@ class Player {
             this.vx *= 0.96;
             this.vy *= 0.96;
         } else if (this.state === "IDLE") {
-            this.opacity = Math.max(this.opacity - 0.06, 0.06);
-            const idleFloor = Math.max(PLAYER_RADIUS, targetRadius * 0.92, (this.peakRadius || PLAYER_RADIUS) * 0.78);
-            this.currentRadius += (idleFloor - this.currentRadius) * 0.08;
+            // Inactividad: achicarse progresivamente según tiempo sin actividad
+            const idleFor = (Date.now() - (this.lastActive || Date.now())) / 1000; // segundos
+            let shrinkFactor;
+            if (idleFor >= 40) {
+                shrinkFactor = 0.30; // Muy pequeño tras 40s
+            } else if (idleFor >= 30) {
+                shrinkFactor = 0.40; // Bastante pequeño tras 30s
+            } else if (idleFor >= 20) {
+                shrinkFactor = 0.55; // Reducido tras 20s
+            } else {
+                shrinkFactor = 0.75; // Ligeramente reducido
+            }
+            this.opacity = Math.max(0.15, 1.0 - (idleFor / 50)); // Se va haciendo transparente
+            const idleFloor = Math.max(PLAYER_RADIUS * 0.3, targetRadius * shrinkFactor);
+            this.currentRadius += (idleFloor - this.currentRadius) * 0.06;
             this.vx *= 0.995;
             this.vy *= 0.995;
         } else {

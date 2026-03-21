@@ -167,16 +167,17 @@ body.dramatic-vignette::before {
 .floating-text {
     position: absolute;
     font-family: 'Bungee', cursive;
-    font-size: 22px; /* Un poco más grande */
+    font-size: 28px; /* Más grande para ser visible */
+    font-weight: 900;
     pointer-events: none;
-    animation: floatUpFade 1.2s ease-out forwards;
-    /* Borde negro grueso solicitado */
+    animation: floatUpFade 1.4s ease-out forwards;
+    /* Borde negro grueso para contraste máximo */
     text-shadow: 
-        -2px -2px 0 #000,  
-         2px -2px 0 #000,
-        -2px  2px 0 #000,
-         2px  2px 0 #000,
-         0px 4px 10px rgba(0,0,0,0.8);
+        -3px -3px 0 #000,  
+         3px -3px 0 #000,
+        -3px  3px 0 #000,
+         3px  3px 0 #000,
+         0px 5px 12px rgba(0,0,0,0.9);
     transform: translate(-50%, -50%);
     will-change: transform, opacity;
     z-index: 1000;
@@ -184,17 +185,17 @@ body.dramatic-vignette::before {
 
 @keyframes floatUpFade {
     0% {
-        transform: translate(-50%, -50%) scale(0.5);
+        transform: translate(-50%, -50%) scale(0.6);
         opacity: 1;
     }
 
-    20% {
-        transform: translate(-50%, -80%) scale(1.2);
+    15% {
+        transform: translate(-50%, -75%) scale(1.4);
         opacity: 1;
     }
 
     100% {
-        transform: translate(-50%, -150%) scale(1);
+        transform: translate(-50%, -170%) scale(1);
         opacity: 0;
     }
 }
