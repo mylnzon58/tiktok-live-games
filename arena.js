@@ -2062,11 +2062,31 @@ class Player {
             ctx.fillStyle = "white"; 
         }
         
-        // Corona gigante dorada para el líder
-        if (this === currentTopArenaLeader || (roundRanking[0] && roundRanking[0].id === this.id)) {
-            const crownSize = Math.max(32, Math.floor(32 * sizeScale));
-            ctx.font = `${crownSize}px serif`;
-            ctx.fillText("👑", this.x, this.y - this.currentRadius - (victories > 0 ? (65 * sizeScale) : (18 * sizeScale)) - crownSize * 0.8);
+        // Corona / Trofeo gigante para el líder (MARGEN CORREGIDO)
+        const isLiveLeader = (roundRanking[0] && roundRanking[0].id === this.id);
+        const isHistoricLeader = (this.id === currentTopArenaLeader?.id);
+
+        if (isLiveLeader || isHistoricLeader) {
+            const crownSize = Math.max(34, Math.floor(34 * sizeScale));
+            const icon = isHistoricLeader ? "🏆" : "👑";
+            
+            // Halo de gloria para el líder de ronda
+            if (isLiveLeader) {
+                ctx.save();
+                ctx.shadowBlur = 45;
+                ctx.shadowColor = "#ffd700";
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.currentRadius + 8, 0, Math.PI * 2);
+                ctx.strokeStyle = "rgba(255, 215, 0, 0.6)";
+                ctx.lineWidth = 10;
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            ctx.font = `bold ${crownSize}px Arial`;
+            // Margen fijo más pequeño para que no se separe al crecer
+            const iconY = this.y - this.currentRadius - 35 - (Math.sin(Date.now() / 200) * 8);
+            ctx.fillText(icon, this.x, iconY);
             ctx.font = `bold ${nameFontSize}px Rajdhani`;
         }
         
