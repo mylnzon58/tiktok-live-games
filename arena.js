@@ -74,6 +74,9 @@ let sessionChampions = [];
 // MOTOR DE AUDIO (SYNTH)
 // ==========================================
 let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let masterAudioGain = audioCtx.createGain();
+masterAudioGain.gain.value = 0.30;
+masterAudioGain.connect(audioCtx.destination);
 let soundEnabled = true; // REVERTIDO: Por defecto activado (OBS / TikTok Studio lo permiten)
 let preferredVoices = { es: null, en: null };
 let speechQueue = [];
@@ -457,7 +460,7 @@ function playCountdownBeep(seconds) {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.connect(gain);
-        gain.connect(audioCtx.destination);
+        gain.connect(masterAudioGain);
         
         // Pitch sube conforme quedan menos segundos
         const basePitch = seconds <= 3 ? 1200 : (seconds <= 5 ? 1000 : 800);
@@ -478,7 +481,7 @@ function playCountdownBeep(seconds) {
             const osc2 = audioCtx.createOscillator();
             const gain2 = audioCtx.createGain();
             osc2.connect(gain2);
-            gain2.connect(audioCtx.destination);
+            gain2.connect(masterAudioGain);
             osc2.type = 'square';
             osc2.frequency.setValueAtTime(basePitch * 1.5, now + 0.12);
             gain2.gain.setValueAtTime(0.2, now + 0.12);
@@ -498,7 +501,7 @@ const sfx = {
         [980, 1320, 1760].forEach((freq, index) => {
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
-            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.connect(gain); gain.connect(masterAudioGain);
             osc.type = 'triangle';
             osc.frequency.setValueAtTime(freq, now + index * 0.03);
             gain.gain.setValueAtTime(0.18, now + index * 0.03);
@@ -511,7 +514,7 @@ const sfx = {
         if (!soundEnabled) return;
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.connect(gain); gain.connect(masterAudioGain);
         osc.type = 'square';
         osc.frequency.setValueAtTime(800, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.1);
@@ -524,7 +527,7 @@ const sfx = {
         if (!soundEnabled) return;
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.connect(gain); gain.connect(masterAudioGain);
         const now = audioCtx.currentTime;
         const oscClick = audioCtx.createOscillator();
         osc.connect(gain);
@@ -546,7 +549,7 @@ const sfx = {
         if (!soundEnabled) return;
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.connect(gain); gain.connect(masterAudioGain);
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(60, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(1, audioCtx.currentTime + 0.6);
@@ -559,7 +562,7 @@ const sfx = {
         if (!soundEnabled) return;
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.connect(gain); gain.connect(masterAudioGain);
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(420, audioCtx.currentTime);
         osc.frequency.linearRampToValueAtTime(920, audioCtx.currentTime + 0.12);
@@ -578,7 +581,7 @@ const sfx = {
 
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.connect(gain); gain.connect(masterAudioGain);
 
         // Sonido tipo "Burbuja" o "Pop" limpio
         osc.type = 'sine';
@@ -595,7 +598,7 @@ const sfx = {
         if (!soundEnabled) return;
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.connect(gain); gain.connect(masterAudioGain);
         osc.type = 'sine';
         osc.frequency.setValueAtTime(880, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(720, audioCtx.currentTime + 0.05);
@@ -616,7 +619,7 @@ const sfx = {
 
             osc.connect(gain);
             oscNoise.connect(gain);
-            gain.connect(audioCtx.destination);
+            gain.connect(masterAudioGain);
 
             osc.type = 'square';
             osc.frequency.setValueAtTime(96 + (index * 18), now + offset);
@@ -643,7 +646,7 @@ const sfx = {
         const gain = audioCtx.createGain();
         osc.connect(gain);
         oscPunch.connect(gain);
-        gain.connect(audioCtx.destination);
+        gain.connect(masterAudioGain);
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(62, now);
         osc.frequency.exponentialRampToValueAtTime(24, now + 0.5);
@@ -662,7 +665,7 @@ const sfx = {
         const now = audioCtx.currentTime;
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.connect(gain); gain.connect(masterAudioGain);
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(220, now);
         osc.frequency.exponentialRampToValueAtTime(90, now + 0.35);
@@ -682,7 +685,7 @@ const sfx = {
             osc.frequency.setValueAtTime(f, now + i * 0.04);
             g.gain.setValueAtTime(0.15, now + i * 0.04);
             g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.04 + 0.1);
-            osc.connect(g).connect(audioCtx.destination);
+            osc.connect(g).connect(masterAudioGain);
             osc.start(now + i * 0.04);
             osc.stop(now + i * 0.04 + 0.12);
         });
@@ -697,7 +700,7 @@ const sfx = {
         osc.frequency.exponentialRampToValueAtTime(800, now + 0.3);
         g.gain.setValueAtTime(0.1, now);
         g.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-        osc.connect(g).connect(audioCtx.destination);
+        osc.connect(g).connect(masterAudioGain);
         osc.start(now);
         osc.stop(now + 0.3);
     },
@@ -712,7 +715,7 @@ const sfx = {
             osc.frequency.exponentialRampToValueAtTime(freq * 0.6, now + i * 0.035 + 0.18);
             gain.gain.setValueAtTime(0.09, now + i * 0.035);
             gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.035 + 0.2);
-            osc.connect(gain).connect(audioCtx.destination);
+            osc.connect(gain).connect(masterAudioGain);
             osc.start(now + i * 0.035);
             osc.stop(now + i * 0.035 + 0.22);
         });
@@ -731,8 +734,8 @@ const sfx = {
         noise.frequency.exponentialRampToValueAtTime(68, now + 0.28);
         gain.gain.setValueAtTime(0.22, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
-        osc.connect(gain).connect(audioCtx.destination);
-        noise.connect(gain).connect(audioCtx.destination);
+        osc.connect(gain).connect(masterAudioGain);
+        noise.connect(gain).connect(masterAudioGain);
         osc.start(now);
         noise.start(now);
         osc.stop(now + 0.45);
@@ -749,7 +752,7 @@ const sfx = {
             osc.frequency.exponentialRampToValueAtTime(20, now + i * 0.04 + 0.55);
             gain.gain.setValueAtTime(0.26 - (i * 0.05), now + i * 0.04);
             gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.04 + 0.58);
-            osc.connect(gain).connect(audioCtx.destination);
+            osc.connect(gain).connect(masterAudioGain);
             osc.start(now + i * 0.04);
             osc.stop(now + i * 0.04 + 0.6);
         });
@@ -762,7 +765,7 @@ const sfx = {
         const gain = audioCtx.createGain();
         osc.connect(gain);
         noise.connect(gain);
-        gain.connect(audioCtx.destination);
+        gain.connect(masterAudioGain);
         osc.type = 'triangle';
         noise.type = 'sawtooth';
         osc.frequency.setValueAtTime(120 * pitchMod, now);
@@ -842,7 +845,7 @@ function scheduleNote(step, time) {
     gainArp.gain.setValueAtTime(arpGain, time);
     gainArp.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
 
-    oscArp.connect(gainArp); gainArp.connect(audioCtx.destination);
+    oscArp.connect(gainArp); gainArp.connect(masterAudioGain);
     oscArp.start(time); oscArp.stop(time + 0.1);
 
     // Bajo 8-Bits (A tiempo de Octavos - Ritmo constante)
@@ -855,7 +858,7 @@ function scheduleNote(step, time) {
         gainBass.gain.setValueAtTime(bassGain, time);
         gainBass.gain.exponentialRampToValueAtTime(0.001, time + 0.2);
 
-        oscBass.connect(gainBass); gainBass.connect(audioCtx.destination);
+        oscBass.connect(gainBass); gainBass.connect(masterAudioGain);
         oscBass.start(time); oscBass.stop(time + 0.2);
     }
 
@@ -871,7 +874,7 @@ function scheduleNote(step, time) {
         gainSnare.gain.setValueAtTime(snareVol, time);
         gainSnare.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
 
-        oscSnare.connect(gainSnare); gainSnare.connect(audioCtx.destination);
+        oscSnare.connect(gainSnare); gainSnare.connect(masterAudioGain);
         oscSnare.start(time); oscSnare.stop(time + 0.1);
     }
 }
