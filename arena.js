@@ -378,7 +378,7 @@ function announceCurrentRoundLeader() {
         getText: () => {
             const currentLeader = roundRanking[0];
             if (!currentLeader?.id) return "";
-            return `¡Dopamina pura! ${currentLeader.name} está dominando con ${Math.floor(currentLeader.score || 0)} puntos. ¡Sigan al líder ahora!`;
+            return `¡Increíble! ${currentLeader.name} está dominando con ${Math.floor(currentLeader.score || 0)} puntos. ¡Sigan al líder ahora!`;
         }
     });
 }
@@ -3436,7 +3436,7 @@ function describeArenaGiftImpact(data, attacker, target, giftEffect) {
     const variants = {
         megaBlast: [
             { overlay: `💥 ${attackerName}: MEGA IMPACTO CON ${giftName}!`, voice: `¡Increíble! ${attackerName} ha lanzado un ${giftName} desencadenando un Megablast contra ${targetName}. ¡El arena está temblando!` },
-            { overlay: `🔥 IMPACTO LEGENDARIO: ${attackerName} LANZA ${giftName}!`, voice: `¡Dopamina pura! ${attackerName} dio ${giftName} desatando un impacto total sobre ${targetName}.` }
+            { overlay: `🔥 IMPACTO LEGENDARIO: ${attackerName} LANZA ${giftName}!`, voice: `¡Puro poder! ${attackerName} dio ${giftName} desatando un impacto total sobre ${targetName}.` }
         ],
         lightningStorm: [
             { overlay: `⚡ ${attackerName}: LLUVIA DE RAYOS CON ${giftName}!`, voice: `¡Cuidado abajo! ${attackerName} invoca una lluvia de rayos sobre ${targetName} con su ${giftName}. ¡El impacto es masivo!` },
