@@ -23,6 +23,7 @@ const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
 const arena = createArenaManager();
+const versusManager = require("./versus/versus-manager")(io);
 const giftCatalog = createGiftCatalog();
 
 const championsStorage = createStorage("arena_champions.json", []);
@@ -96,6 +97,8 @@ function sendArena(req, res) {
 }
 app.get("/", sendArena);
 app.get("/arena", sendArena);
+// Versus Politico Game
+app.use("/versus", express.static(path.join(__dirname, "versus/public")));
 // Overlay de países (secundario)
 app.get("/overlay", (req, res) => res.sendFile(path.join(__dirname, "overlay.html")));
 app.get("/api/gifts", (req, res) => res.json(giftCatalog.getCatalogSnapshot()));
@@ -709,6 +712,7 @@ function bindTikTokListeners(connection) {
                 return;
             }
             handleArenaGift(event);
+            versusManager.handleVersusGift(event);
         } catch (error) {
             console.error("Gift error:", error.message);
         }
@@ -721,6 +725,7 @@ function bindTikTokListeners(connection) {
             return;
         }
         handleArenaLike(event);
+        versusManager.handleVersusLike(event);
     });
 
     connection.on("chat", (rawData) => {
@@ -730,6 +735,7 @@ function bindTikTokListeners(connection) {
             return;
         }
         handleArenaChat(event);
+        versusManager.handleVersusChat(event);
     });
 }
 
@@ -748,6 +754,7 @@ function startChromeCookieSync() {
 // --- SOCKET.IO CONNECTION ---
 io.on("connection", (socket) => {
     socket.emit("timerUpdate", timeRemaining);
+    versusManager.syncClient(socket);
     
     // Sincronización inicial MINIFICADA
     const players = arena.getPlayers();
@@ -800,6 +807,22 @@ io.on("connection", (socket) => {
     socket.on("arena:debug:toggleSD", () => {
         isSuddenDeath = !isSuddenDeath;
         io.emit("arena:suddenDeath", isSuddenDeath);
+    });
+
+    socket.on("versus:debug:chat", (data) => {
+        if (!versusManager) return;
+        versusManager.handleVersusChat({
+            comment: data.comment || "Milei",
+            user: { name: data.userName || "DebugUser" }
+        });
+    });
+    socket.on("versus:debug:gift", (data) => {
+        if (!versusManager) return;
+        versusManager.handleVersusGift({
+            gift: { name: data.giftName || "Rose", totalDiamonds: data.diamonds || 1 },
+            user: { name: data.userName || "DebugDonor" },
+            comment: data.comment || ""
+        });
     });
 });
 

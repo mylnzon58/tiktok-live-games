@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Versus Político V3.6</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <link rel="icon" href="data:,">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@900&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="stream-container" id="stream-container">
+        <div id="unblock" class="unblock"></div>
+
+        <header class="header">
+            <h1 class="title">BATALLA POLÍTICA</h1>
+            <div id="timer" class="timer">03:00</div>
+        </header>
+
+        <main class="arena">
+            <div class="vs">VS</div>
+
+            <div class="fighter left">
+                <!-- Large Pulsing Win Counter -->
+                <div class="win-count latente" id="wins-m">0</div>
+                <div class="ring m">
+                    <img id="pfp-m" src="/milei_face.png" class="face" crossorigin="anonymous" onerror="this.onerror=null; this.src='https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';">
+                </div>
+                <h2 class="name">MILEI</h2>
+                <div class="score m-bg" id="score-m">0</div>
+            </div>
+
+            <div class="fighter right">
+                <div class="win-count latente" id="wins-c">0</div>
+                <div class="ring c">
+                    <img id="pfp-c" src="/cristina_face.png" class="face" crossorigin="anonymous" onerror="this.onerror=null; this.src='https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';">
+                </div>
+                <h2 class="name">CRISTINA</h2>
+                <div class="score c-bg" id="score-c">0</div>
+            </div>
+        </main>
+
+        <div class="interaction-zone">
+            <div class="lanes">
+                <div id="lane-l" class="lane l"></div>
+                <div id="lane-r" class="lane r"></div>
+            </div>
+            
+            <div class="bar-container">
+                <div id="bar-fill" class="bar-fill m-bg"></div>
+                <div class="divider">
+                    <div class="electric"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="showcase">
+            <div class="tile">❤️ +10</div>
+            <div class="tile">🌹 +1K</div>
+            <div class="tile">🍩 +10K</div>
+            <div class="tile">🦁 +500K</div>
+            <div class="tile">🌌 +1M</div>
+        </div>
+
+        <div class="instruction">¡Escribe tu favorito en el chat!</div>
+
+        <!-- Debug -->
+        <div id="debug" class="debug">
+            <button onclick="socket.emit('versus:debug:chat', { comment: 'Milei' })">M</button>
+            <button onclick="socket.emit('versus:debug:chat', { comment: 'Cristina' })">C</button>
+            <button onclick="socket.emit('versus:debug:gift', { giftName: 'Lion', diamonds: 500 })">🦁</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
