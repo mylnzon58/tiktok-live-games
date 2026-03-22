@@ -89,6 +89,7 @@ let lastCompletedRoundWinner = null;
 // --- ROUTES ---
 // Juego principal: Arena en raíz y en /arena
 app.use(express.static(__dirname));
+app.use(express.static(path.join(__dirname, "versus/public")));
 function sendArena(req, res) {
     const fs = require("fs");
     let html = fs.readFileSync(path.join(__dirname, "arena.html"), "utf8");
