@@ -1026,6 +1026,8 @@ function pushHazard(hazard) {
 // CONFIGURACIONES FÍSICAS (arena rectangular: burbujas más grandes para verse bien)
 // ==========================================
 const MAX_HP = 1000; 
+const RESILIENCE_THRESHOLD = 1500; // Sincronizado con server
+const UNDERDOG_DAMAGE_RATIO = 0.35; // Solo recibe 35% del daño
 let PLAYER_RADIUS = 38; // Iniciamos más pequeños para que la arena se sienta gigante
 
 /** Formatea puntuación para que se lea bien en la burbuja (ej: 3689633 → "3.7M") */
@@ -2098,6 +2100,15 @@ class Player {
 
     takeDamage(amount, attackerId) {
         let finalAmt = isSuddenDeath ? amount * 2 : amount;
+        
+        // Simular resiliencia en cliente para que los números flotantes coincidan
+        const isUnderdog = (this.score || 0) < RESILIENCE_THRESHOLD || (this.invulnerableUntil > Date.now()); 
+        // Nota: this.invulnerableUntil aquí se usa como proxy de la resistencia extra tras revivir que manda el server
+        
+        if (isUnderdog && !isSuddenDeath) {
+            finalAmt = Math.floor(finalAmt * UNDERDOG_DAMAGE_RATIO);
+        }
+
         this.hp = Math.max(this.hp - finalAmt, 0);
         this.flash = 1;
         spawnFloatingText(`-${Math.floor(finalAmt)}`, this.x, this.y, isSuddenDeath ? "#ff0000" : "#ff4757");
@@ -2753,7 +2764,11 @@ socket.on("arena:hallOfFameUpdate", (list) => {
 updatePowersGuide();
 
 function updateTopShowcase() {
-    const podium3 = sessionChampions
+    // Usar Hall of Fame persistente como fuente principal para el Top Arena "Histórico" (12h)
+    // Si no hay HOF todavía, usar los campeones de la sesión actual
+    const dataSource = (persistentHOF && persistentHOF.length > 0) ? persistentHOF : sessionChampions;
+    
+    const podium3 = (dataSource || [])
         .map((entry) => {
             const livePlayer = entry.id ? players[entry.id] : Object.values(players).find((player) => player?.name === entry.name);
             return {
@@ -2762,7 +2777,7 @@ function updateTopShowcase() {
                 avatar: livePlayer?.avatar || entry.avatar || "https://p16-webcast.tiktokcdn.com/webcast-va/new_gifter_badge_v3.png~tplv-obj.image",
                 currentScore: Math.floor(livePlayer?.score || 0),
                 displayScore: Math.floor(livePlayer?.score || 0),
-                bestScore: Math.floor(livePlayer?.bestScore || livePlayer?.score || 0),
+                bestScore: Math.floor(livePlayer?.bestScore || livePlayer?.score || entry.bestScore || 0),
                 victories: Math.floor(entry.victories || 0)
             };
         })
@@ -3304,6 +3319,77 @@ socket.on("arena:ko", (data) => {
     hitStopFrames = Math.max(hitStopFrames, 12);
 });
 
+// ===============================================
+// NEUROMARKETING SOCKET LISTENERS
+// ===============================================
+
+socket.on("arena:goldenMinute", (active) => {
+    const overlay = document.getElementById("golden-minute-overlay");
+    if (overlay) overlay.style.display = active ? "flex" : "none";
+    if (active) {
+        showAnnouncer("¡MINUTO DE ORO! PUNTOS x2", "#ffd700");
+        announce("¡Atención! Comienza el Minuto de Oro. La arena multiplicará toda la puntuación durante sesenta segundos.");
+        playSound("jackpot");
+    }
+});
+
+socket.on("arena:extremeRecognition", (data) => {
+    const { playerName, giftName } = data;
+    // Ducking total (Silence background for VIP Spotlight)
+    if(masterAudioGain) masterAudioGain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+    setTimeout(() => {
+        if(masterAudioGain) masterAudioGain.gain.setTargetAtTime(0.45, audioCtx.currentTime, 0.5);
+    }, 4500);
+
+    // Mención exagerada cortando todo
+    speakImmediate(`¡ATENCIÓN! ${playerName} acaba de desatar el poder legendario del regalo ${giftName}. ¡Eres una maldita leyenda, ${playerName}!`, { 
+        volume: 1.0, 
+        pitch: 1.1, 
+        rate: 1.0 
+    });
+
+    showAnnouncer(`👑 LEYENDA: ${playerName} 👑`, "#ffd700");
+});
+
+socket.on("arena:throneInDanger", (data) => {
+    const { targetName, attackerName } = data;
+    showAnnouncer(`🚨 ${targetName.toUpperCase()} ¡TE ESTÁN DERROCANDO! 🚨`, "#ff0000");
+    triggerOverlayFlash("255, 0, 0", 0.3);
+    playSound("heavyExplosion"); 
+    
+    // Anuncio agresivo
+    announce(`¡Peligro crítico! ${attackerName} está destruyendo al rey ${targetName}. ¡Defiende el trono ahora!`, { priority: true });
+});
+
+socket.on("arena:frenzyUpdate", (data) => {
+    const { total, active } = data;
+    const fill = document.getElementById("frenzy-fill");
+    const text = document.getElementById("frenzy-text");
+    if (!fill || !text) return;
+
+    if (active) {
+        fill.style.width = "100%";
+        fill.classList.add("active");
+        text.textContent = "¡FRENESÍ GLOBAL x2!";
+        text.style.color = "#ffff00";
+    } else {
+        const percentage = Math.min(100, Math.floor((total / 3000) * 100));
+        fill.style.width = percentage + "%";
+        fill.classList.remove("active");
+        text.textContent = `${Math.floor(total)} / 3000`;
+        text.style.color = "#fff";
+    }
+});
+
+socket.on("arena:frenzyGlobalInfo", () => {
+    showAnnouncer("🔥 FRENESÍ COMUNITARIO ATIVADO 🔥", "#ff4757");
+    announce("¡Meta comunitaria superada! ¡Frenesí activado! Puntos dobles en la arena durante 30 segundos.");
+    triggerOverlayFlash("255, 60, 0", 0.4);
+    playSound("jackpot");
+    screenShake = Math.max(screenShake, 20);
+});
+
+
 function resolveArenaGiftEffect(data, attacker, target, diamondsTotal, giftValue, giftName) {
     const effectKey = data.effectKey || data.fx || ""; // Usar la clave de efecto del servidor
     const category = data.category || "";
@@ -3564,6 +3650,34 @@ socket.on("arena:gift", (data) => {
 
     attacker.flash = 1;
     screenShake = Math.max(screenShake, Math.max(fxProfile.shake, Math.min(34, 10 + Math.log2(diamondsTotal + 1) * 3.2)));
+
+    // Neuromarketing: Efecto Casi Victoria / Golpe Crítico 10x
+    if (data.isCritical) {
+        const critDOM = document.createElement("div");
+        critDOM.textContent = "CRÍTICO x10";
+        critDOM.className = "floating-text critical-text";
+        // Calculate canvas-independent percentage coordinates mapping logic for floating element
+        const rx = (attacker.x / canvas.width) * 100;
+        const ry = ((attacker.y - 70) / canvas.height) * 100;
+        critDOM.style.left = `calc(${rx}% - 160px)`; // Substracting overlay adjustment roughly
+        critDOM.style.top = `${ry}%`;
+        
+        if(floatingLayer) {
+            floatingLayer.appendChild(critDOM);
+            setTimeout(() => critDOM.remove(), 2500);
+        }
+        playSound("jackpot");
+        screenShake = Math.max(screenShake, 25);
+    }
+
+    // Balance/Neuromarketing: Efecto Catch-up David vs Goliath
+    if (data.isDavidVsGoliath) {
+        spawnFloatingText("¡DAVID VS GOLIATH!", attacker.x, attacker.y - 90, "#ffaa00");
+        spawnFloatingText("EFECTIVIDAD INCREMENTADA", attacker.x, attacker.y - 110, "#ffff00");
+        playSound("powerUp", 1.2); 
+        screenShake = Math.max(screenShake, 20);
+        triggerOverlayFlash("255, 170, 0", 0.2);
+    }
 
     const giftEffect = resolveArenaGiftEffect(data, attacker, target, diamondsTotal, giftValue, data.giftName || "");
     const giftNarration = describeArenaGiftImpact(data, attacker, target, giftEffect);

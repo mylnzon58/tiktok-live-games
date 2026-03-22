@@ -66,6 +66,13 @@ if (lastWinners[0]?.id) {
 }
 
 let isSuddenDeath = false;
+let roundFrenzyDiamonds = 0;
+let isFrenzyActive = false;
+let frenzyTimer = null;
+let goldenMinuteActive = false;
+let goldenMinuteTimer = null;
+let goldenMinuteTimeout = null;
+
 let timeRemaining = GAME_CONFIG.arena.roundDurationSeconds;
 let timerInterval = null;
 let tiktokRetryTimer = null;
@@ -233,6 +240,27 @@ function resetRound() {
     isSuddenDeath = false;
     arenaLeaderVoiceWindow = { leaderId: null, count: 0 };
     io.emit("arena:suddenDeath", false);
+    
+    // Neuromarketing resets
+    roundFrenzyDiamonds = 0;
+    isFrenzyActive = false;
+    if(frenzyTimer) clearTimeout(frenzyTimer);
+    io.emit("arena:frenzyUpdate", { total: 0, active: false });
+
+    goldenMinuteActive = false;
+    if(goldenMinuteTimer) clearTimeout(goldenMinuteTimer);
+    if(goldenMinuteTimeout) clearTimeout(goldenMinuteTimeout);
+    io.emit("arena:goldenMinute", false);
+
+    // Randomize Golden Minute logic
+    goldenMinuteTimer = setTimeout(() => {
+        goldenMinuteActive = true;
+        io.emit("arena:goldenMinute", true);
+        goldenMinuteTimeout = setTimeout(() => {
+            goldenMinuteActive = false;
+            io.emit("arena:goldenMinute", false);
+        }, 60000);
+    }, Math.floor(Math.random() * (GAME_CONFIG.arena.roundDurationSeconds / 2 * 1000)) + 30000);
 
     arena.resetRound();
     queueArenaState(true);
@@ -394,9 +422,34 @@ function handleArenaGift(event) {
     }
     const target = targetSelection.target;
 
-    const result = arena.applyGiftCombat(attacker.id, target.id, event.gift, isSuddenDeath);
+    const isSpecialMultiplier = isSuddenDeath || isFrenzyActive || goldenMinuteActive;
+    const result = arena.applyGiftCombat(attacker.id, target.id, event.gift, isSpecialMultiplier);
     if (!result) return;
     logArenaGift(event, result);
+
+    // Frenzy Check (Neuromarketing)
+    roundFrenzyDiamonds += event.gift.totalDiamonds;
+    if (roundFrenzyDiamonds >= 3000 && !isFrenzyActive) {
+        isFrenzyActive = true;
+        io.emit("arena:frenzyUpdate", { total: roundFrenzyDiamonds, active: true });
+        io.emit("arena:frenzyGlobalInfo");
+        frenzyTimer = setTimeout(() => {
+            isFrenzyActive = false;
+            roundFrenzyDiamonds = 0;
+            io.emit("arena:frenzyUpdate", { total: 0, active: false });
+        }, 30000); // 30s frenzy
+    } else if (!isFrenzyActive) {
+        io.emit("arena:frenzyUpdate", { total: roundFrenzyDiamonds, active: false });
+    }
+
+    // Throne In Danger (Loss Aversion Neuromarketing)
+    const ranking = arena.getCurrentRanking(2);
+    if (ranking.length >= 2 && ranking[0].id === result.target.id && ranking[1].id === result.attacker.id && result.damage > 0) {
+        io.emit("arena:throneInDanger", {
+            targetName: result.target.name,
+            attackerName: result.attacker.name
+        });
+    }
 
     io.emit("arena:gift", {
         attacker: { id: result.attacker.id, x: result.attacker.x, y: result.attacker.y },
@@ -415,6 +468,8 @@ function handleArenaGift(event) {
         sfx: event.gift.sfx,
         sizeScale: event.gift.sizeScale,
         multiplier: result.comboMultiplier,
+        isCritical: result.isCritical,
+        isDavidVsGoliath: result.isDavidVsGoliath,
         damage: result.damage,
         scoreGain: result.scoreGain,
         scoreLoss: result.scoreLoss
@@ -448,7 +503,13 @@ function handleArenaGift(event) {
         });
     }
 
+    // Extreme Recognition (Ego Boost Neuromarketing)
     if (event.gift.totalDiamonds >= GAME_CONFIG.countries.bigGiftThreshold) {
+        io.emit("arena:extremeRecognition", {
+            playerName: result.attacker.name,
+            giftName: event.gift.name
+        });
+        
         io.emit("arena:burst", {
             sourceId: result.attacker.id,
             targetId: result.target.id,
@@ -569,6 +630,11 @@ function handleArenaChat(event) {
     const text = event.comment.toUpperCase();
     const player = arena.ensurePlayer(event.user, "chat");
     if (!player) return;
+
+    if (text.startsWith("ATAQUE @")) {
+        const targetRaw = text.slice(8).trim();
+        arena.setPlayerTargetPreference(player.id, targetRaw);
+    }
 
     const activity = arena.applyChatActivity(player.id);
     const chatRequestedPower = text.includes(`+ ${GAME_CONFIG.arena.chatPowerKeyword}`) ||
