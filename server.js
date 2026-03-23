@@ -79,6 +79,7 @@ let timerInterval = null;
 let tiktokRetryTimer = null;
 let chromeSyncTimer = null;
 let arenaBroadcastTimer = null;
+let arenaLikeBatch = {}; // Para agrupar likes por usuario y reducir emisiones socket
 let arenaSawTimer = null;
 let liveStatus = { connected: false, username: process.env.TIKTOK_USERNAME || DEFAULT_TIKTOK_USERNAME };
 let tiktokLive = null;
@@ -89,7 +90,6 @@ let lastCompletedRoundWinner = null;
 // --- ROUTES ---
 // Juego principal: Arena en raíz y en /arena
 app.use(express.static(__dirname));
-app.use(express.static(path.join(__dirname, "versus/public")));
 function sendArena(req, res) {
     const fs = require("fs");
     let html = fs.readFileSync(path.join(__dirname, "arena.html"), "utf8");
@@ -105,24 +105,37 @@ app.get("/overlay", (req, res) => res.sendFile(path.join(__dirname, "overlay.htm
 app.get("/api/gifts", (req, res) => res.json(giftCatalog.getCatalogSnapshot()));
 
 // --- ARENA STATE BROADCAST ---
+// Minificar un jugador para envío eficiente
+function minifyPlayer(p) {
+    return {
+        i: p.id,
+        n: p.name,
+        a: p.avatar,
+        s: p.score,
+        ss: p.standingScore,
+        h: p.hp,
+        x: Math.round(p.x),
+        y: Math.round(p.y),
+        st: p.state,
+        saw: p.sawActiveUntil,
+        inv: p.invulnerableUntil,
+        v: p.victories
+    };
+}
+
+// INSTANT JOIN: Emitir jugador nuevo inmediatamente (0ms latencia)
+function emitInstantJoin(player) {
+    if (!player) return;
+    const sanitized = arena.sanitizeForClient(player);
+    if (!sanitized) return;
+    io.emit("arena:join", minifyPlayer(sanitized));
+}
+
 function emitArenaState() {
     const players = arena.getPlayers();
     const minified = {};
     for (const [id, p] of Object.entries(players)) {
-        minified[id] = {
-            i: p.id,
-            n: p.name,
-            a: p.avatar,
-            s: p.score,
-            ss: p.standingScore,
-            h: p.hp,
-            x: Math.round(p.x),
-            y: Math.round(p.y),
-            st: p.state,
-            saw: p.sawActiveUntil,
-            inv: p.invulnerableUntil,
-            v: p.victories
-        };
+        minified[id] = minifyPlayer(p);
     }
     io.emit("arena:sync", minified);
     io.emit("arena:currentRanking", arena.getCurrentRanking());
@@ -413,6 +426,7 @@ async function connectToTikTok() {
 function handleArenaGift(event) {
     const attacker = arena.ensurePlayer(event.user, "gift");
     if (!attacker) return;
+    if (attacker.isNewSession) { emitInstantJoin(attacker); attacker.isNewSession = false; }
 
     if (attacker.state === "ELIMINATED") {
         arena.respawnPlayer(attacker, "gift");
@@ -554,22 +568,50 @@ function handleArenaGift(event) {
 function handleArenaLike(event) {
     const player = arena.ensurePlayer(event.user, "like");
     if (!player) return;
+    if (player.isNewSession) { emitInstantJoin(player); player.isNewSession = false; }
 
+    // Ejecutar lógica de juego inmediatamente para mantener consistencia en servidor
     const support = arena.applyLikeSupport(player.id, event.likeCount);
     const comboLikes = support?.likeCombo || event.likeCount;
     const strike = arena.applyLikeStrike(player.id, comboLikes, isSuddenDeath);
     logArenaLike(event, player, support, strike);
 
-    io.emit("arena:like", {
-        userId: player.id,
-        player: support?.player || null,
-        likeCount: event.likeCount,
-        comboLikes,
-        heal: support?.heal || 0,
-        scoreGain: support?.scoreGain || 0,
-        userName: player.name,
-        respawned: Boolean(support?.respawned)
-    });
+    // AGREGAR AL LOTE (Batch) en lugar de emitir cada segundo
+    if (!arenaLikeBatch[player.id]) {
+        arenaLikeBatch[player.id] = {
+            userId: player.id,
+            userName: player.name,
+            likeCount: 0,
+            comboLikes: 0,
+            heal: 0,
+            scoreGain: 0,
+            respawned: false,
+            strike: null
+        };
+    }
+
+    const batch = arenaLikeBatch[player.id];
+    batch.likeCount += event.likeCount;
+    batch.comboLikes = comboLikes;
+    batch.heal += (support?.heal || 0);
+    batch.scoreGain += (support?.scoreGain || 0);
+    if (support?.respawned) batch.respawned = true;
+    
+    // Powerup logic dentro del batch
+    if (comboLikes >= GAME_CONFIG.arena.likeMiniPowerThreshold) {
+        batch.powerup = {
+            type: "buzzsaw",
+            duration: comboLikes >= GAME_CONFIG.arena.likeMegaPowerThreshold 
+                ? GAME_CONFIG.arena.likeMegaPowerDurationFrames 
+                : GAME_CONFIG.arena.likeMiniPowerDurationFrames
+        };
+    }
+
+    if (strike) {
+        batch.strike = strike;
+    }
+
+    // Telemetría
     emitArenaTelemetry("like", {
         userId: player.id,
         userName: player.name,
@@ -584,56 +626,55 @@ function handleArenaLike(event) {
         strikeTriggered: Boolean(strike),
         ko: Boolean(strike?.ko)
     });
-
-    if (support?.respawned) {
-        io.emit("arena:respawn", { userId: player.id, mode: "basic" });
-    }
-
-    if (support?.player && comboLikes >= GAME_CONFIG.arena.likeBurstThreshold) {
-        io.emit("arena:burst", {
-            x: support.player.x,
-            y: support.player.y,
-            count: comboLikes >= GAME_CONFIG.arena.likeMegaPowerThreshold ? 6 : 3,
-            color: comboLikes >= GAME_CONFIG.arena.likeMiniPowerThreshold ? "#7dd3fc" : "#bbf7d0"
-        });
-    }
-
-    if (comboLikes >= GAME_CONFIG.arena.likeMiniPowerThreshold) {
-        const duration = comboLikes >= GAME_CONFIG.arena.likeMegaPowerThreshold
-            ? GAME_CONFIG.arena.likeMegaPowerDurationFrames
-            : GAME_CONFIG.arena.likeMiniPowerDurationFrames;
-        io.emit("arena:powerup", {
-            userId: player.id,
-            type: "buzzsaw",
-            duration
-        });
-    }
-
-    if (strike) {
-        io.emit("arena:likeStrike", {
-            attacker: strike.attacker,
-            target: strike.target,
-            damage: strike.damage,
-            scoreLoss: strike.scoreLoss,
-            ko: strike.ko,
-            likeCount: event.likeCount,
-            comboLikes
-        });
-        if (strike.ko) {
-            io.emit("arena:ko", {
-                attackerId: strike.attacker.id,
-                targetId: strike.target.id
-            });
-        }
-    }
-
-    queueArenaState();
 }
+
+/** 
+ * Función para emitir el lote de likes a todos los clientes.
+ * Se llama periódicamente mediante setInterval.
+ */
+function flushArenaLikeBatch() {
+    const batchArray = Object.values(arenaLikeBatch);
+    if (batchArray.length === 0) return;
+
+    // Emitir el lote completo
+    io.emit("arena:likesBatch", batchArray);
+
+    // Procesar efectos visuales especiales que NO queremos que se pierdan (respawns, strikes, powerups)
+    batchArray.forEach(b => {
+        if (b.respawned) {
+             io.emit("arena:respawn", { userId: b.userId, mode: "basic" });
+        }
+        if (b.powerup) {
+            io.emit("arena:powerup", { userId: b.userId, type: b.powerup.type, duration: b.powerup.duration });
+        }
+        if (b.strike) {
+             io.emit("arena:likeStrike", {
+                attacker: b.strike.attacker,
+                target: b.strike.target,
+                damage: b.strike.damage,
+                scoreLoss: b.strike.scoreLoss,
+                ko: b.strike.ko,
+                likeCount: b.likeCount
+             });
+             if (b.strike.ko) {
+                 io.emit("arena:ko", { attackerId: b.userId, targetId: b.strike.target.id });
+             }
+        }
+    });
+
+    arenaLikeBatch = {}; // Limpiar lote
+    queueArenaState(); // CRÍTICO: Sincronizar jugadores nuevos que entraron por likes/taps
+}
+
+// Configurar el flush del lote cada 500ms
+setInterval(flushArenaLikeBatch, 300); // Reducido de 500ms a 300ms para latencia mínima
+// Fin de lógica de likes batching
 
 function handleArenaChat(event) {
     const text = event.comment.toUpperCase();
     const player = arena.ensurePlayer(event.user, "chat");
     if (!player) return;
+    if (player.isNewSession) { emitInstantJoin(player); player.isNewSession = false; }
 
     if (text.startsWith("ATAQUE @")) {
         const targetRaw = text.slice(8).trim();
@@ -680,12 +721,15 @@ function handleArenaChat(event) {
         io.emit("arena:respawn", { userId: player.id, mode: "basic" });
     }
 
+    const isVersusVote = /(milei|cristina|leon|kuka|lla|cfk|peluca|peron)/i.test(cleanComment);
+
     if (
         topArenaLeader?.id &&
         topArenaLeader.id === player.id &&
         cleanComment &&
         cleanComment.length >= 3 &&
-        !chatRequestedPower
+        !chatRequestedPower &&
+        !isVersusVote
     ) {
         if (arenaLeaderVoiceWindow.leaderId !== topArenaLeader.id) {
             arenaLeaderVoiceWindow = { leaderId: topArenaLeader.id, count: 0 };
@@ -700,6 +744,7 @@ function handleArenaChat(event) {
             });
         }
     }
+    queueArenaState(); // Asegurar que jugadores nuevos por chat también se sincronicen
 }
 
 // --- TIKTOK EVENT BINDING (Arena only) ---

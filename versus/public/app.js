@@ -29,37 +29,75 @@ let audioOn = false;
 
 const SFX = {
     chat: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-positive-interface-click-1112.mp3"),
-    hit: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-boxer-getting-hit-2055.mp3"), // Punch/Impact
+    hit:  new Audio("https://assets.mixkit.co/sfx/preview/mixkit-boxer-getting-hit-2055.mp3"),
     epic: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-cinematic-mystery-reveal-911.mp3"),
-    zap: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-electric-plasma-zap-3069.mp3"),
-    win: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-medieval-show-fanfare-announcement-226.mp3")
+    zap:  new Audio("https://assets.mixkit.co/sfx/preview/mixkit-electric-plasma-zap-3069.mp3"),
+    win:  new Audio("https://assets.mixkit.co/sfx/preview/mixkit-medieval-show-fanfare-announcement-226.mp3")
 };
+Object.values(SFX).forEach(s => s.volume = 0.6);
+
+// Himno Nacional Argentino — dominio público (Wikimedia Commons / ICPM)
+const bgMusic = new Audio("https://upload.wikimedia.org/wikipedia/commons/transcoded/8/8a/Himno_Nacional_Argentino_-_ICPM_%28instrumental%29.ogg/Himno_Nacional_Argentino_-_ICPM_%28instrumental%29.ogg.mp3");
+bgMusic.loop   = true;
+bgMusic.volume = 0.35; // Volumen subido para que se escuche claro
+
+// Habilitar audio explicitamente para esquivar bloqueos de Chrome
+let isUnlocked = false;
 
 function unlockAudio() {
+    if (isUnlocked) return;
+    isUnlocked = true;
     audioOn = true;
-    DOM.unblock.classList.add("hidden");
     
-    // Wake up all audios
+    // Despertar efectos de sonido
     Object.values(SFX).forEach(s => {
         s.volume = 0.6;
         s.play().then(() => { s.pause(); s.currentTime = 0; }).catch(()=>{});
     });
 
-    speak("¡Sistema de audio activado! ¡Que comience el combate!");
+    // Iniciar himno
+    bgMusic.play().catch(() => {});
 }
-DOM.unblock.addEventListener("click", unlockAudio);
+
+// Intentar autoplay al cargar, sino esperar primer clic silencioso (como en arena)
+bgMusic.play().then(() => {
+    isUnlocked = true; 
+    audioOn = true;
+}).catch(() => {
+    // Si lo bloquea, el primer touch/click/tecla lo destraba
+    document.addEventListener("click", unlockAudio, { once: true });
+    document.addEventListener("keydown", unlockAudio, { once: true });
+    document.addEventListener("touchstart", unlockAudio, { once: true });
+});
+
+// Función global para debug, la llama el botón del HTML
+window.testTTS = function() {
+    speak("Probando la síntesis de voz. ¡León contra Pingüina!");
+    play("epic");
+};
 
 if (new URLSearchParams(window.location.search).has('debug')) DOM.debug.classList.add("active");
 
-function speak(text) {
+function speak(text, isGift = false) {
     if (!audioOn) return;
-    if ('speechSynthesis' in window) {
-        if (window.speechSynthesis.pending > 2) return;
-        const u = new SpeechSynthesisUtterance(text);
-        u.lang = "es-AR";
-        u.rate = 1.35;
-        window.speechSynthesis.speak(u);
+    if (!window.speechSynthesis) return;
+    
+    // Si hay muchos mensajes pendientes, cancelamos para dar paso a lo nuevo (Prioridad Tiempo Real)
+    if (window.speechSynthesis.speaking && isGift) {
+        window.speechSynthesis.cancel();
+    } else if (window.speechSynthesis.pending > 3) {
+        // Si hay más de 3 en espera y no es un regalo, lo ignoramos para no acumular lag
+        if (!isGift) return;
     }
+    
+    // Limpiar emojis (Safer regex)
+    const cleanText = String(text).replace(/[^\x00-\x7FáéíóúÁÉÍÓÚñÑ\s\w.,!?¿¡-]/g, '');
+    if (!cleanText.trim()) return;
+
+    const u = new SpeechSynthesisUtterance(cleanText);
+    u.lang = "es-AR";
+    u.rate = 1.4; // Un poco más rápido para mantener el ritmo
+    window.speechSynthesis.speak(u);
 }
 
 function play(key) {
@@ -90,8 +128,9 @@ function spawn(data) {
     void ring.offsetWidth;
     ring.classList.add("impact");
 
-    if (data.diamonds > 0) {
+    if (data.type === 'like') {
         play("zap");
+    } else if (data.type === 'gift') {
         if (data.diamonds >= 500) play("epic");
         else play("hit");
     } else {
@@ -128,5 +167,5 @@ socket.on("versus:end", (data) => {
     play("win");
     const { winnerIds, state } = data;
     const w = state.fighters.find(f => f.id === winnerIds[0]);
-    if (w) speak(`¡Duelo finalizado! ¡${w.name} es el gran triunfador!`);
+    if (w) speak(`¡Duelo finalizado! ¡${w.name} es el gran triunfador!`, true);
 });

@@ -403,8 +403,8 @@ body.dramatic-vignette::before {
     top: 10px;
     left: 10px;
     right: 170px; /* Deja espacio para el Hall of Fame lateral */
-    height: 150px;
-    background: rgba(10, 10, 25, 0.85);
+    height: 240px;
+    background: rgba(10, 10, 25, 0.9);
     border: 2px solid rgba(255, 215, 0, 0.4);
     border-radius: 15px;
     backdrop-filter: blur(10px);
@@ -417,11 +417,11 @@ body.dramatic-vignette::before {
 
 .header-guide-title {
     font-family: 'Bungee', cursive;
-    font-size: 16px;
+    font-size: 28px;
     color: #ffd700;
     text-align: center;
-    margin-bottom: 8px;
-    letter-spacing: 2px;
+    margin-bottom: 12px;
+    letter-spacing: 3px;
 }
 
 .header-guide-items {
@@ -439,13 +439,13 @@ body.dramatic-vignette::before {
 }
 
 .h-icon {
-    font-size: 48px;
+    font-size: 100px;
     filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.7));
     animation: heartbeatZoom 1.5s infinite ease-in-out;
 }
 
 .h-label {
-    font-size: 13px;
+    font-size: 22px;
     font-weight: 800;
     color: #fff;
     text-transform: uppercase;
