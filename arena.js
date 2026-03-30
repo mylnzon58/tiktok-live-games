@@ -116,6 +116,8 @@ let lastClutchCueAt = 0;
 let lastFinalStretchCueAt = 0;
 let lastReentryCueAt = 0;
 let lastVisibleCompetitorCount = 0;
+let crowdZoomBaseScale = 1.0; // Zoom-out dinámico por cantidad de jugadores
+let lastCrowdCountUpdate = 0;
 let lastCompletedRoundWinner = null;
 let lastRoundWinnerHypeAt = 0;
 
@@ -285,17 +287,19 @@ function queueAnnouncement(text, options = {}) {
         const normalizedText = String(dedupeBase || "").trim().toLowerCase();
         
         // Evitaremos el deduplicado agresivo para regalos
-        if (!options.force && !options.isGift && normalizedText && normalizedText === lastAnnouncementText && (now - lastAnnouncementQueuedAt) < 2000) {
+        if (!window._lastAnnouncements) window._lastAnnouncements = {};
+        const dKey = options.dedupeKey || normalizedText;
+        if (!options.force && !options.isGift && (now - (window._lastAnnouncements[dKey] || 0)) < 2000) {
             return;
         }
         
         // Cola corta (5 mensajes) para evitar lag acumulado
-        if (!options.force && now - lastSpeechAt < minIntervalMs && speechQueue.length > 5) return;
+        if (!options.force && now - lastSpeechAt < minIntervalMs && speechQueue.length > 2) return;
 
         if (options.queueKey) {
             speechQueue = speechQueue.filter((entry) => entry.queueKey !== options.queueKey);
         }
-        lastAnnouncementText = normalizedText;
+        window._lastAnnouncements[options.dedupeKey || normalizedText] = now;
         lastAnnouncementQueuedAt = now;
         const newEntry = {
             text,
@@ -321,11 +325,16 @@ function queueAnnouncement(text, options = {}) {
             speechQueue.push(newEntry);
         }
 
-        // Hard cap: evitar que la cola crezca indefinidamente
-        while (speechQueue.length > 8) {
+        // Hard cap agresivo: Nunca tener más de 3 mensajes en cola para que siempre narre el PRESENTE
+        while (speechQueue.length > 2) {
+            // Intentar dropear cosas no críticas primero
             const dropIdx = speechQueue.findIndex(e => !e.isGift && !e.priority);
-            if (dropIdx >= 0) speechQueue.splice(dropIdx, 1);
-            else break;
+            if (dropIdx >= 0) {
+                speechQueue.splice(dropIdx, 1);
+            } else {
+                // Si todo es regalo/prioridad pero hay demasiados, dropeamos el más viejo (el último)
+                speechQueue.pop();
+            }
         }
 
         if (!speechTimer) {
@@ -539,294 +548,377 @@ function playCountdownBeep(seconds) {
 }
 
 const sfx = {
-    roseShot: () => {
-        if (!soundEnabled) return;
+    buzzsaw: (vol = 0.08, pitch = 1) => {
+        if (!soundEnabled || !audioCtx) return;
         const now = audioCtx.currentTime;
-        [980, 1320, 1760].forEach((freq, index) => {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain); gain.connect(masterAudioGain);
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(freq, now + index * 0.03);
-            gain.gain.setValueAtTime(0.18, now + index * 0.03);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + index * 0.03 + 0.12);
-            osc.start(now + index * 0.03);
-            osc.stop(now + index * 0.03 + 0.1);
-        });
-    },
-    shoot: () => {
-        if (!soundEnabled) return;
         const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain); gain.connect(masterAudioGain);
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.14, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.12);
-        osc.start(audioCtx.currentTime);
-        osc.stop(audioCtx.currentTime + 0.1);
-    },
-    hit: () => {
-        if (!soundEnabled) return;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain); gain.connect(masterAudioGain);
-        const now = audioCtx.currentTime;
-        const oscClick = audioCtx.createOscillator();
-        osc.connect(gain);
-        oscClick.connect(gain);
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(180, now);
-        osc.frequency.exponentialRampToValueAtTime(34, now + 0.18);
-        oscClick.type = 'triangle';
-        oscClick.frequency.setValueAtTime(540, now);
-        oscClick.frequency.exponentialRampToValueAtTime(120, now + 0.08);
-        gain.gain.setValueAtTime(0.35, now);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
-        osc.start(now);
-        oscClick.start(now);
-        osc.stop(now + 0.18);
-        oscClick.stop(now + 0.09);
-    },
-    explosion: () => {
-        if (!soundEnabled) return;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain); gain.connect(masterAudioGain);
+        const g = audioCtx.createGain();
         osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(60, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(1, audioCtx.currentTime + 0.6);
-        gain.gain.setValueAtTime(0.9, audioCtx.currentTime); // ¡DOPAMINA EXTREMA!
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
-        osc.start(audioCtx.currentTime);
-        osc.stop(audioCtx.currentTime + 0.6);
+        // Reducimos armónicos: solo 1 oscilador por sierra
+        osc.frequency.setValueAtTime(140 * pitch, now);
+        osc.frequency.exponentialRampToValueAtTime(100 * pitch, now + 0.12);
+        g.gain.setValueAtTime(vol * 0.45, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc.connect(g).connect(masterAudioGain);
+        osc.start(now); osc.stop(now + 0.12);
     },
-    lightning: () => {
-        if (!soundEnabled) return;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain); gain.connect(masterAudioGain);
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(420, audioCtx.currentTime);
-        osc.frequency.linearRampToValueAtTime(920, audioCtx.currentTime + 0.12);
-        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.22);
-        osc.start(audioCtx.currentTime);
-        osc.stop(audioCtx.currentTime + 0.22);
-    },
-    heal: (pitchMod = 1, force = false) => {
-        if (!soundEnabled) return;
-
-        // Throttling: máximo 10 sonidos de "pop" por segundo
-        const now = Date.now();
-        if (!force && lastHealSoundTime && (now - lastHealSoundTime < 100)) return;
-        lastHealSoundTime = now;
-
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain); gain.connect(masterAudioGain);
-
-        // Sonido tipo "Burbuja" o "Pop" limpio
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(800 * pitchMod, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(100 * pitchMod, audioCtx.currentTime + 0.05);
-
-        gain.gain.setValueAtTime(0.01, audioCtx.currentTime); // Casi total silencio para evitar fatiga auditiva
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
-
-        osc.start(audioCtx.currentTime);
-        osc.stop(audioCtx.currentTime + 0.05);
-    },
-    tick: () => {
-        if (!soundEnabled) return;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain); gain.connect(masterAudioGain);
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(720, audioCtx.currentTime + 0.05);
-        gain.gain.setValueAtTime(0.025, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
-        osc.start(audioCtx.currentTime);
-        osc.stop(audioCtx.currentTime + 0.05);
-    },
-    buzzsaw: (vol = 1) => {
-        if (!soundEnabled) return;
+    hit: (vol = 1) => {
+        if (!soundEnabled || !audioCtx) return;
         const now = audioCtx.currentTime;
-        const pulseOffsets = [0, 0.032, 0.064, 0.096];
-
-        pulseOffsets.forEach((offset, index) => {
-            const osc = audioCtx.createOscillator();
-            const oscNoise = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-
-            osc.connect(gain);
-            oscNoise.connect(gain);
-            gain.connect(masterAudioGain);
-
-            osc.type = 'square';
-            osc.frequency.setValueAtTime(96 + (index * 18), now + offset);
-            osc.frequency.linearRampToValueAtTime(132 + (index * 22), now + offset + 0.04);
-
-            oscNoise.type = 'sawtooth';
-            oscNoise.frequency.setValueAtTime(310 + (index * 45), now + offset);
-            oscNoise.frequency.linearRampToValueAtTime(510 + (index * 50), now + offset + 0.04);
-
-            gain.gain.setValueAtTime(0.035 * vol, now + offset);
-            gain.gain.exponentialRampToValueAtTime(0.0008 * vol, now + offset + 0.05);
-
-            osc.start(now + offset);
-            oscNoise.start(now + offset);
-            osc.stop(now + offset + 0.055);
-            oscNoise.stop(now + offset + 0.055);
-        });
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(10, now + 0.1);
+        g.gain.setValueAtTime(0.12 * vol, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+        osc.connect(g).connect(masterAudioGain);
+        osc.start(now); osc.stop(now + 0.1);
+    },
+    explosion: (vol = 1) => {
+        if (!soundEnabled || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(100, now);
+        osc.frequency.exponentialRampToValueAtTime(30, now + 0.25);
+        g.gain.setValueAtTime(0.25 * vol, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        osc.connect(g).connect(masterAudioGain);
+        osc.start(now); osc.stop(now + 0.25);
     },
     heavyExplosion: (vol = 1) => {
-        if (!soundEnabled) return;
+        if (!soundEnabled || !audioCtx) return;
         const now = audioCtx.currentTime;
         const osc = audioCtx.createOscillator();
-        const oscPunch = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain);
-        oscPunch.connect(gain);
-        gain.connect(masterAudioGain);
+        const g = audioCtx.createGain();
         osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(62, now);
-        osc.frequency.exponentialRampToValueAtTime(24, now + 0.5);
-        oscPunch.type = 'square';
-        oscPunch.frequency.setValueAtTime(118, now);
-        oscPunch.frequency.exponentialRampToValueAtTime(42, now + 0.12);
-        gain.gain.setValueAtTime(0.35 * vol, now); // DOPAMINA BOOST
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.52);
-        osc.start(now);
-        oscPunch.start(now);
-        osc.stop(now + 0.52);
-        oscPunch.stop(now + 0.14);
-    },
-    fire: () => {
-        if (!soundEnabled) return;
-        const now = audioCtx.currentTime;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain); gain.connect(masterAudioGain);
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(220, now);
-        osc.frequency.exponentialRampToValueAtTime(90, now + 0.35);
-        gain.gain.setValueAtTime(0.14, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-        osc.start(now);
-        osc.stop(now + 0.35);
+        osc.frequency.setValueAtTime(80, now);
+        osc.frequency.exponentialRampToValueAtTime(20, now + 0.4);
+        g.gain.setValueAtTime(0.4 * vol, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+        osc.connect(g).connect(masterAudioGain);
+        osc.start(now); osc.stop(now + 0.45);
     },
     jackpot: (vol = 1) => {
-        if (!soundEnabled) return;
+        if (!soundEnabled || !audioCtx) return;
         const now = audioCtx.currentTime;
-        // Sonido ascendente tipo tragamonedas (rápido y brillante)
-        [440, 554, 659, 880, 1108, 1318, 1760].forEach((f, i) => {
+        // Simplificado: solo 3 armónicos en lugar de 7 para ahorrar CPU
+        [440, 659, 880].forEach((f, i) => {
             const osc = audioCtx.createOscillator();
             const g = audioCtx.createGain();
             osc.type = 'square';
-            osc.frequency.setValueAtTime(f, now + i * 0.04);
-            g.gain.setValueAtTime(0.22 * vol, now + i * 0.04); // MÁS BRILLO
-            g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.04 + 0.1);
+            osc.frequency.setValueAtTime(f, now + i * 0.05);
+            g.gain.setValueAtTime(0.15 * vol, now + i * 0.05);
+            g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.05 + 0.15);
             osc.connect(g).connect(masterAudioGain);
-            osc.start(now + i * 0.04);
-            osc.stop(now + i * 0.04 + 0.12);
+            osc.start(now + i * 0.05); osc.stop(now + i * 0.05 + 0.15);
         });
     },
     powerUp: () => {
-        if (!soundEnabled) return;
+        if (!soundEnabled || !audioCtx) return;
         const now = audioCtx.currentTime;
         const osc = audioCtx.createOscillator();
         const g = audioCtx.createGain();
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(200, now);
-        osc.frequency.exponentialRampToValueAtTime(800, now + 0.3);
-        g.gain.setValueAtTime(0.1, now);
-        g.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        osc.frequency.exponentialRampToValueAtTime(800, now + 0.25);
+        g.gain.setValueAtTime(0.08, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
         osc.connect(g).connect(masterAudioGain);
-        osc.start(now);
-        osc.stop(now + 0.3);
+        osc.start(now); osc.stop(now + 0.25);
     },
-    galaxyBlast: (vol = 1) => {
-        if (!soundEnabled) return;
-        const now = audioCtx.currentTime;
-        [420, 620, 860, 1180].forEach((freq, i) => {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = i % 2 === 0 ? "triangle" : "sawtooth";
-            osc.frequency.setValueAtTime(freq, now + i * 0.035);
-            osc.frequency.exponentialRampToValueAtTime(freq * 0.6, now + i * 0.035 + 0.18);
-            gain.gain.setValueAtTime(0.15 * vol, now + i * 0.035);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.035 + 0.2);
-            osc.connect(gain).connect(masterAudioGain);
-            osc.start(now + i * 0.035);
-            osc.stop(now + i * 0.035 + 0.22);
-        });
-    },
-    lionRoar: (vol = 1) => {
-        if (!soundEnabled) return;
+    heal: (vol = 1) => {
+        if (!soundEnabled || !audioCtx) return;
         const now = audioCtx.currentTime;
         const osc = audioCtx.createOscillator();
-        const noise = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = "sawtooth";
-        noise.type = "square";
-        osc.frequency.setValueAtTime(96, now);
-        osc.frequency.exponentialRampToValueAtTime(42, now + 0.42);
-        noise.frequency.setValueAtTime(180, now);
-        noise.frequency.exponentialRampToValueAtTime(68, now + 0.28);
-        gain.gain.setValueAtTime(0.35 * vol, now); // SONIDO MÁS GRAVE E INTENSO
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
-        osc.connect(gain).connect(masterAudioGain);
-        noise.connect(gain).connect(masterAudioGain);
-        osc.start(now);
-        noise.start(now);
-        osc.stop(now + 0.45);
-        noise.stop(now + 0.3);
+        const g = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(500, now);
+        osc.frequency.exponentialRampToValueAtTime(900, now + 0.2);
+        g.gain.setValueAtTime(0.12 * vol, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc.connect(g).connect(masterAudioGain);
+        osc.start(now); osc.stop(now + 0.2);
     },
     universeCrash: (vol = 1) => {
-        if (!soundEnabled) return;
+        if (!soundEnabled || !audioCtx) return;
         const now = audioCtx.currentTime;
-        [54, 72, 96, 110].forEach((freq, i) => { // Agregamos una armónica extra
+        // Reducido a solo 2 osciladores potentes
+        [54, 72].forEach((f, i) => {
             const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
+            const g = audioCtx.createGain();
             osc.type = "sawtooth";
-            osc.frequency.setValueAtTime(freq, now + i * 0.04);
-            osc.frequency.exponentialRampToValueAtTime(20, now + i * 0.04 + 0.55);
-            gain.gain.setValueAtTime((0.35 - (i * 0.05)) * vol, now + i * 0.04); // VIBRACIÓN BESTIAL
-            gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.04 + 0.58);
-            osc.connect(gain).connect(masterAudioGain);
-            osc.start(now + i * 0.04);
-            osc.stop(now + i * 0.04 + 0.6);
+            osc.frequency.setValueAtTime(f, now);
+            osc.frequency.exponentialRampToValueAtTime(20, now + 0.5);
+            g.gain.setValueAtTime(0.3 * vol, now);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+            osc.connect(g).connect(masterAudioGain);
+            osc.start(now); osc.stop(now + 0.5);
         });
     },
     glide: (pitchMod = 1) => {
-        if (!soundEnabled) return;
+        if (!soundEnabled || !audioCtx) return;
         const now = audioCtx.currentTime;
         const osc = audioCtx.createOscillator();
-        const noise = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain);
-        noise.connect(gain);
-        gain.connect(masterAudioGain);
+        const g = audioCtx.createGain();
         osc.type = 'triangle';
-        noise.type = 'sawtooth';
         osc.frequency.setValueAtTime(120 * pitchMod, now);
-        osc.frequency.exponentialRampToValueAtTime(72 * pitchMod, now + 0.12);
-        noise.frequency.setValueAtTime(240 * pitchMod, now);
-        noise.frequency.exponentialRampToValueAtTime(130 * pitchMod, now + 0.12);
-        gain.gain.setValueAtTime(0.022, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-        osc.start(now);
-        noise.start(now);
-        osc.stop(now + 0.12);
-        noise.stop(now + 0.12);
+        osc.frequency.exponentialRampToValueAtTime(60 * pitchMod, now + 0.1);
+        g.gain.setValueAtTime(0.02, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+        osc.connect(g).connect(masterAudioGain);
+        osc.start(now); osc.stop(now + 0.1);
+    },
+    // --- GIFT SFX: Disparo de rosa/proyectil ---
+    roseShot: (vol = 1) => {
+        if (!soundEnabled || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        // Pew-pew brillante con sweep ascendente
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.exponentialRampToValueAtTime(1800, now + 0.06);
+        osc.frequency.exponentialRampToValueAtTime(400, now + 0.18);
+        g.gain.setValueAtTime(0.18 * vol, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc.connect(g).connect(masterAudioGain);
+        osc.start(now); osc.stop(now + 0.2);
+        // Sub-layer crujido
+        const osc2 = audioCtx.createOscillator();
+        const g2 = audioCtx.createGain();
+        osc2.type = 'square';
+        osc2.frequency.setValueAtTime(1400, now + 0.02);
+        osc2.frequency.exponentialRampToValueAtTime(200, now + 0.12);
+        g2.gain.setValueAtTime(0.06 * vol, now + 0.02);
+        g2.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+        osc2.connect(g2).connect(masterAudioGain);
+        osc2.start(now + 0.02); osc2.stop(now + 0.14);
+    },
+    // --- GIFT SFX: Fuego/Fireworks ---
+    fire: (vol = 1) => {
+        if (!soundEnabled || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        // Rugido de fuego: ruido filtrado + sub grave
+        const noise = audioCtx.createBufferSource();
+        const buf = getNoiseBuffer();
+        if (buf) {
+            noise.buffer = buf;
+            const hp = audioCtx.createBiquadFilter();
+            hp.type = 'bandpass'; hp.frequency.setValueAtTime(800, now); hp.Q.setValueAtTime(1.5, now);
+            const ng = audioCtx.createGain();
+            ng.gain.setValueAtTime(0.22 * vol, now);
+            ng.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+            noise.connect(hp).connect(ng).connect(masterAudioGain);
+            noise.start(now); noise.stop(now + 0.35);
+        }
+        const sub = audioCtx.createOscillator();
+        const sg = audioCtx.createGain();
+        sub.type = 'sawtooth';
+        sub.frequency.setValueAtTime(120, now);
+        sub.frequency.exponentialRampToValueAtTime(45, now + 0.3);
+        sg.gain.setValueAtTime(0.2 * vol, now);
+        sg.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+        sub.connect(sg).connect(masterAudioGain);
+        sub.start(now); sub.stop(now + 0.32);
+    },
+    // --- GIFT SFX: Rayo/Lightning ---
+    lightning: (vol = 1) => {
+        if (!soundEnabled || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        // Crack eléctrico: ruido + barrido descendente rápido
+        const noise = audioCtx.createBufferSource();
+        const buf = getNoiseBuffer();
+        if (buf) {
+            noise.buffer = buf;
+            const bp = audioCtx.createBiquadFilter();
+            bp.type = 'highpass'; bp.frequency.setValueAtTime(3000, now);
+            const ng = audioCtx.createGain();
+            ng.gain.setValueAtTime(0.28 * vol, now);
+            ng.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+            noise.connect(bp).connect(ng).connect(masterAudioGain);
+            noise.start(now); noise.stop(now + 0.15);
+        }
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(2200, now);
+        osc.frequency.exponentialRampToValueAtTime(80, now + 0.18);
+        g.gain.setValueAtTime(0.2 * vol, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+        osc.connect(g).connect(masterAudioGain);
+        osc.start(now); osc.stop(now + 0.22);
+    },
+    // --- GIFT SFX: Rugido del león ---
+    lionRoar: (vol = 1) => {
+        if (!soundEnabled || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        // Rugido profundo: sub wobble + distorsión media
+        [40, 58, 78].forEach((f, i) => {
+            const osc = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            osc.type = i === 0 ? 'sawtooth' : 'square';
+            osc.frequency.setValueAtTime(f * 1.3, now);
+            osc.frequency.exponentialRampToValueAtTime(f * 0.5, now + 0.55);
+            g.gain.setValueAtTime(0.28 * vol, now + i * 0.04);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+            osc.connect(g).connect(masterAudioGain);
+            osc.start(now + i * 0.04); osc.stop(now + 0.6);
+        });
+        // Crack agudo arriba
+        const crackOsc = audioCtx.createOscillator();
+        const crackG = audioCtx.createGain();
+        crackOsc.type = 'sawtooth';
+        crackOsc.frequency.setValueAtTime(300, now + 0.05);
+        crackOsc.frequency.exponentialRampToValueAtTime(60, now + 0.45);
+        crackG.gain.setValueAtTime(0.15 * vol, now + 0.05);
+        crackG.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+        crackOsc.connect(crackG).connect(masterAudioGain);
+        crackOsc.start(now + 0.05); crackOsc.stop(now + 0.5);
+    },
+    // --- GIFT SFX: Galaxia Premium ---
+    galaxyBlast: (vol = 1) => {
+        if (!soundEnabled || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        // Sweep cósmico ascendente + shimmer
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(200, now);
+        osc.frequency.exponentialRampToValueAtTime(3000, now + 0.2);
+        osc.frequency.exponentialRampToValueAtTime(600, now + 0.4);
+        g.gain.setValueAtTime(0.18 * vol, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+        osc.connect(g).connect(masterAudioGain);
+        osc.start(now); osc.stop(now + 0.45);
+        // Shimmer layer
+        const sh = audioCtx.createOscillator();
+        const shg = audioCtx.createGain();
+        sh.type = 'triangle';
+        sh.frequency.setValueAtTime(1600, now + 0.08);
+        sh.frequency.exponentialRampToValueAtTime(4000, now + 0.22);
+        sh.frequency.exponentialRampToValueAtTime(800, now + 0.4);
+        shg.gain.setValueAtTime(0.1 * vol, now + 0.08);
+        shg.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
+        sh.connect(shg).connect(masterAudioGain);
+        sh.start(now + 0.08); sh.stop(now + 0.42);
+    },
+    // --- BOMBA: Explosión de cluster bomb ---
+    bombExplosion: (vol = 1) => {
+        if (!soundEnabled || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        // Boom grave + crack agudo
+        const sub = audioCtx.createOscillator();
+        const sg = audioCtx.createGain();
+        sub.type = 'sawtooth';
+        sub.frequency.setValueAtTime(110, now);
+        sub.frequency.exponentialRampToValueAtTime(25, now + 0.3);
+        sg.gain.setValueAtTime(0.35 * vol, now);
+        sg.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+        sub.connect(sg).connect(masterAudioGain);
+        sub.start(now); sub.stop(now + 0.32);
+        const crack = audioCtx.createOscillator();
+        const cg = audioCtx.createGain();
+        crack.type = 'square';
+        crack.frequency.setValueAtTime(900, now);
+        crack.frequency.exponentialRampToValueAtTime(50, now + 0.12);
+        cg.gain.setValueAtTime(0.15 * vol, now);
+        cg.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+        crack.connect(cg).connect(masterAudioGain);
+        crack.start(now); crack.stop(now + 0.14);
+    },
+    // --- BOMBA: Rebote ---
+    bombBounce: (vol = 0.5) => {
+        if (!soundEnabled || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(350, now);
+        osc.frequency.exponentialRampToValueAtTime(180, now + 0.08);
+        g.gain.setValueAtTime(0.1 * vol, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+        osc.connect(g).connect(masterAudioGain);
+        osc.start(now); osc.stop(now + 0.1);
+    },
+    // --- SFX Disparo genérico ---
+    shoot: (vol = 0.6) => {
+        if (!soundEnabled || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(500, now);
+        osc.frequency.exponentialRampToValueAtTime(200, now + 0.08);
+        g.gain.setValueAtTime(0.08 * vol, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+        osc.connect(g).connect(masterAudioGain);
+        osc.start(now); osc.stop(now + 0.1);
+    },
+    // --- SFX Victoria ---
+    victory: (vol = 1) => {
+        if (!soundEnabled || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        [523, 659, 784, 1047].forEach((f, i) => {
+            const osc = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(f, now + i * 0.08);
+            g.gain.setValueAtTime(0.12 * vol, now + i * 0.08);
+            g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.08 + 0.2);
+            osc.connect(g).connect(masterAudioGain);
+            osc.start(now + i * 0.08); osc.stop(now + i * 0.08 + 0.2);
+        });
+    },
+    // --- SFX Derrota ---
+    defeat: (vol = 1) => {
+        if (!soundEnabled || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.exponentialRampToValueAtTime(80, now + 0.4);
+        g.gain.setValueAtTime(0.15 * vol, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+        osc.connect(g).connect(masterAudioGain);
+        osc.start(now); osc.stop(now + 0.45);
     }
 };
 
-function playSound(type, param) {
-    if (sfx[type]) sfx[type](param);
+// --- AUDIO OPTIMIZATION: VOICE LIMITER & THROTTLER ---
+const activeVoices = new Set();
+const lastSoundTimes = {};
+const VOICE_LIMIT = 14; // Máximo 14 efectos simultáneos para evitar saturación
+
+function playSound(type, ...args) {
+    if (!soundEnabled || !audioCtx || audioCtx.state === 'suspended') return;
+
+    const now = Date.now();
+    // Throttle dinámico: sonidos comunes tienen más espera, regalos menos
+    const highPriority = ["jackpot", "powerUp", "universeCrash", "lionRoar", "heavyExplosion", "victory", "defeat"];
+    const cooldown = highPriority.includes(type) ? 25 : 55; 
+
+    if (lastSoundTimes[type] && (now - lastSoundTimes[type] < cooldown)) return;
+    lastSoundTimes[type] = now;
+
+    // Polyphony Limit
+    if (activeVoices.size >= VOICE_LIMIT && !highPriority.includes(type)) return;
+
+    const voiceId = Symbol(type);
+    activeVoices.add(voiceId);
+
+    try {
+        if (sfx[type]) sfx[type](...args);
+    } catch (e) {
+        console.warn("SFX Error:", type, e);
+    } finally {
+        // Duración aproximada para liberar el canal de voz
+        const duration = type.includes("Explosion") ? 800 : 350;
+        setTimeout(() => activeVoices.delete(voiceId), duration);
+    }
 }
 
 // ==========================================
@@ -834,104 +926,123 @@ function playSound(type, param) {
 // ==========================================
 let nextNoteTime = 0;
 let currentNote = 0;
+// --- AUDIO ENGINE: NEW ADDICTIVE TECH-PHONK BGM ---
 let bgmTimerID;
 let isBgmPlaying = false;
+let noiseBuffer = null;
 
-// Escalas estilo 8-bit Dopamina / Boss Battle - MÁS ADICTIVA Y HEROICA
-// Nueva escala Phrygian Dominant (A#, A, G, F# feel) - Tensa y Cyberpunk
-const arp1 = [466.16, 440.00, 392.00, 369.99, 392.00, 440.00]; 
-const arp2 = [349.23, 311.13, 293.66, 261.63, 293.66, 311.13]; 
-const arp3 = [233.08, 220.00, 196.00, 185.00, 196.00, 220.00]; 
-const arp4 = [466.16, 554.37, 622.25, 698.46, 622.25, 554.37]; 
+function getNoiseBuffer() {
+    if (noiseBuffer) return noiseBuffer;
+    if (!audioCtx) return null;
+    const bufferSize = audioCtx.sampleRate * 1;
+    noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+        output[i] = Math.random() * 2 - 1;
+    }
+    return noiseBuffer;
+}
 
-const sequence = [
-    ...Array(16).fill(0).map((_, i) => ({ arp: arp1[i % arp1.length], bass: 116.54 })), // A#
-    ...Array(16).fill(0).map((_, i) => ({ arp: arp2[i % arp2.length], bass: 87.31 })),  // F
-    ...Array(16).fill(0).map((_, i) => ({ arp: arp3[i % arp3.length], bass: 58.27 })),  // A# octave down
-    ...Array(16).fill(0).map((_, i) => ({ arp: arp4[i % arp4.length], bass: 138.59 }))  // C# heroic tension
-];
+// Escala A-Minor Bouncy (A, C, D, E, G) - Estilo Phonk/Retro
+const riff1 = [440.0, 440.0, 523.25, 587.33, 659.25, 587.33, 523.25, 440.0];
+const bass1 = [55.0, 55.0, 65.41, 73.42, 82.41, 73.42, 65.41, 55.0];
 
 function scheduleNote(step, time) {
-    if (!soundEnabled) return;
-    const { arp, bass } = sequence[step];
+    if (!soundEnabled || !audioCtx) return;
     
-    // Volumen REDUCIDO para que sea muy finitamente de fondo (suave)
-    let bgmEnergy, arpGain, bassGain;
-    if (currentRoundSeconds <= 10) {
-        // CUENTA REGRESIVA: Un poco más alto pero sin aturdir
-        bgmEnergy = 1.15;
-        arpGain = 0.022; // Reducido al 50%
-        bassGain = 0.04;
-    } else if (currentRoundSeconds <= 30) {
-        bgmEnergy = 1.05;
-        arpGain = 0.011;
-        bassGain = 0.02;
-    } else if (currentRoundSeconds <= 90) {
-        bgmEnergy = 0.95;
-        arpGain = 0.007;
-        bassGain = 0.012;
-    } else {
-        bgmEnergy = 0.90;
-        arpGain = 0.005; // Muy suave de fondo
-        bassGain = 0.009;
+    const beatInBar = step % 16;
+    const patternStep = step % 8;
+    const freq = riff1[patternStep];
+    const bFreq = bass1[patternStep];
+
+    const BGM_VOL = 0.28; // Volumen "adictivo" pero controlado
+
+    // 1. KICK (Punchy Sub) - Pasos 0, 4, 8, 12
+    if (beatInBar % 4 === 0) {
+        const oscK = audioCtx.createOscillator();
+        const gainK = audioCtx.createGain();
+        oscK.type = 'sine';
+        oscK.frequency.setValueAtTime(150, time);
+        oscK.frequency.exponentialRampToValueAtTime(40, time + 0.12);
+        gainK.gain.setValueAtTime(BGM_VOL * 0.8, time);
+        gainK.gain.exponentialRampToValueAtTime(0.001, time + 0.12);
+        oscK.connect(gainK); gainK.connect(masterAudioGain);
+        oscK.start(time); oscK.stop(time + 0.12);
     }
 
-    // Synth Lead (Melodía Rápida Arpegiada)
-    const oscArp = audioCtx.createOscillator();
-    const gainArp = audioCtx.createGain();
-    oscArp.type = 'square';
-    oscArp.frequency.value = arp * (1.8 + (bgmEnergy * 0.18));
-
-    // Decaimiento corto para dar efecto de 8-bits percusivo
-    gainArp.gain.setValueAtTime(arpGain, time);
-    gainArp.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
-
-    oscArp.connect(gainArp); gainArp.connect(masterAudioGain);
-    oscArp.start(time); oscArp.stop(time + 0.1);
-
-    // Bajo 8-Bits (A tiempo de Octavos - Ritmo constante)
-    if (step % 2 === 0) {
-        const oscBass = audioCtx.createOscillator();
-        const gainBass = audioCtx.createGain();
-        oscBass.type = 'sawtooth';
-        oscBass.frequency.value = (bass / 2) * bgmEnergy; // Bien grave
-
-        gainBass.gain.setValueAtTime(bassGain, time);
-        gainBass.gain.exponentialRampToValueAtTime(0.001, time + 0.2);
-
-        oscBass.connect(gainBass); gainBass.connect(masterAudioGain);
-        oscBass.start(time); oscBass.stop(time + 0.2);
+    // 2. SNARE / CLAP (Noise) - Pasos 4, 12
+    if (beatInBar % 8 === 4) {
+        const noise = audioCtx.createBufferSource();
+        const buf = getNoiseBuffer();
+        if (buf) {
+            noise.buffer = buf;
+            const noiseFilter = audioCtx.createBiquadFilter();
+            noiseFilter.type = 'bandpass';
+            noiseFilter.frequency.setValueAtTime(1200, time);
+            const noiseGain = audioCtx.createGain();
+            noiseGain.gain.setValueAtTime(BGM_VOL * 0.4, time);
+            noiseGain.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
+            noise.connect(noiseFilter); noiseFilter.connect(noiseGain); 
+            noiseGain.connect(masterAudioGain);
+            noise.start(time); noise.stop(time + 0.1);
+        }
     }
 
-    // Snare simulado 8-bit (Ruido blanco simple c/ onda muy grave que decae veloz)
-    if (step % 8 === 4) {
-        const oscSnare = audioCtx.createOscillator();
-        const gainSnare = audioCtx.createGain();
-        oscSnare.type = 'square';
-        oscSnare.frequency.setValueAtTime(400, time);
-        oscSnare.frequency.exponentialRampToValueAtTime(10, time + 0.1);
-
-        const snareVol = currentRoundSeconds <= 10 ? 0.05 : 0.015;
-        gainSnare.gain.setValueAtTime(snareVol, time);
-        gainSnare.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
-
-        oscSnare.connect(gainSnare); gainSnare.connect(masterAudioGain);
-        oscSnare.start(time); oscSnare.stop(time + 0.1);
+    // 3. HI-HAT (Short Noise) - Todos los contratiempos (pasos impares)
+    if (beatInBar % 2 === 1) {
+        const hh = audioCtx.createBufferSource();
+        const buf = getNoiseBuffer();
+        if (buf) {
+            hh.buffer = buf;
+            const hhFilter = audioCtx.createBiquadFilter();
+            hhFilter.type = 'highpass';
+            hhFilter.frequency.setValueAtTime(7000, time);
+            const hhGain = audioCtx.createGain();
+            hhGain.gain.setValueAtTime(BGM_VOL * 0.15, time);
+            hhGain.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
+            hh.connect(hhFilter); hhFilter.connect(hhGain); 
+            hhGain.connect(masterAudioGain);
+            hh.start(time); hh.stop(time + 0.04);
+        }
     }
+
+    // 4. BASS (Phonk Style Saw)
+    const oscB = audioCtx.createOscillator();
+    const gainB = audioCtx.createGain();
+    oscB.type = 'sawtooth';
+    oscB.frequency.setValueAtTime(bFreq, time);
+    const lowPass = audioCtx.createBiquadFilter();
+    lowPass.type = 'lowpass';
+    lowPass.frequency.setValueAtTime(400, time);
+    gainB.gain.setValueAtTime(BGM_VOL * 0.25, time);
+    gainB.gain.linearRampToValueAtTime(BGM_VOL * 0.15, time + 0.08);
+    gainB.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
+    oscB.connect(lowPass); lowPass.connect(gainB); gainB.connect(masterAudioGain);
+    oscB.start(time); oscB.stop(time + 0.15);
+
+    // 5. LEAD MELODY (Bouncy Square)
+    const oscL = audioCtx.createOscillator();
+    const gainL = audioCtx.createGain();
+    oscL.type = 'square';
+    oscL.frequency.setValueAtTime(freq, time);
+    gainL.gain.setValueAtTime(BGM_VOL * 0.08, time);
+    gainL.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
+    oscL.connect(gainL); gainL.connect(masterAudioGain);
+    oscL.start(time); oscL.stop(time + 0.1);
 }
 
 function scheduler() {
     if (!isBgmPlaying) return;
-    // Programa notas hasta 100ms en el futuro para mantener la cadencia exacta
     while (nextNoteTime < audioCtx.currentTime + 0.1) {
         scheduleNote(currentNote, nextNoteTime);
-        // Tempo: muy rápido en countdown, normal el resto
-        const secondsPerBeat = currentRoundSeconds <= 10 ? 0.075 : (currentRoundSeconds <= 30 ? 0.094 : (currentRoundSeconds <= 90 ? 0.102 : 0.116));
-        nextNoteTime += secondsPerBeat;
-        currentNote = (currentNote + 1) % sequence.length;
+        const tempoFactor = currentRoundSeconds <= 15 ? 0.85 : 1.0;
+        const secondsPerStep = 0.117 * tempoFactor; 
+        nextNoteTime += secondsPerStep;
+        currentNote = (currentNote + 1) % 64; 
     }
     bgmTimerID = setTimeout(scheduler, 25);
 }
+
 
 function startBgm() {
     if (isBgmPlaying) return;
@@ -955,6 +1066,7 @@ let particles = [];
 let lightningBolts = [];
 let hazards = []; // Elementos peligrosos en el mapa como sierras y lasers
 let ambientParticles = []; // Partículas ambientales de fondo
+let bombs = []; // Bombas rebotantes lanzadas por regalos
 let positionBatch = {}; // Lote de posiciones para enviar al servidor
 
 let lastHealSoundTime = 0;
@@ -975,6 +1087,7 @@ const MAX_FLOATING_TEXTS = 30;
 const MAX_PROJECTILES = 28;
 const MAX_HAZARDS = 10;
 const MAX_SHOCKWAVES = 10;
+const MAX_BOMBS = 20;
 const FLOATING_TEXT_INTERVAL_MS = 90;
 const ANNOUNCER_INTERVAL_MS = 240;
 
@@ -1544,8 +1657,8 @@ class Player {
             } else {
                 shrinkFactor = 0.75; // Ligeramente reducido
             }
-            const isLeader = (roundRanking[0] && roundRanking[0].id === this.id) || (this.score >= 1000) || (this.victories > 0);
-            this.opacity = isLeader ? 0.92 : Math.max(0.15, 1.0 - (idleFor / 50)); // Se va haciendo transparente solo si no es líder
+            const isLeader = (roundRanking[0] && roundRanking[0].id === this.id) || (this.score >= 200) || (this.victories > 0);
+            this.opacity = isLeader ? 0.92 : Math.max(0.25, 1.0 - (idleFor / 150)); // Se va haciendo transparente solo si no es líder
             const idleFloor = Math.max(PLAYER_RADIUS * 0.3, targetRadius * shrinkFactor);
             this.currentRadius += (idleFloor - this.currentRadius) * 0.06;
             this.vx *= 0.995;
@@ -1600,7 +1713,19 @@ class Player {
             const sawPulseEveryMs = Math.max(60, 118 - Math.min(42, this.engagement * 1.6));
             if (now - (this.lastSawAudioAt || 0) >= sawPulseEveryMs) {
                 this.lastSawAudioAt = now;
-                playSound("buzzsaw", 0.12); // Aumentado para que sea siempre audible pero sutil
+                const multiplier = 1 + (passiveSawTier * 0.5) + Math.min(1.5, (this.score || 0) / 10000); // RPM Dinámico
+                
+                // MÉRITOCRACIA ACÚSTICA: El limitador global deja pasar al jugador si es el más imponente
+                // de los últimos 80ms, haciendo que los gigantes siempre ahoguen el sonido de los chicos.
+                if (now - (window.globalLastPassiveSawAt || 0) > 80) {
+                    window.globalLastPassiveSawAt = now;
+                    window.globalMaxSawRPM = multiplier;
+                    playSound("buzzsaw", 0.06, multiplier); 
+                } else if (multiplier > (window.globalMaxSawRPM || 0)) {
+                    window.globalLastPassiveSawAt = now;
+                    window.globalMaxSawRPM = multiplier;
+                    playSound("buzzsaw", 0.08, multiplier); 
+                }
             }
         }
 
@@ -2132,7 +2257,17 @@ class Player {
 
         this.hp = Math.max(this.hp - finalAmt, 0);
         this.flash = 1;
-        spawnFloatingText(`-${Math.floor(finalAmt)}`, this.x, this.y, isSuddenDeath ? "#ff0000" : "#ff4757");
+        
+        // PÉRDIDA DE PUNTOS VISUAL INMEDIATA (Predicción cliente)
+        if (!isUnderdog) {
+            const simulatedScoreLoss = Math.max(1, Math.round(finalAmt * 0.1)); // Basado en damageScoreLossRatio del server
+            this.score = Math.max(0, (this.score || 0) - simulatedScoreLoss);
+            this.standingScore = Math.max(0, (this.standingScore || 0) - simulatedScoreLoss);
+            this.scorePop = 1.0;
+            spawnFloatingText(`-${Math.floor(simulatedScoreLoss)} PTS`, this.x, this.y - 40, "#fca5a5");
+        }
+
+        spawnFloatingText(`-${Math.floor(finalAmt)} HP`, this.x, this.y, isSuddenDeath ? "#ff0000" : "#ff4757");
         syncStateToServer(attackerId && players[attackerId] ? players[attackerId] : this);
 
         if (this.hp <= 0 && this.state !== "ELIMINATED") {
@@ -2327,6 +2462,293 @@ function spawnProjectileBurst(attacker, target, count, totalDamage, color, optio
     }
 }
 
+// ==========================================
+// BOMBA REBOTANTE (Cluster Bomb System)
+// ==========================================
+class Bomb {
+    constructor(x, y, attackerId, options = {}) {
+        this.x = x;
+        this.y = y;
+        this.attackerId = attackerId;
+        this.vx = options.vx || (Math.random() - 0.5) * 14;
+        this.vy = options.vy || -(Math.random() * 8 + 6);
+        this.radius = options.radius || 16;
+        this.damage = options.damage || 40;
+        this.color = options.color || "#ff6b00";
+        this.bounces = options.bounces || 3;
+        this.life = options.life || 180; // 3 seg a 60fps
+        this.gravity = 0.35;
+        this.friction = 0.92;
+        this.pulsePhase = Math.random() * Math.PI * 2;
+        this.active = true;
+        this.splashRadius = options.splashRadius || 80;
+        this.bombLabel = options.bombLabel || "💣";
+        this.knockbackForce = options.knockbackForce || 8;
+        this.tier = options.tier || "small";
+    }
+    update() {
+        if (!this.active) return;
+        this.vy += this.gravity;
+        this.x += this.vx;
+        this.y += this.vy;
+        this.life--;
+        this.pulsePhase += 0.2;
+
+        // Rebote en paredes del arena
+        const b = getArenaBounds();
+        let curRight = b.right;
+        if (this.y < 530) curRight = Math.min(curRight, 645);
+
+        let didBounce = false;
+        if (this.x - this.radius < b.left) {
+            this.x = b.left + this.radius; this.vx = Math.abs(this.vx) * this.friction; didBounce = true;
+        } else if (this.x + this.radius > curRight) {
+            this.x = curRight - this.radius; this.vx = -Math.abs(this.vx) * this.friction; didBounce = true;
+        }
+        if (this.y + this.radius > b.bottom) {
+            this.y = b.bottom - this.radius; this.vy = -Math.abs(this.vy) * this.friction; didBounce = true;
+        } else if (this.y - this.radius < b.top) {
+            this.y = b.top + this.radius; this.vy = Math.abs(this.vy) * this.friction; didBounce = true;
+        }
+
+        // Rebote con jugadores: empuja y daña
+        for (const id in players) {
+            if (id === this.attackerId || !players[id] || players[id].hp <= 0 || players[id].state === "ELIMINATED") continue;
+            const p = players[id];
+            const dx = p.x - this.x;
+            const dy = p.y - this.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const hitDist = p.currentRadius + this.radius;
+            if (dist < hitDist && dist > 0) {
+                // Empujar al jugador lejos (knockback)
+                const nx = dx / dist;
+                const ny = dy / dist;
+                p.vx += nx * this.knockbackForce;
+                p.vy += ny * this.knockbackForce;
+                // Rebotar la bomba
+                this.vx = -nx * Math.abs(this.vx) * 0.7;
+                this.vy = -ny * Math.abs(this.vy) * 0.7;
+                this.bounces--;
+                didBounce = true;
+                // Efecto visual del golpe
+                playSound("bombBounce", 0.8);
+                createExplosion(this.x, this.y, this.color, { count: 8, speed: 6, shake: 3 });
+                spawnFloatingText("💥 PUSH!", (this.x + p.x) / 2, (this.y + p.y) / 2, "#ffaa00");
+                p.takeDamage(Math.floor(this.damage * 0.3), this.attackerId);
+            }
+        }
+
+        if (didBounce) {
+            this.bounces--;
+            playSound("bombBounce", 0.5);
+            // Partículas de rebote
+            for (let i = 0; i < 4; i++) {
+                pushParticle({
+                    x: this.x, y: this.y,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: (Math.random() - 0.5) * 4,
+                    life: 0.5, size: 3 + Math.random() * 4,
+                    color: this.color
+                });
+            }
+        }
+
+        // Estela de chispas
+        if (Math.random() < 0.4) {
+            pushParticle({
+                x: this.x + (Math.random() - 0.5) * this.radius,
+                y: this.y + (Math.random() - 0.5) * this.radius,
+                vx: (Math.random() - 0.5) * 2,
+                vy: -Math.random() * 3 - 1,
+                life: 0.6,
+                size: 4 + Math.random() * 5,
+                color: Math.random() > 0.5 ? this.color : "#ffd166"
+            });
+        }
+
+        // Explotar cuando se agotan rebotes o vida
+        if (this.bounces <= 0 || this.life <= 0) {
+            this.explode();
+        }
+    }
+    explode() {
+        this.active = false;
+        playSound("bombExplosion", Math.min(2.0, 0.8 + (this.damage / 100)));
+        createExplosion(this.x, this.y, this.color, {
+            count: Math.min(60, 20 + Math.floor(this.damage / 3)),
+            speed: Math.min(18, 10 + this.damage / 20),
+            shake: Math.min(30, 8 + this.damage / 8)
+        });
+        pushShockwave({ x: this.x, y: this.y, r: this.splashRadius, opacity: 0.9, color: this.color });
+        pushShockwave({ x: this.x, y: this.y, r: this.splashRadius * 0.5, opacity: 0.7, color: "#fff" });
+
+        // Splash damage + knockback a todos dentro del radio
+        for (const id in players) {
+            if (!players[id] || players[id].hp <= 0 || players[id].state === "ELIMINATED") continue;
+            const p = players[id];
+            const dx = p.x - this.x;
+            const dy = p.y - this.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < this.splashRadius + p.currentRadius) {
+                const falloff = 1 - Math.min(1, dist / (this.splashRadius + p.currentRadius));
+                const splashDmg = Math.floor(this.damage * falloff);
+                if (splashDmg > 0) {
+                    p.takeDamage(splashDmg, this.attackerId);
+                    // Knockback proporcional a la cercanía
+                    if (dist > 0) {
+                        const nx = dx / dist;
+                        const ny = dy / dist;
+                        const force = this.knockbackForce * falloff * 1.5;
+                        p.vx += nx * force;
+                        p.vy += ny * force;
+                    }
+                    spawnFloatingText(`💣 -${splashDmg}`, p.x, p.y - 30, "#ff4444");
+                }
+            }
+        }
+    }
+    draw() {
+        if (!this.active) return;
+        ctx.save();
+        const pulse = 1 + Math.sin(this.pulsePhase) * 0.15;
+        const r = this.radius * pulse;
+
+        // Glow
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, r * 1.8, 0, Math.PI * 2);
+        const glowGrad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, r * 1.8);
+        glowGrad.addColorStop(0, this.color + "88");
+        glowGrad.addColorStop(1, "transparent");
+        ctx.fillStyle = glowGrad;
+        ctx.fill();
+
+        // Cuerpo
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+        const bodyGrad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, r);
+        bodyGrad.addColorStop(0, "#fff");
+        bodyGrad.addColorStop(0.3, this.color);
+        bodyGrad.addColorStop(1, "#222");
+        ctx.fillStyle = bodyGrad;
+        ctx.fill();
+
+        // Icono
+        ctx.font = `bold ${r * 1.6}px Arial`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(this.bombLabel, this.x, this.y);
+
+        // Mecha/chispa
+        const mechaX = this.x + Math.cos(this.pulsePhase * 3) * r * 0.6;
+        const mechaY = this.y - r;
+        ctx.beginPath();
+        ctx.arc(mechaX, mechaY, 3 + Math.sin(this.pulsePhase * 5) * 2, 0, Math.PI * 2);
+        ctx.fillStyle = Math.sin(this.pulsePhase * 8) > 0 ? "#ff0" : "#f80";
+        ctx.fill();
+
+        ctx.restore();
+    }
+}
+
+function pushBomb(bomb) {
+    if (bombs.length >= MAX_BOMBS) bombs.shift();
+    bombs.push(bomb);
+}
+
+// ==========================================
+// KNOCKBACK: Empujar jugadores cercanos por impacto de regalo
+// ==========================================
+function applyGiftKnockback(epicenterX, epicenterY, knockbackForce, knockbackRadius, attackerId) {
+    for (const id in players) {
+        if (id === attackerId || !players[id] || players[id].hp <= 0 || players[id].state === "ELIMINATED") continue;
+        const p = players[id];
+        const dx = p.x - epicenterX;
+        const dy = p.y - epicenterY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < knockbackRadius + p.currentRadius && dist > 0) {
+            const falloff = 1 - Math.min(1, dist / (knockbackRadius + p.currentRadius));
+            const nx = dx / dist;
+            const ny = dy / dist;
+            const force = knockbackForce * falloff;
+            p.vx += nx * force;
+            p.vy += ny * force;
+            // Efecto visual empujado
+            if (force > 3) {
+                pushParticle({
+                    x: p.x, y: p.y,
+                    vx: nx * force * 0.5,
+                    vy: ny * force * 0.5,
+                    life: 0.5, size: 6 + force,
+                    color: "#ffaa00"
+                });
+                if (force > 6) {
+                    spawnFloatingText("PUSH!", p.x, p.y - p.currentRadius, "#ffcc00");
+                }
+            }
+        }
+    }
+}
+
+// ==========================================
+// CLUSTER BOMBS: Lanzar bombas rebotantes escaladas por tier de regalo
+// ==========================================
+function spawnGiftBombs(attacker, target, diamondsTotal, giftValue, color) {
+    // Cantidad de bombas escalada por valor del regalo
+    let bombCount, bombDamage, bombRadius, bounces, splashRadius, knockbackForce, bombLabel;
+    if (giftValue >= 30000) {
+        // UNIVERSO: Armagedón
+        bombCount = 12; bombDamage = 180; bombRadius = 28; bounces = 5;
+        splashRadius = 200; knockbackForce = 20; bombLabel = "🌌";
+    } else if (giftValue >= 10000) {
+        // LEÓN: Bombardeo pesado
+        bombCount = 8; bombDamage = 120; bombRadius = 24; bounces = 4;
+        splashRadius = 160; knockbackForce = 16; bombLabel = "🦁";
+    } else if (giftValue >= 1000) {
+        // GALAXIA+: Cluster serio
+        bombCount = 5; bombDamage = 70; bombRadius = 20; bounces = 4;
+        splashRadius = 120; knockbackForce = 12; bombLabel = "⚡";
+    } else if (giftValue >= 100) {
+        // MEDIA: Bombas decentes
+        bombCount = 3; bombDamage = 40; bombRadius = 18; bounces = 3;
+        splashRadius = 90; knockbackForce = 9; bombLabel = "🔥";
+    } else if (giftValue >= 10) {
+        // PEQUEÑOS PAGOS: Algunas bombitas
+        bombCount = 2; bombDamage = 22; bombRadius = 14; bounces = 3;
+        splashRadius = 65; knockbackForce = 6; bombLabel = "💥";
+    } else {
+        // ROSA/FREE: 1 bombita decorativa
+        bombCount = 1; bombDamage = 12; bombRadius = 10; bounces = 2;
+        splashRadius = 45; knockbackForce = 4; bombLabel = "💣";
+    }
+
+    // Multiplicar por repeat count
+    const repeatBoost = Math.min(3, Math.log2((diamondsTotal / Math.max(1, giftValue)) + 1));
+    bombCount = Math.min(MAX_BOMBS - bombs.length, Math.ceil(bombCount * (1 + repeatBoost * 0.3)));
+
+    const cx = target ? target.x : attacker.x;
+    const cy = target ? target.y : attacker.y;
+
+    for (let i = 0; i < bombCount; i++) {
+        const angle = (i / bombCount) * Math.PI * 2 + (Math.random() * 0.5);
+        const speed = 6 + Math.random() * 8;
+        setTimeout(() => {
+            pushBomb(new Bomb(cx + (Math.random() - 0.5) * 30, cy - 20, attacker.id, {
+                vx: Math.cos(angle) * speed,
+                vy: -Math.abs(Math.sin(angle) * speed) - 3,
+                radius: bombRadius + Math.random() * 4,
+                damage: bombDamage,
+                color: color || "#ff6b00",
+                bounces: bounces,
+                splashRadius: splashRadius,
+                knockbackForce: knockbackForce,
+                bombLabel: bombLabel,
+                tier: giftValue >= 10000 ? "legendary" : giftValue >= 1000 ? "epic" : giftValue >= 100 ? "medium" : "small"
+            }));
+            playSound("roseShot", Math.min(1.5, 0.5 + giftValue / 200));
+        }, i * 80);
+    }
+}
+
 function createEpicSpawnEffect(x, y, name) {
     // Rayo desde el cielo
     pushLightningBolt({
@@ -2458,7 +2880,9 @@ socket.on("arena:sawHit", (data) => {
 
     if (data.isTipClash) {
         spawnFloatingText("⚔️ CLASH", (attacker.x + target.x) / 2, (attacker.y + target.y) / 2, "#ffd700");
-        playSound("buzzsaw", 1.4);
+        const aTier = attacker.getPassiveSawTier ? attacker.getPassiveSawTier() : 0;
+        const tTier = target.getPassiveSawTier ? target.getPassiveSawTier() : 0;
+        playSound("buzzsaw", 1.4, 1 + Math.max(aTier, tTier) * 0.6);
         createExplosion((attacker.x + target.x) / 2, (attacker.y + target.y) / 2, "#fff", { count: 12, speed: 7 });
     } else {
         target.flash = 0.8;
@@ -2481,8 +2905,10 @@ socket.on("arena:sawHit", (data) => {
                 spawnFloatingText(`+${Math.floor(data.scoreLoss)} PTS`, attacker.x, attacker.y - 50, "#86efac");
             }
         }
-        // Ruidito de sierra MAS fuerte
-        playSound("buzzsaw", 1.8);
+        // Ruidito de sierra MAS fuerte y ajustado a RPM
+        const aTier = attacker.getPassiveSawTier ? attacker.getPassiveSawTier() : 0;
+        const multiplier = 1 + (aTier * 0.4) + Math.min(1.5, (attacker.score || 0) / 15000);
+        playSound("buzzsaw", 1.8, multiplier);
     }
 });
 
@@ -2935,7 +3361,9 @@ socket.on("arena:roundEnd", (data) => {
         player.sawLife = 0;
         player.flash = 0;
         player.engagement = 0;
+        player.giftRadiusBoost = 0;
     });
+    bombs = []; // Limpiar bombas al fin de ronda
 
     const roundWinner = data?.roundWinner || data?.winner;
     lastCompletedRoundWinner = roundWinner || lastCompletedRoundWinner;
@@ -2943,6 +3371,8 @@ socket.on("arena:roundEnd", (data) => {
     const arenaChampion = currentTopArenaLeader;
 
     if (!roundWinner) {
+        lastCompletedRoundWinner = null;
+        renderLastRoundWinner();
         spawnFloatingText("FIN DE RONDA", canvas.width / 2, canvas.height / 2 - 100, "#fff");
         return;
     }
@@ -2954,7 +3384,15 @@ socket.on("arena:roundEnd", (data) => {
     speechQueue = [];
     if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
     
-    speakImmediate(`¡FINAL DE LA RONDA! El gran ganador es ${w.name} con ${Math.floor(w.score || w.standingScore || 0)} puntos. ¡Felicidades al nuevo campeón!`, { rate: 1.05, pitch: 1.1, volume: 1 });
+    spawnFloatingText("GANADOR DE RONDA: " + w.name.toUpperCase(), canvas.width / 2, canvas.height / 2 - 130, "#fde68a");
+    
+    // Limpiar cola para anuncio inmediato de ganador
+    speechQueue = [];
+    if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
+    
+    setTimeout(() => {
+        speakImmediate(`¡ATENCIÓN! ¡FINAL DE LA RONDA! El gran ganador de esta batalla es ${w.name} con ${Math.floor(w.score || w.standingScore || 0)} puntos. ¡Un aplauso para el nuevo campeón de la arena!`, { rate: 0.98, pitch: 1.05, volume: 1 });
+    }, 150);
     
     // MENSIONAR A LOS DEMÁS ("Recordar los de la arena")
     // Tomamos el top 2 y 3 del ranking actual de la ronda
@@ -3755,19 +4193,20 @@ socket.on("arena:gift", (data) => {
     let color = giftEffect.color;
 
     showAnnouncer(giftNarration.overlay, giftValue >= 500 ? "#ffd166" : (giftValue >= 20 ? "#7dd3fc" : "#f8fafc"));
-    if (diamondsTotal >= 1) { 
-        // PRIORIDAD: Regalos >= 10 monedas van al principio de la cola. Regalos >= 1000 interrumpen.
-        announce(giftNarration.voice, { 
-            gapMs: 800, 
-            isGift: true, 
-            force: true, 
-            priority: giftValue >= 10,
-            interrupt: giftValue >= 1000,
-            isMale: giftNarration.isMale
-        });
-    }
     const impactDelay = diamondsTotal >= 10 ? 1200 : 800;
+
     setTimeout(() => {
+        if (diamondsTotal >= 1) { 
+            // La voz narradora se lanza JUSTO en el momento del impacto visual para PERFECTA SINCRONÍA
+            announce(giftNarration.voice, { 
+                gapMs: 800, 
+                isGift: true, 
+                force: true, 
+                priority: giftValue >= 10,
+                interrupt: giftValue >= 1000,
+                isMale: giftNarration.isMale
+            });
+        }
     
         // Detección de tipos de ataque: utilizar tanto la clave sugerida como los fallbacks.
         if (giftEffect.type === "megaBlast") {
@@ -3862,7 +4301,8 @@ socket.on("arena:gift", (data) => {
             atkType = "none";
         } else if (giftEffect.type === "buzzsaw" || giftValue >= 500) {
             // Power-up de Sierra (Aura)
-            playSound("buzzsaw", 2.0);
+            const ptsMultiplier = 1 + (attacker.score || 0) / 10000;
+            playSound("buzzsaw", 2.0, ptsMultiplier);
             attacker.sawLife = Math.max(attacker.sawLife, 1320); // 22s de aura
             spawnFloatingText("SIERRA ACTIVA", attacker.x, attacker.y - 40, "#ff9f43");
             createExplosion(attacker.x, attacker.y, "#ff9f43", { count: 36, speed: 10, shake: 10 });
@@ -3870,36 +4310,50 @@ socket.on("arena:gift", (data) => {
             triggerArenaBorderPulse("255, 159, 67", 0.45, 10);
             atkType = "none";
         } else if (giftEffect.type === "projectile") {
-            playSound("roseShot");
+            const volMod = Math.min(3.5, 1 + (diamondsTotal / 50));
+            if (diamondsTotal >= 1000) playSound("universeCrash", Math.min(3.0, volMod));
+            else if (diamondsTotal >= 100) playSound("jackpot", Math.min(2.0, volMod));
+            else if (diamondsTotal >= 10) playSound("powerUp", Math.min(1.5, volMod));
+            else playSound("roseShot", volMod);
+
             const pColor = color || (data.giftName?.toLowerCase().includes("rose") ? "#ff4757" : "#00f0ff");
-            spawnProjectileBurst(attacker, target, Math.min(6, 1 + Math.floor(diamondsTotal/2)), damage, pColor, {
-                spread: 12,
-                speed: 16,
-                wobble: 10,
-                radius: 14,
-                trail: true // Ahora tienen estela para ser NOTABLES
+            spawnProjectileBurst(attacker, target, Math.min(20, 1 + Math.floor(diamondsTotal/2)), damage, pColor, {
+                spread: 12 + Math.min(30, diamondsTotal * 0.15),
+                speed: 16 + Math.min(20, diamondsTotal * 0.08),
+                wobble: 10 + Math.min(15, diamondsTotal * 0.1),
+                radius: 14 + Math.min(40, diamondsTotal * 0.8),
+                trail: true 
             });
-            atkType = "none"; // Ya manejado por burst
+            
+            if (diamondsTotal >= 10) {
+                triggerOverlayFlash("255, 255, 255", Math.min(0.65, diamondsTotal / 300));
+                screenShake = Math.max(screenShake, Math.min(60, 10 + diamondsTotal / 5));
+                createExplosion(target.x, target.y, pColor, { count: Math.min(80, 20 + diamondsTotal), speed: 12, shake: 0 });
+            }
+            atkType = "none";
         } else if (giftEffect.type === "tapSpark") {
-            playSound("hit", 1.2);
-            createExplosion(target.x, target.y, "#fef08a", { count: 12, speed: 6, shake: 2 });
+            const volMod = Math.min(3.0, 1 + (diamondsTotal / 50));
+            playSound("hit", 1.2 * volMod);
+            createExplosion(target.x, target.y, "#fef08a", { count: 12 + Math.min(40, diamondsTotal), speed: 6 + Math.min(10, diamondsTotal*0.1), shake: 2 + Math.min(15, diamondsTotal*0.2) });
             target.takeDamage(damage, attacker.id);
             atkType = "none";
         } else if (giftEffect.type === "fireBurst") {
-            playSound(data.sfx || "fire");
-            createFireBurst(target.x, target.y, attacker.currentRadius + 64);
-            createExplosion(target.x, target.y, "#ff8a00", { count: 42, speed: 13, shake: 14 });
-            createExplosion(target.x + 26, target.y - 20, "#ffd166", { count: 26, speed: 9, shake: 8 });
+            const volMod = Math.min(3.5, 1 + (diamondsTotal / 50));
+            playSound(data.sfx || "fire", volMod);
+            createFireBurst(target.x, target.y, attacker.currentRadius + 64 + Math.min(60, diamondsTotal));
+            createExplosion(target.x, target.y, "#ff8a00", { count: 42 + Math.min(50, diamondsTotal), speed: 13 + Math.min(10, diamondsTotal*0.1), shake: 14 + Math.min(10, diamondsTotal*0.1) });
+            createExplosion(target.x + 26, target.y - 20, "#ffd166", { count: 26 + Math.min(30, diamondsTotal), speed: 9, shake: 8 });
             triggerOverlayFlash("255, 120, 40", 0.22);
             triggerArenaBorderPulse("255, 120, 40", 0.62, 13);
             triggerBackgroundGrade("255, 120, 40", 0.12);
             screenShake = Math.max(screenShake, Math.max(screenShake, isSuddenDeath ? 36 : 28));
             atkType = "lightning";
         } else if (giftEffect.type === "shockwave") {
-            playSound(data.sfx || "heavyExplosion");
-            hitStopFrames = Math.max(hitStopFrames, 12);
-            focusCamera(target.x, target.y, Math.max(fxProfile.cameraScale, 1.38), Math.max(fxProfile.cameraFrames, 95));
-            createExplosion(target.x, target.y, color, { count: 44, speed: 14, shake: 18 });
+            const volMod = Math.min(3.5, 1 + (diamondsTotal / 50));
+            playSound(data.sfx || "heavyExplosion", volMod);
+            hitStopFrames = Math.max(hitStopFrames, 12 + Math.min(20, Math.floor(diamondsTotal/10)));
+            focusCamera(target.x, target.y, Math.max(fxProfile.cameraScale, 1.38 + Math.min(0.5, diamondsTotal/500)), Math.max(fxProfile.cameraFrames, 95 + Math.min(50, diamondsTotal/10)));
+            createExplosion(target.x, target.y, color, { count: 44 + Math.min(60, diamondsTotal), speed: 14 + Math.min(10, diamondsTotal*0.1), shake: 18 + Math.min(20, diamondsTotal*0.1) });
             createExplosion(target.x + 28, target.y - 18, "#fff3b0", { count: 24, speed: 10, shake: 10 });
             createExplosion(target.x - 28, target.y + 18, "#f59e0b", { count: 24, speed: 10, shake: 10 });
             const swScale = (data.sizeScale || 0.45) * 1.8;
@@ -3911,9 +4365,10 @@ socket.on("arena:gift", (data) => {
             screenShake = Math.max(screenShake, isSuddenDeath ? 42 : 34);
             atkType = "lightning";
         } else if (data.sfx) {
-            // Regalos de pago: volumen/pitch según valor para dopamina (pagos suenan más impactantes)
+            const volMod = Math.min(4.0, 1 + (diamondsTotal / 50));
+            // Regalos de pago: volumen brutal escalado dinámicamente según valor de diamantes
             const paidPitch = diamondsTotal >= 1000 ? 1.15 : diamondsTotal >= 100 ? 1.08 : 1.0;
-            playSound(data.sfx, paidPitch);
+            playSound(data.sfx, paidPitch * volMod);
         }
     
         // Shockwave al atacar
@@ -3953,6 +4408,22 @@ socket.on("arena:gift", (data) => {
             playSound("lightning");
             spawnFloatingText("LASER", attacker.x, attacker.y, "#a855f7");
             pushHazard(new LaserBeam(attacker.x, attacker.y, attacker.id, 400));
+        }
+        // ==========================================
+        // KNOCKBACK: Empujar rivales cercanos al impacto
+        // ==========================================
+        const knockbackData = data.knockback || 0;
+        const kbForce = Math.max(knockbackData * 12, Math.min(25, 3 + Math.log2(diamondsTotal + 1) * 2.5));
+        const kbRadius = Math.min(350, 60 + diamondsTotal * 0.5);
+        if (kbForce > 1 && target.id !== 'dummy') {
+            applyGiftKnockback(target.x, target.y, kbForce, kbRadius, attacker.id);
+        }
+
+        // ==========================================
+        // CLUSTER BOMBS: Bombas rebotantes escaladas por tier
+        // ==========================================
+        if (diamondsTotal >= 1) {
+            spawnGiftBombs(attacker, target, diamondsTotal, giftValue, color);
         }
     }, impactDelay);
 });
@@ -3999,7 +4470,7 @@ socket.on("arena:currentRanking", (data) => {
     lastRoundRankingAt = Date.now();
     updateRankingDOM(true); // Forzar actualización cuando cambian los líderes
 
-    const visibleCompetitors = roundRanking.filter((player) => player?.state !== "REMOVED" && player?.state !== "IDLE").length;
+    const visibleCompetitors = roundRanking.filter((player) => player?.state !== "REMOVED").length;
     if (visibleCompetitors <= 1) {
         promptReturnToArena();
     }
@@ -4079,7 +4550,7 @@ socket.on("arena:currentRanking", (data) => {
     if (roundLeaderForVoice?.name) {
         const shouldHypeRoundWinner =
             roundLeaderForVoice.id !== lastRoundWinnerHypeId ||
-            now - lastRoundWinnerHypeAt > 40000;
+            now - lastRoundWinnerHypeAt > 80000;
 
         if (shouldHypeRoundWinner) {
             lastRoundWinnerHypeId = roundLeaderForVoice.id;
@@ -4255,11 +4726,47 @@ function loop() {
     const leader = leaderData ? (players[leaderData.id] || Object.values(players).find(p => p.name === leaderData.name)) : null;
     const runnerUp = runnerUpData ? (players[runnerUpData.id] || Object.values(players).find(p => p.name === runnerUpData.name)) : null;
 
-    // --- CÁMARA ESTÁTICA (FIJA EN LA ARENA) ---
-    // El usuario prefiere que la línea de la arena esté fija en pantalla.
+    // --- CÁMARA DINÁMICA POR CANTIDAD DE JUGADORES (Crowd Zoom) ---
+    // Zoom-out escalonado para que no se sientan apretados
     camera.targetX = canvas.width / 2;
     camera.targetY = canvas.height / 2;
-    camera.targetScale = 1.0; 
+
+    const crowdNow = Date.now();
+    if (crowdNow - lastCrowdCountUpdate > 500) {
+        lastCrowdCountUpdate = crowdNow;
+        const visibleCount = Object.values(players).filter(p => p.opacity > 0.3 && p.hp > 0).length;
+
+        // TIERS DE ZOOM-OUT ESCALONADOS (suave interpolación por tier)
+        let targetCrowdScale;
+        if (visibleCount <= 30) {
+            // Pocos jugadores: zoom normal, arena cómoda
+            targetCrowdScale = 1.0;
+        } else if (visibleCount <= 200) {
+            // 30→200: zoom-out gradual de 1.0 → 0.82
+            const t = (visibleCount - 30) / (200 - 30);
+            targetCrowdScale = 1.0 - t * 0.18;
+        } else if (visibleCount <= 500) {
+            // 200→500: fijo en 0.82 (estable, que se acostumbren)
+            targetCrowdScale = 0.82;
+        } else if (visibleCount <= 1000) {
+            // 500→1000: zoom-out de 0.82 → 0.68
+            const t = (visibleCount - 500) / (1000 - 500);
+            targetCrowdScale = 0.82 - t * 0.14;
+        } else {
+            // 1000+: máximo zoom-out fijo
+            targetCrowdScale = 0.68;
+        }
+        // Transición muy suave (lerp lento para no marear)
+        crowdZoomBaseScale += (targetCrowdScale - crowdZoomBaseScale) * 0.08;
+    }
+
+    // El zoom base lo da el crowd, pero si un regalo/evento hizo focusCamera con zoomTimer activo,
+    // ese zoom temporal tiene prioridad (solo dura unos frames).
+    if (camera.zoomTimer > 0) {
+        camera.zoomTimer--;
+    } else {
+        camera.targetScale = crowdZoomBaseScale;
+    }
 
     camera.scale += (camera.targetScale - camera.scale) * 0.05;
     camera.x += (camera.targetX - camera.x) * 0.05;
@@ -4402,7 +4909,9 @@ function loop() {
 
                 if (collisionType === "saw-clash") {
                     if (pList.length < 200) spawnFloatingText("⚔️ CLASH", (p1.x + p2.x) / 2, (p1.y + p2.y) / 2, "#ffd700");
-                    playSound("buzzsaw", 1.5);
+                    const p1Tier = p1.getPassiveSawTier ? p1.getPassiveSawTier() : 0;
+                    const p2Tier = p2.getPassiveSawTier ? p2.getPassiveSawTier() : 0;
+                    playSound("buzzsaw", 1.5, 1 + Math.max(p1Tier, p2Tier) * 0.5);
                     screenShake = Math.max(screenShake, 12);
                     createExplosion((p1.x + p2.x) / 2, (p1.y + p2.y) / 2, "#fff", { count: 12, speed: 10 });
                 } else {
@@ -4503,6 +5012,13 @@ function loop() {
         }
     }
 
+    // Bombas rebotantes (Cluster Bombs)
+    for (let i = bombs.length - 1; i >= 0; i--) {
+        const bomb = bombs[i];
+        bomb.update();
+        bomb.draw();
+        if (!bomb.active) bombs.splice(i, 1);
+    }
     // Rayos (Lightning)
     for (let i = lightningBolts.length - 1; i >= 0; i--) {
         const l = lightningBolts[i];
@@ -4591,7 +5107,7 @@ function loop() {
         ctx.fillStyle = "rgba(255, 0, 0, 0.8)";
         ctx.font = "bold 24px Rajdhani";
         ctx.fillText(`DEBUG MODE ON - PLAYERS: ${pList.length}`, 400, 300);
-        ctx.fillText(`CAM SCALE: ${camera.scale.toFixed(2)}`, 400, 330);
+        ctx.fillText(`CAM SCALE: ${camera.scale.toFixed(2)} | CROWD BASE: ${crowdZoomBaseScale.toFixed(2)} | ZOOM TIMER: ${camera.zoomTimer}`, 400, 330);
     }
 
     ctx.restore(); // Restore Camera

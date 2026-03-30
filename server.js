@@ -490,7 +490,8 @@ function handleArenaGift(event) {
         isDavidVsGoliath: result.isDavidVsGoliath,
         damage: result.damage,
         scoreGain: result.scoreGain,
-        scoreLoss: result.scoreLoss
+        scoreLoss: result.scoreLoss,
+        knockback: event.gift.knockback || 0
     });
     emitArenaTelemetry("gift", {
         userId: result.attacker.id,
@@ -667,7 +668,7 @@ function flushArenaLikeBatch() {
 }
 
 // Configurar el flush del lote cada 500ms
-setInterval(flushArenaLikeBatch, 300); // Reducido de 500ms a 300ms para latencia mínima
+setInterval(flushArenaLikeBatch, 30); // Optimizado a 30ms para que se sientan súper responsivos
 // Fin de lógica de likes batching
 
 function handleArenaChat(event) {

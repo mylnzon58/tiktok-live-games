@@ -39,7 +39,7 @@ Object.values(SFX).forEach(s => s.volume = 0.6);
 // Himno Nacional Argentino — dominio público (Wikimedia Commons / ICPM)
 const bgMusic = new Audio("https://upload.wikimedia.org/wikipedia/commons/transcoded/8/8a/Himno_Nacional_Argentino_-_ICPM_%28instrumental%29.ogg/Himno_Nacional_Argentino_-_ICPM_%28instrumental%29.ogg.mp3");
 bgMusic.loop   = true;
-bgMusic.volume = 0.35; // Volumen subido para que se escuche claro
+bgMusic.volume = 0.08; // Volumen nivel 1: súper bajo para no tapar a los narradores
 
 // Habilitar audio explicitamente para esquivar bloqueos de Chrome
 let isUnlocked = false;
