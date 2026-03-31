@@ -581,7 +581,7 @@ function handleArenaGift(event) {
     }
 
     broadcastHallOfFame();
-    queueArenaState();
+    queueArenaState(true); // FORZAR SINCRONIZACIÓN INMEDIATA POR REGALO
 }
 
 function handleArenaLike(event) {
@@ -685,8 +685,8 @@ function flushArenaLikeBatch() {
     queueArenaState(); // CRÍTICO: Sincronizar jugadores nuevos que entraron por likes/taps
 }
 
-// Configurar el flush del lote cada 500ms
-setInterval(flushArenaLikeBatch, 30); // Optimizado a 30ms para que se sientan súper responsivos
+// Configurar el flush del lote cada 16ms (60fps) para respuesta ultrasónica
+setInterval(flushArenaLikeBatch, 16); 
 // Fin de lógica de likes batching
 
 function handleArenaChat(event) {
@@ -734,10 +734,18 @@ function handleArenaChat(event) {
                 player: activity.player
             });
         }
-        queueArenaState();
+        queueArenaState(true); // FORZAR SINCRONIZACIÓN INMEDIATA POR ACTIVIDAD
     }
     if (activity?.respawned) {
         io.emit("arena:respawn", { userId: player.id, mode: "basic" });
+    }
+
+    // Detectar "APLAUSOS" en el chat y emitir evento de aplausos
+    if (text.includes("APLAUSO") || text.includes("CLAP") || text.includes("BRAVO")) {
+        io.emit("arena:applause", {
+            userId: player.id,
+            name: player.name
+        });
     }
 
     const isVersusVote = /(milei|cristina|leon|kuka|lla|cfk|peluca|peron)/i.test(cleanComment);
@@ -820,6 +828,22 @@ function startChromeCookieSync() {
 io.on("connection", (socket) => {
     socket.emit("timerUpdate", timeRemaining);
     versusManager.syncClient(socket);
+
+    socket.on("arena:tapAttack", (data) => {
+        const targetId = data.targetId;
+        const target = arena.ensurePlayer({ id: targetId }, "tap-target");
+        if (!target || target.hp <= 0 || target.state === "ELIMINATED") return;
+        const result = arena.applyDamageConsequences({ id: "admin", name: "Admin", score: 5000, roundStats: { damageDealt: 0, kos: 0 } }, target, 20, Date.now(), false);
+        if (result.damage > 0) {
+            io.emit("arena:likeStrike", {
+                attacker: { id: "admin", name: "Admin", avatar: "" },
+                target: { id: target.id, name: target.name },
+                damage: result.damage, scoreLoss: result.scoreLoss, ko: result.ko, likeCount: 5
+            });
+            if (result.ko) io.emit("arena:ko", { attackerId: "admin", targetId: target.id });
+            queueArenaState(true);
+        }
+    });
     
     // Sincronización inicial MINIFICADA
     const players = arena.getPlayers();

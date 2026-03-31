@@ -167,11 +167,10 @@ body.dramatic-vignette::before {
 .floating-text {
     position: absolute;
     font-family: 'Bungee', cursive;
-    font-size: 28px; /* Más grande para ser visible */
+    font-size: 42px;
     font-weight: 900;
     pointer-events: none;
     animation: floatUpFade 1.4s ease-out forwards;
-    /* Borde negro grueso para contraste máximo */
     text-shadow: 
         -3px -3px 0 #000,  
          3px -3px 0 #000,
@@ -181,6 +180,14 @@ body.dramatic-vignette::before {
     transform: translate(-50%, -50%);
     will-change: transform, opacity;
     z-index: 1000;
+}
+.floating-text.ft-big {
+    font-size: 56px;
+    text-shadow: -4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000, 0px 6px 16px rgba(0,0,0,1);
+}
+.floating-text.ft-epic {
+    font-size: 72px;
+    text-shadow: -5px -5px 0 #000, 5px -5px 0 #000, -5px 5px 0 #000, 5px 5px 0 #000, 0px 8px 20px rgba(0,0,0,1);
 }
 
 @keyframes floatUpFade {

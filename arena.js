@@ -13,6 +13,24 @@ const CLEAR_CACHE = new window.URLSearchParams(window.location.search).get("clea
 canvas.width = 800;
 canvas.height = 1350;
 
+// ==========================================
+// OPTIMIZACIÓN: WEB WORKER (PHYSICS)
+// ==========================================
+const physicsWorker = new Worker('workers/physics-worker.js');
+physicsWorker.postMessage({ type: 'init', data: { width: 800, height: 1350, cellSize: 100 } });
+
+let lastWorkerProcessedFrame = -1;
+let workerProcessing = false;
+let pendingCollisions = [];
+
+physicsWorker.onmessage = function(e) {
+    const { type, collisions } = e.data;
+    if (type === 'collisions') {
+        pendingCollisions = collisions;
+        workerProcessing = false;
+    }
+};
+
 // LIMPIEZA DE CACHE SI SE SOLICITA
 if (CLEAR_CACHE) {
     console.warn("🧹 Limpiando caché local...");
@@ -120,6 +138,9 @@ let crowdZoomBaseScale = 1.0; // Zoom-out dinámico por cantidad de jugadores
 let lastCrowdCountUpdate = 0;
 let lastCompletedRoundWinner = null;
 let lastRoundWinnerHypeAt = 0;
+let lastApplauseAt = 0;
+const sawMilestoneTracker = {};
+let lastGiftTeaseAt = 0;
 
 // Captura de errores para visualizar en pantalla (Debug)
 window.onerror = function(msg, url, line) {
@@ -581,25 +602,60 @@ const sfx = {
         const osc = audioCtx.createOscillator();
         const g = audioCtx.createGain();
         osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(100, now);
-        osc.frequency.exponentialRampToValueAtTime(30, now + 0.25);
-        g.gain.setValueAtTime(0.25 * vol, now);
-        g.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        osc.frequency.setValueAtTime(140, now);
+        osc.frequency.exponentialRampToValueAtTime(18, now + 0.4);
+        g.gain.setValueAtTime(0.45 * vol, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
         osc.connect(g).connect(masterAudioGain);
-        osc.start(now); osc.stop(now + 0.25);
+        osc.start(now); osc.stop(now + 0.4);
+        const sub = audioCtx.createOscillator();
+        const subg = audioCtx.createGain();
+        sub.type = 'sine';
+        sub.frequency.setValueAtTime(80, now);
+        sub.frequency.exponentialRampToValueAtTime(15, now + 0.25);
+        subg.gain.setValueAtTime(0.4 * vol, now);
+        subg.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        sub.connect(subg).connect(masterAudioGain);
+        sub.start(now); sub.stop(now + 0.25);
+        const noise = audioCtx.createBufferSource();
+        const buf = getNoiseBuffer();
+        if (buf) {
+            noise.buffer = buf;
+            const bp = audioCtx.createBiquadFilter();
+            bp.type = 'bandpass'; bp.frequency.setValueAtTime(800, now); bp.Q.setValueAtTime(0.5, now);
+            const ng = audioCtx.createGain();
+            ng.gain.setValueAtTime(0.25 * vol, now);
+            ng.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+            noise.connect(bp).connect(ng).connect(masterAudioGain);
+            noise.start(now); noise.stop(now + 0.2);
+        }
     },
     heavyExplosion: (vol = 1) => {
         if (!soundEnabled || !audioCtx) return;
         const now = audioCtx.currentTime;
-        const osc = audioCtx.createOscillator();
-        const g = audioCtx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(80, now);
-        osc.frequency.exponentialRampToValueAtTime(20, now + 0.4);
-        g.gain.setValueAtTime(0.4 * vol, now);
-        g.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
-        osc.connect(g).connect(masterAudioGain);
-        osc.start(now); osc.stop(now + 0.45);
+        [80, 55, 35].forEach((f, i) => {
+            const o = audioCtx.createOscillator();
+            const gn = audioCtx.createGain();
+            o.type = i === 0 ? 'sawtooth' : 'square';
+            o.frequency.setValueAtTime(f, now + i * 0.03);
+            o.frequency.exponentialRampToValueAtTime(15, now + 0.55);
+            gn.gain.setValueAtTime(0.38 * vol, now + i * 0.03);
+            gn.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+            o.connect(gn).connect(masterAudioGain);
+            o.start(now + i * 0.03); o.stop(now + 0.55);
+        });
+        const noise = audioCtx.createBufferSource();
+        const buf = getNoiseBuffer();
+        if (buf) {
+            noise.buffer = buf;
+            const bp = audioCtx.createBiquadFilter();
+            bp.type = 'bandpass'; bp.frequency.setValueAtTime(400, now); bp.Q.setValueAtTime(0.8, now);
+            const ng = audioCtx.createGain();
+            ng.gain.setValueAtTime(0.3 * vol, now);
+            ng.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+            noise.connect(bp).connect(ng).connect(masterAudioGain);
+            noise.start(now); noise.stop(now + 0.4);
+        }
     },
     jackpot: (vol = 1) => {
         if (!soundEnabled || !audioCtx) return;
@@ -843,19 +899,40 @@ const sfx = {
         osc.connect(g).connect(masterAudioGain);
         osc.start(now); osc.stop(now + 0.1);
     },
-    // --- SFX Disparo genérico ---
+    // --- SFX Disparo (ARMA DE FUEGO noise-burst) ---
     shoot: (vol = 0.6) => {
         if (!soundEnabled || !audioCtx) return;
         const now = audioCtx.currentTime;
-        const osc = audioCtx.createOscillator();
-        const g = audioCtx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(500, now);
-        osc.frequency.exponentialRampToValueAtTime(200, now + 0.08);
-        g.gain.setValueAtTime(0.08 * vol, now);
-        g.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-        osc.connect(g).connect(masterAudioGain);
-        osc.start(now); osc.stop(now + 0.1);
+        const noise = audioCtx.createBufferSource();
+        const buf = getNoiseBuffer();
+        if (buf) {
+            noise.buffer = buf;
+            const bp = audioCtx.createBiquadFilter();
+            bp.type = 'bandpass'; bp.frequency.setValueAtTime(3500, now); bp.Q.setValueAtTime(0.6, now);
+            const ng = audioCtx.createGain();
+            ng.gain.setValueAtTime(0.38 * vol, now);
+            ng.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+            noise.connect(bp).connect(ng).connect(masterAudioGain);
+            noise.start(now); noise.stop(now + 0.1);
+        }
+        const kick = audioCtx.createOscillator();
+        const kg = audioCtx.createGain();
+        kick.type = 'sine';
+        kick.frequency.setValueAtTime(250, now);
+        kick.frequency.exponentialRampToValueAtTime(50, now + 0.08);
+        kg.gain.setValueAtTime(0.3 * vol, now);
+        kg.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+        kick.connect(kg).connect(masterAudioGain);
+        kick.start(now); kick.stop(now + 0.1);
+        const snap = audioCtx.createOscillator();
+        const sg = audioCtx.createGain();
+        snap.type = 'square';
+        snap.frequency.setValueAtTime(2400, now);
+        snap.frequency.exponentialRampToValueAtTime(400, now + 0.04);
+        sg.gain.setValueAtTime(0.18 * vol, now);
+        sg.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+        snap.connect(sg).connect(masterAudioGain);
+        snap.start(now); snap.stop(now + 0.06);
     },
     // --- SFX Victoria ---
     victory: (vol = 1) => {
@@ -885,6 +962,112 @@ const sfx = {
         g.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
         osc.connect(g).connect(masterAudioGain);
         osc.start(now); osc.stop(now + 0.45);
+    },
+    energyGain: (vol = 0.5) => {
+        if (!soundEnabled || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.exponentialRampToValueAtTime(1200, now + 0.08);
+        g.gain.setValueAtTime(0.2 * vol, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc.connect(g).connect(masterAudioGain);
+        osc.start(now); osc.stop(now + 0.12);
+    },
+    energyLoss: (vol = 0.5) => {
+        if (!soundEnabled || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+        g.gain.setValueAtTime(0.2 * vol, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc.connect(g).connect(masterAudioGain);
+        osc.start(now); osc.stop(now + 0.12);
+    },
+    giftTease: (vol = 0.7) => {
+        if (!soundEnabled || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        [440, 554, 659].forEach((f, i) => {
+            const osc = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(f, now + i * 0.12);
+            g.gain.setValueAtTime(0.12 * vol, now + i * 0.12);
+            g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.2);
+            osc.connect(g).connect(masterAudioGain);
+            osc.start(now + i * 0.12); osc.stop(now + i * 0.12 + 0.2);
+        });
+    },
+    sawActivation: (vol = 1) => {
+        if (!soundEnabled || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(40, now);
+        osc.frequency.exponentialRampToValueAtTime(280, now + 0.35);
+        osc.frequency.exponentialRampToValueAtTime(200, now + 0.5);
+        g.gain.setValueAtTime(0.42 * vol, now);
+        g.gain.linearRampToValueAtTime(0.35 * vol, now + 0.35);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+        osc.connect(g).connect(masterAudioGain);
+        osc.start(now); osc.stop(now + 0.6);
+        const o2 = audioCtx.createOscillator();
+        const g2 = audioCtx.createGain();
+        o2.type = 'square';
+        o2.frequency.setValueAtTime(1200, now + 0.08);
+        o2.frequency.exponentialRampToValueAtTime(300, now + 0.5);
+        g2.gain.setValueAtTime(0.18 * vol, now + 0.08);
+        g2.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+        o2.connect(g2).connect(masterAudioGain);
+        o2.start(now + 0.08); o2.stop(now + 0.55);
+        const noise = audioCtx.createBufferSource();
+        const buf = getNoiseBuffer();
+        if (buf) {
+            noise.buffer = buf;
+            const hp = audioCtx.createBiquadFilter();
+            hp.type = 'highpass'; hp.frequency.setValueAtTime(1500, now);
+            const ng = audioCtx.createGain();
+            ng.gain.setValueAtTime(0.15 * vol, now + 0.15);
+            ng.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+            noise.connect(hp).connect(ng).connect(masterAudioGain);
+            noise.start(now + 0.15); noise.stop(now + 0.4);
+        }
+    },
+    applause: (vol = 1) => {
+        if (!soundEnabled || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        for (let i = 0; i < 6; i++) {
+            const noise = audioCtx.createBufferSource();
+            const buf = getNoiseBuffer();
+            if (!buf) continue;
+            noise.buffer = buf;
+            const bp = audioCtx.createBiquadFilter();
+            bp.type = 'bandpass';
+            bp.frequency.setValueAtTime(1500 + Math.random() * 2000, now + i * 0.08);
+            bp.Q.setValueAtTime(1.2, now + i * 0.08);
+            const ng = audioCtx.createGain();
+            const t = now + i * 0.08;
+            ng.gain.setValueAtTime(0, t);
+            ng.gain.linearRampToValueAtTime(0.22 * vol, t + 0.03);
+            ng.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+            noise.connect(bp).connect(ng).connect(masterAudioGain);
+            noise.start(t); noise.stop(t + 0.12);
+        }
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.exponentialRampToValueAtTime(1320, now + 0.3);
+        g.gain.setValueAtTime(0.06 * vol, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        osc.connect(g).connect(masterAudioGain);
+        osc.start(now); osc.stop(now + 0.35);
     }
 };
 
@@ -898,7 +1081,7 @@ function playSound(type, ...args) {
 
     const now = Date.now();
     // Throttle dinámico: sonidos comunes tienen más espera, regalos menos
-    const highPriority = ["jackpot", "powerUp", "universeCrash", "lionRoar", "heavyExplosion", "victory", "defeat"];
+    const highPriority = ["jackpot", "powerUp", "universeCrash", "lionRoar", "heavyExplosion", "victory", "defeat", "sawActivation", "applause", "energyGain", "energyLoss"];
     const cooldown = highPriority.includes(type) ? 25 : 55; 
 
     if (lastSoundTimes[type] && (now - lastSoundTimes[type] < cooldown)) return;
@@ -1091,18 +1274,64 @@ const MAX_BOMBS = 20;
 const FLOATING_TEXT_INTERVAL_MS = 90;
 const ANNOUNCER_INTERVAL_MS = 240;
 
-function pushParticle(particle) {
-    if (particles.length >= MAX_PARTICLES) {
-        particles.splice(0, particles.length - MAX_PARTICLES + 1);
+// ==========================================
+// OPTIMIZACIÓN: OBJECT POOLING (PARTICLES)
+// ==========================================
+class ParticlePool {
+    constructor(maxSize) {
+        this.maxSize = maxSize;
+        this.pool = [];
+        this.active = [];
     }
-    particles.push(particle);
+
+    get() {
+        if (this.pool.length > 0) {
+            return this.pool.pop();
+        }
+        return {}; // New object if pool empty
+    }
+
+    recycle(p) {
+        if (this.pool.length < this.maxSize) {
+            // Reset common properties
+            p.x = 0; p.y = 0; p.vx = 0; p.vy = 0;
+            p.life = 0; p.size = 0; p.color = "#fff";
+            p.isHeart = false; p.isCoin = false;
+            p.opacity = 1; p.rot = 0; p.rotV = 0;
+            this.pool.push(p);
+        }
+    }
+
+    resetActive() {
+        for (let i = this.active.length - 1; i >= 0; i--) {
+            this.recycle(this.active[i]);
+        }
+        this.active = [];
+    }
 }
 
-function pushAmbientParticle(particle) {
-    if (ambientParticles.length >= MAX_AMBIENT_PARTICLES) {
-        ambientParticles.splice(0, ambientParticles.length - MAX_AMBIENT_PARTICLES + 1);
+const particlePool = new ParticlePool(MAX_PARTICLES + 50);
+const ambientParticlePool = new ParticlePool(MAX_AMBIENT_PARTICLES + 50);
+
+function pushParticle(data) {
+    const p = particlePool.get();
+    Object.assign(p, data);
+    if (!p.life) p.life = 1.0;
+    if (particles.length >= MAX_PARTICLES) {
+        const recycled = particles.shift();
+        particlePool.recycle(recycled);
     }
-    ambientParticles.push(particle);
+    particles.push(p);
+}
+
+function pushAmbientParticle(data) {
+    const p = ambientParticlePool.get();
+    Object.assign(p, data);
+    if (ambientParticles.length >= MAX_AMBIENT_PARTICLES) {
+        const recycled = ambientParticles.shift();
+        ambientParticlePool.recycle(recycled);
+    }
+    ambientParticles.push(p);
 }
 
 function pushLightningBolt(bolt) {
@@ -1147,7 +1376,7 @@ function pushHazard(hazard) {
 const MAX_HP = 1000; 
 const RESILIENCE_THRESHOLD = 1500; // Sincronizado con server
 const UNDERDOG_DAMAGE_RATIO = 0.35; // Solo recibe 35% del daño
-let PLAYER_RADIUS = 38; // Iniciamos más pequeños para que la arena se sienta gigante
+let PLAYER_RADIUS = 28; // Iniciamos más pequeños para que la arena se sienta gigante
 
 /** Formatea puntuación para que se lea bien en la burbuja (ej: 3689633 → "3.7M") */
 function formatScoreShort(score) {
@@ -1280,15 +1509,34 @@ function drawArenaWalls() {
 // MOUSE INTERACTION (Para lanzar bot local de prueba)
 // ==========================================
 canvas.addEventListener("mousedown", () => {
-    // Inicializar audio al hacer click (necesario por navegadores)
-    if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+});
 
-    // Test hit stop y sonido
-    // screenShake = 20;
-    // hitStopFrames = 10;
-    // playSound("heavyExplosion");
+canvas.addEventListener("click", (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const clickX = (e.clientX - rect.left) * scaleX;
+    const clickY = (e.clientY - rect.top) * scaleY;
+    let closestPlayer = null;
+    let closestDist = Infinity;
+    for (const p of Object.values(players)) {
+        if (!p || p.state === "ELIMINATED") continue;
+        const dx = p.x - clickX;
+        const dy = p.y - clickY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < (p.currentRadius || 20) + 10 && dist < closestDist) {
+            closestDist = dist;
+            closestPlayer = p;
+        }
+    }
+    if (closestPlayer) {
+        closestPlayer.flash = 0.6;
+        playSound("shoot", 0.8);
+        createExplosion(closestPlayer.x, closestPlayer.y, closestPlayer.color || "#ff4444", { count: 6, speed: 5, shake: 3 });
+        spawnFloatingText("TAP!", closestPlayer.x, closestPlayer.y - 30, "#ff9f43", "ft-big");
+        socket.emit("arena:tapAttack", { targetId: closestPlayer.id });
+    }
 });
 
 // Inicializar partículas ambientales
@@ -1324,7 +1572,7 @@ function getAvatarImage(url) {
     return img;
 }
 
-function spawnFloatingText(text, x, y, color) {
+function spawnFloatingText(text, x, y, color, sizeClass) {
     const now = Date.now();
     if (now - lastFloatingTextAt < FLOATING_TEXT_INTERVAL_MS) {
         return;
@@ -1335,7 +1583,7 @@ function spawnFloatingText(text, x, y, color) {
         floatingLayer.firstElementChild?.remove();
     }
     const el = document.createElement("div");
-    el.className = "floating-text";
+    el.className = "floating-text" + (sizeClass ? " " + sizeClass : "");
     el.textContent = text;
     el.style.color = color;
     // Usar porcentajes para alinear con el canvas en cualquier resolución
@@ -1602,16 +1850,16 @@ class Player {
     }
 
     update() {
-        // --- DINÁMICA DE TAMAÑO ---
+        // --- DINÁMICA DE TAMAÑO (DIFICULTAD AUMENTADA) ---
         const safeScore = Math.max(this.score || 0, 0);
         const scoreScale = Math.min(
-            (Math.sqrt(safeScore) * 1.55) + (Math.log10(safeScore + 1) * 10), 
-            280 // Aumentado el límite para permitir estados "Titán" épicos por regalos
+            (Math.sqrt(safeScore) * 0.35) + (Math.log10(safeScore + 1) * 4.5), 
+            120 // Reducido el límite de crecimiento por score puro
         );
-        const engagementScale = Math.min((this.engagement || 0) * 0.42, 55); // Bonus por actividad reciente (tapping/regalos)
+        const engagementScale = Math.min((this.engagement || 0) * 0.2, 35); // Bonus por actividad (tapping/regalos) - DIFICULTAD NERFEADA
         const baseTargetRadius = PLAYER_RADIUS + scoreScale;
         let targetRadius = Math.max(PLAYER_RADIUS, baseTargetRadius + engagementScale + (this.giftRadiusBoost || 0));
-        targetRadius = Math.min(380, targetRadius); // CAP MÁXIMO ABSOLUTO para evitar cubrir toda la pantalla
+        targetRadius = Math.min(140, targetRadius); // CAP MÁXIMO ABSOLUTO para evitar cubrir toda la pantalla
         this.peakRadius = Math.max(this.peakRadius || PLAYER_RADIUS, targetRadius);
 
         // LÍMITE DE TAMAÑO JUSTO (Regla del Líder)
@@ -1665,11 +1913,26 @@ class Player {
             this.vy *= 0.995;
         } else {
             const retainedRadius = Math.max(targetRadius, (this.peakRadius || PLAYER_RADIUS) * 0.84);
-            const radiusStep = retainedRadius > this.currentRadius ? 0.18 : 0.055;
+            // Transformación visual más agresiva/rápida (radiusStep aumentado)
+            const radiusStep = retainedRadius > this.currentRadius ? 0.32 : 0.12;
             this.currentRadius += (retainedRadius - this.currentRadius) * radiusStep;
-            this.peakRadius += (targetRadius - this.peakRadius) * 0.035;
+            this.peakRadius += (targetRadius - this.peakRadius) * 0.08;
             this.peakRadius = Math.max(this.peakRadius, this.currentRadius, PLAYER_RADIUS);
             this.opacity = 1.0;
+        }
+
+        // REGLA DE ORO: jamás salirse de la arena
+        if (!this._knockbackActive) {
+            const clamped = clampToArena(this.x, this.y, this.currentRadius + 2);
+            this.x = clamped.x;
+            this.y = clamped.y;
+        } else {
+            const clamped = clampToArena(this.x, this.y, -20);
+            this.x += (clamped.x - this.x) * 0.15;
+            this.y += (clamped.y - this.y) * 0.15;
+            if (Math.abs(this.x - clamped.x) < 2 && Math.abs(this.y - clamped.y) < 2) {
+                this._knockbackActive = false;
+            }
         }
 
         // Decay del boost de regalo (más lento que engagement)
@@ -1924,6 +2187,7 @@ class Player {
 
         ctx.save();
         ctx.globalAlpha = opacity;
+        const sizeScale = this.currentRadius / PLAYER_RADIUS;
 
         // --- EFECTO ZOOM LATENTE PARA EL LIDER #1 ---
         if (this === currentTopArenaLeader || (roundRanking[0] && roundRanking[0].id === this.id)) {
@@ -2060,35 +2324,7 @@ class Player {
         }
         ctx.restore();
 
-        // --- PUNTOS / SCORE (legible: formato corto 3.7M / 12k) ---
-        const sizeScale = this.currentRadius / PLAYER_RADIUS; // Factor de escala relativo
-        const scorePulse = 1 + (Math.sin(Date.now() / 150) * 0.05) + (this.scorePop || 0);
-        if (this.scorePop > 0) this.scorePop *= 0.85;
-        const scoreText = formatScoreShort(this.score ?? 0);
-        const badgeFontSize = Math.min(38, Math.max(18, Math.floor(22 * sizeScale * scorePulse)));
-        const badgeH = Math.max(28, 26 * sizeScale);
-        const badgeW = Math.max(60, Math.min(140, scoreText.length * (badgeFontSize * 0.68)));
-        const badgeY = this.y + this.currentRadius * 0.75;
-        const badgeX = this.x - badgeW / 2;
-        ctx.fillStyle = "rgba(0, 0, 0, 0.88)";
-        ctx.beginPath();
-        if (ctx.roundRect) {
-            ctx.roundRect(badgeX, badgeY - badgeH / 2, badgeW, badgeH, 14);
-        } else {
-            ctx.rect(badgeX, badgeY - badgeH / 2, badgeW, badgeH);
-        }
-        ctx.fill();
-        ctx.strokeStyle = "rgba(255, 215, 0, 0.6)";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.fillStyle = "#fff";
-        ctx.font = `bold ${badgeFontSize}px Rajdhani`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.shadowColor = "#000";
-        ctx.shadowBlur = 3;
-        ctx.fillText(scoreText, this.x, badgeY);
-        ctx.shadowBlur = 0;
+        // (Original score draw location - MOVED TO END TO BE IN FRONT)
 
         // Calaveras de muertes (escalan con el tamaño)
         if ((this.deaths || 0) > 0) {
@@ -2233,6 +2469,40 @@ class Player {
                 });
             }
         }
+
+        // --- PUNTOS / SCORE (Legible y SIEMPRE AL FRENTE) ---
+        const scorePulse = 1 + (Math.sin(Date.now() / 150) * 0.05) + (this.scorePop || 0);
+        if (this.scorePop > 0) this.scorePop *= 0.85;
+        const scoreText = formatScoreShort(this.score ?? 0);
+        const badgeFontSize = Math.min(38, Math.max(18, Math.floor(22 * sizeScale * scorePulse)));
+        const badgeH = Math.max(28, 26 * sizeScale);
+        const badgeW = Math.max(60, Math.min(140, scoreText.length * (badgeFontSize * 0.68)));
+        const badgeY = this.y + this.currentRadius + 8;
+        const badgeX = this.x - badgeW / 2;
+        
+        ctx.save();
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = "rgba(255, 215, 0, 0.4)";
+        ctx.fillStyle = "rgba(0, 0, 0, 0.92)";
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(badgeX, badgeY - badgeH / 2, badgeW, badgeH, 14);
+        } else {
+            ctx.rect(badgeX, badgeY - badgeH / 2, badgeW, badgeH);
+        }
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255, 215, 0, 0.72)";
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        
+        ctx.fillStyle = "#fff";
+        ctx.font = `bold ${badgeFontSize}px Rajdhani`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.shadowColor = "#000";
+        ctx.shadowBlur = 4;
+        ctx.fillText(scoreText, this.x, badgeY);
+        ctx.restore();
 
         ctx.restore();
     }
@@ -3090,6 +3360,23 @@ function syncPlayerFromServer(sp) {
             players[id].lastTapBoostAt = Date.now();
         }
         players[id].score = newScore;
+
+        // SAW MILESTONE
+        const sawThresholds = [400, 550, 700, 1000];
+        const prevMilestone = sawMilestoneTracker[id] || 0;
+        let newMilestone = 0;
+        for (let t = sawThresholds.length - 1; t >= 0; t--) {
+            if (newScore >= sawThresholds[t]) { newMilestone = sawThresholds[t]; break; }
+        }
+        if (newMilestone > prevMilestone) {
+            sawMilestoneTracker[id] = newMilestone;
+            playSound("sawActivation", 1.2);
+            const p = players[id];
+            if (p) {
+                spawnFloatingText("SIERRA NIVEL " + (sawThresholds.indexOf(newMilestone) + 1), p.x, p.y - 60, "#ff9f43", "ft-big");
+                createExplosion(p.x, p.y, "#ff9f43", { count: 18, speed: 8, shake: 6 });
+            }
+        }
         
         players[id].standingScore = standingScore ?? players[id].standingScore ?? players[id].score ?? 0;
         players[id].hp = hp ?? players[id].hp;
@@ -3522,7 +3809,7 @@ socket.on("arena:respawn", (data) => {
     player.peakRadius = Math.max(player.currentRadius, PLAYER_RADIUS);
     player.respawnSizeLockUntil = Date.now() + 1800;
     player.flash = 1;
-    spawnFloatingText("RESPAWN", player.x, player.y - 40, "#7dd3fc");
+    spawnFloatingText("RESPAWN", player.x, player.y - 40, "#7dd3fc", "ft-big");
     playSound("heal");
 });
 
@@ -3622,10 +3909,25 @@ socket.on("arena:likeStrike", (data) => {
         });
     }
     pushShockwave({ x: target.x, y: target.y, r: 16, opacity: 0.8, color: "#bbf7d0" });
+    target.flash = 1;
+    spawnFloatingText("-" + Math.floor(data.damage || 0), target.x, target.y - 24, "#ff6b6b", "ft-big");
+    playSound("energyLoss", Math.min(1, (data.damage || 0) / 200));
+    if ((data.scoreLoss || 0) > 0) {
+        target.score = Math.max(0, (target.score || 0) - data.scoreLoss);
+        target.standingScore = Math.max(0, (target.standingScore || 0) - data.scoreLoss);
+        target.scorePop = 1.0;
+        spawnFloatingText("-" + Math.floor(data.scoreLoss) + " PTS", target.x, target.y - 50, "#fca5a5", "ft-big");
+    }
+    if (comboLikes >= 20) {
+        spawnFloatingText("TAP STRIKE", attacker.x, attacker.y - 34, "#bbf7d0");
+    }
+    screenShake = Math.max(screenShake, Math.min(isSuddenDeath ? 13 : 9, (isSuddenDeath ? 4.6 : 2.8) + (comboLikes / (isSuddenDeath ? 9 : 12))));
+    playSound("hit", 1.08);
+});
 
 socket.on("connect", () => {
     console.log("Conectado al servidor Socket.IO");
-    spawnFloatingText("¡SERVIDOR CONECTADO!", canvas.width / 2, canvas.height / 2 - 100, "#00ff00");
+    spawnFloatingText("SERVIDOR CONECTADO", canvas.width / 2, canvas.height / 2 - 100, "#00ff00");
     playSound("heal", 0.6);
     screenShake = Math.max(screenShake, 10);
 });
@@ -3633,21 +3935,14 @@ socket.on("connect", () => {
 socket.on("arena:chatWake", (data) => {
     const p = syncPlayerFromServer(data.player) || players[data.userId];
     if (p) {
-        // Efecto visual extremo para cuando entran con "YO"
         p.flash = 1;
         p.opacity = 1;
         p.state = "ACTIVE";
         p.lastActive = Date.now();
-        
-        // Empuje épico y shake
         p.vx += (Math.random() - 0.5) * 20;
         p.vy += (Math.random() - 0.5) * 20 + 5;
         screenShake = Math.max(screenShake, 8);
-        
-        // Texto flotante grande
-        spawnFloatingText("¡AQUÍ ESTOY!", p.x, p.y - p.currentRadius - 20, "#fbbf24");
-        
-        // Sonido y partículas
+        spawnFloatingText("AQUI ESTOY!", p.x, p.y - p.currentRadius - 20, "#fbbf24", "ft-big");
         playSound("heal", 0.8);
         for (let i = 0; i < 15; i++) {
             pushParticle({
@@ -3662,19 +3957,26 @@ socket.on("arena:chatWake", (data) => {
         }
     }
 });
-    target.flash = 1;
-    spawnFloatingText(`-${Math.floor(data.damage || 0)}`, target.x, target.y - 24, "#bbf7d0");
-    if ((data.scoreLoss || 0) > 0) {
-        target.score = Math.max(0, (target.score || 0) - data.scoreLoss); // Modificación visual inmediata
-        target.standingScore = Math.max(0, (target.standingScore || 0) - data.scoreLoss);
-        target.scorePop = 1.0;
-        spawnFloatingText(`-${Math.floor(data.scoreLoss)} PTS`, target.x, target.y - 50, "#fca5a5");
+
+socket.on("arena:applause", (data) => {
+    const now = Date.now();
+    if (now - lastApplauseAt < 5000) return;
+    lastApplauseAt = now;
+    playSound("applause", 1.5);
+    setTimeout(() => playSound("applause", 1.2), 300);
+    setTimeout(() => playSound("applause", 0.8), 700);
+    spawnFloatingText("APLAUSOS", canvas.width / 2, canvas.height / 2 - 160, "#fde68a", "ft-epic");
+    showAnnouncer("APLAUSOS EN LA ARENA", "#fde68a");
+    announce("El publico aplaude! Que energia en la arena!", { gapMs: 1500 });
+    screenShake = Math.max(screenShake, 4);
+    triggerOverlayFlash("255, 235, 140", 0.08);
+    if (now - lastGiftTeaseAt > 120000) {
+        lastGiftTeaseAt = now;
+        setTimeout(() => {
+            playSound("giftTease", 0.6);
+            announce("Prueba regalos como el leon o el universo para desatar poderes epicos!", { gapMs: 3000 });
+        }, 6000);
     }
-    if (comboLikes >= 20) {
-        spawnFloatingText("TAP STRIKE", attacker.x, attacker.y - 34, "#bbf7d0");
-    }
-    screenShake = Math.max(screenShake, Math.min(isSuddenDeath ? 13 : 9, (isSuddenDeath ? 4.6 : 2.8) + (comboLikes / (isSuddenDeath ? 9 : 12))));
-    playSound("hit", 1.08);
 });
 
 // EVENTO DE PODER POR CHAT (Aura Visual Potente - Similar a Regalo Pago)
@@ -3778,7 +4080,7 @@ socket.on("arena:ko", (data) => {
     screenShake = Math.max(screenShake, 22);
     
     // Hitstop extra en KO
-    hitStopFrames = Math.max(hitStopFrames, 12);
+    hitStopFrames = Math.max(hitStopFrames, 8); // Reducido de 12 para que sea más fluido
 });
 
 // ===============================================
@@ -4070,6 +4372,7 @@ socket.on("arena:gift", (data) => {
     const attacker = syncPlayerFromServer(data.attackerState) || players[attackerId];
     if (!attacker) return;
 
+    attacker.scorePop = 1.0; // PUNTOS REACCIONAN A REGALOS
     attacker.lastActive = Date.now(); // Despierta de AFK inmediatamente
     attacker.engagement = Math.min((attacker.engagement || 0) + Math.max(4, Math.log2((data.diamondCount || 1) * (data.repeatCount || 1) + 1) * 5), 120);
     
@@ -4214,7 +4517,8 @@ socket.on("arena:gift", (data) => {
             const blastSfx = data.sfx || (data.giftName?.toLowerCase().includes("lion") ? "lionRoar" : "universeCrash");
             playSound(blastSfx, 3.0); // SUPER VOLUMEN PARA MEGA REGALOS
             
-            hitStopFrames = giftValue >= 34999 ? 55 : (giftValue >= 1000 ? 40 : 28);
+            // Reducido hitStop para evitar sensación de congelamiento total (Juice vs Lag)
+            hitStopFrames = giftValue >= 34999 ? 22 : (giftValue >= 1000 ? 15 : 12);
             screenShake = giftValue >= 30000 ? 120 : (giftValue >= 1000 ? 100 : 70); // SHAKE EXTREMO
             triggerOverlayFlash("255, 240, 200", giftValue >= 30000 ? 0.7 : 0.45);
             triggerArenaBorderPulse("255, 214, 102", 0.95, 25);
@@ -4351,7 +4655,10 @@ socket.on("arena:gift", (data) => {
         } else if (giftEffect.type === "shockwave") {
             const volMod = Math.min(3.5, 1 + (diamondsTotal / 50));
             playSound(data.sfx || "heavyExplosion", volMod);
-            hitStopFrames = Math.max(hitStopFrames, 12 + Math.min(20, Math.floor(diamondsTotal/10)));
+            // Solo activamos pausa (hitStop) para impactos notables (>=100 diamantes)
+            if (diamondsTotal >= 100) {
+                hitStopFrames = Math.max(hitStopFrames, 10 + Math.min(10, Math.floor(diamondsTotal/100)));
+            }
             focusCamera(target.x, target.y, Math.max(fxProfile.cameraScale, 1.38 + Math.min(0.5, diamondsTotal/500)), Math.max(fxProfile.cameraFrames, 95 + Math.min(50, diamondsTotal/10)));
             createExplosion(target.x, target.y, color, { count: 44 + Math.min(60, diamondsTotal), speed: 14 + Math.min(10, diamondsTotal*0.1), shake: 18 + Math.min(20, diamondsTotal*0.1) });
             createExplosion(target.x + 28, target.y - 18, "#fff3b0", { count: 24, speed: 10, shake: 10 });
@@ -4613,56 +4920,7 @@ let currentArenaKingId = null;
 /** Burbujas: capa #arena-bubbles encima del canvas, position fixed + píxeles desde getBoundingClientRect. */
 /** Las burbujas ahora se dibujan directamente en el Player.draw() dentro del canvas para que escalen con la cámara. 
     Esta función era redundante y causaba los círculos blancos que tapaban el avatar. */
-// ==========================================
-// OPTIMIZACIÓN: PARTICIONAMIENTO ESPACIAL (GRID)
-// ==========================================
-class SpatialGrid {
-    constructor(width, height, cellSize) {
-        this.cellSize = cellSize;
-        this.cols = Math.ceil(width / cellSize);
-        this.rows = Math.ceil(height / cellSize);
-        this.cells = new Array(this.cols * this.rows);
-    }
-
-    clear() {
-        for (let i = 0; i < this.cells.length; i++) {
-            this.cells[i] = null;
-        }
-    }
-
-    insert(obj) {
-        const x = Math.floor(obj.x / this.cellSize);
-        const y = Math.floor(obj.y / this.cellSize);
-        if (x < 0 || x >= this.cols || y < 0 || y >= this.rows) return;
-        const idx = y * this.cols + x;
-        if (!this.cells[idx]) this.cells[idx] = [];
-        this.cells[idx].push(obj);
-    }
-
-    getNeighbors(obj) {
-        const x = Math.floor(obj.x / this.cellSize);
-        const y = Math.floor(obj.y / this.cellSize);
-        const neighbors = [];
-        for (let i = -1; i <= 1; i++) {
-            for (let j = -1; j <= 1; j++) {
-                const nx = x + i;
-                const ny = y + j;
-                if (nx >= 0 && nx < this.cols && ny >= 0 && ny < this.rows) {
-                    const idx = ny * this.cols + nx;
-                    const cell = this.cells[idx];
-                    if (cell) {
-                        for (let k = 0; k < cell.length; k++) {
-                            neighbors.push(cell[k]);
-                        }
-                    }
-                }
-            }
-        }
-        return neighbors;
-    }
-}
-
-const spatialGrid = new SpatialGrid(800, 1350, 100);
+// Redundante: Movido a Web Worker
 
 function updateBubblesLayer() {
     // Eliminado: El dibujado ahora es autoritativo en Player.draw()
@@ -4792,13 +5050,25 @@ function loop() {
     ctx.translate(-camera.x, -camera.y);
 
     // Dibujar Partículas Ambientales (Se mueven y escalan)
+    // Throttled: Solo actualizar cada 2 frames para estabilidad si hay muchos jugadores
+    const shouldUpdateAmbient = (frameCount % 2 === 0);
     ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
     ambientParticles.forEach(p => {
-        p.y += p.vy;
-        p.x += p.vx;
+        if (shouldUpdateAmbient) {
+            p.y += p.vy;
+            p.x += p.vx;
+
+            if (p.isCoin) {
+                p.rot += p.rotV;
+            }
+
+            if (p.y < -10) { 
+                p.y = canvas.height + 10; 
+                p.x = Math.random() * canvas.width; 
+            }
+        }
 
         if (p.isCoin) {
-            p.rot += p.rotV;
             ctx.save();
             ctx.translate(p.x, p.y);
             ctx.rotate(p.rot);
@@ -4815,18 +5085,69 @@ function loop() {
             ctx.font = `bold ${p.size * 0.7}px Arial`;
             ctx.fillText("$", 0, 0);
             ctx.restore();
-            // No reset for coins, they fall off screen
-            return;
+        } else {
+            ctx.globalAlpha = p.opacity;
+            ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
         }
-
-        if (p.y < -10) { p.y = canvas.height + 10; p.x = Math.random() * canvas.width; }
-
-        ctx.globalAlpha = p.opacity;
-        ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
     });
+
+    // --- OFFLOADED PHYSICS: PROCESAR COLISIONES DEL WORKER ---
+    if (!workerProcessing) {
+        workerProcessing = true;
+        const workerPlayerData = {};
+        for (const id in players) {
+            const p = players[id];
+            workerPlayerData[id] = {
+                id: p.id, x: p.x, y: p.y, hp: p.hp, opacity: p.opacity,
+                currentRadius: p.currentRadius,
+                sawLife: p.sawLife,
+                passiveSawTier: p.getPassiveSawTier ? p.getPassiveSawTier() : 0
+            };
+        }
+        physicsWorker.postMessage({ 
+            type: 'update', 
+            data: { players: workerPlayerData, isSuddenDeath } 
+        });
+    }
+
+    // Aplicar colisiones pendientes
+    if (pendingCollisions.length > 0) {
+        pendingCollisions.forEach(c => {
+            const p1 = players[c.p1Id];
+            const p2 = players[c.p2Id];
+            if (!p1 || !p2 || p1.hp <= 0 || p2.hp <= 0) return;
+
+            let dist = Math.sqrt(c.distSq);
+            let nx = c.dx / dist;
+            let ny = c.dy / dist;
+            let overlap = c.minDist - dist;
+
+            const bounceFactor = c.type === "saw-clash" ? 1.5 : 1;
+            let tx = p1.vx; let ty = p1.vy;
+            p1.vx = p2.vx * bounceFactor; p1.vy = p2.vy * bounceFactor;
+            p2.vx = tx * bounceFactor; p2.vy = ty * bounceFactor;
+
+            let sep = (overlap / 2) + 1.5;
+            p1.x -= nx * sep; p1.y -= ny * sep;
+            p2.x += nx * sep; p2.y += ny * sep;
+
+            // Efectos de choque
+            if (c.type === "body") {
+                if (Math.abs(p1.vx) + Math.abs(p1.vy) > 4) {
+                    createExplosion((p1.x + p2.x) / 2, (p1.y + p2.y) / 2, "#fff", { count: 3, speed: 4, shake: 0 });
+                    if (frameCount % 6 === 0) playSound("hit", 0.1);
+                }
+            } else if (c.type === "saw-clash") {
+                createExplosion((p1.x + p2.x) / 2, (p1.y + p2.y) / 2, "#ff9f43", { count: 12, speed: 12, shake: 0.8 });
+                if (frameCount % 4 === 0) playSound("buzzsaw", 0.25);
+                screenShake = Math.max(screenShake, 1.2);
+            }
+        });
+        pendingCollisions = []; // Limpiar tras procesar
+    }
     ctx.globalAlpha = 1.0;
 
     // --- HIT STOP ---
@@ -4845,89 +5166,6 @@ function loop() {
         return;
     }
 
-    // --- OPTIMIZACIÓN: ACTUALIZAR GRID ESPACIAL ---
-    spatialGrid.clear();
-    const pList = Object.values(players);
-    pList.forEach(p => {
-        if (p.hp > 0 && p.opacity > 0.1) spatialGrid.insert(p);
-    });
-
-    // Físicas entre jugadores (OPTIMIZADO CON GRID)
-    for (let i = 0; i < pList.length; i++) {
-        const p1 = pList[i];
-        if (p1.hp <= 0) continue;
-
-        const neighbors = spatialGrid.getNeighbors(p1);
-        for (let j = 0; j < neighbors.length; j++) {
-            const p2 = neighbors[j];
-            if (p1 === p2 || p2.hp <= 0) continue;
-
-            // Evitar doble check (solo procesar si p1.id < p2.id)
-            if (p1.id >= p2.id) continue;
-
-            let dx = p2.x - p1.x; let dy = p2.y - p1.y;
-            let distSq = dx * dx + dy * dy;
-            
-            const p1HasSaw = p1.sawLife > 0 || p1.getPassiveSawTier() > 0;
-            const p2HasSaw = p2.sawLife > 0 || p2.getPassiveSawTier() > 0;
-            
-            const bodyMinDist = p1.currentRadius + p2.currentRadius;
-            const saw1Radius = p1.currentRadius + 15 + (p1.getPassiveSawTier() * 12);
-            const saw2Radius = p2.currentRadius + 15 + (p2.getPassiveSawTier() * 12);
-            const sawMinDist = saw1Radius + saw2Radius;
-
-            let collisionType = "none";
-            let minDist = bodyMinDist;
-
-            if (distSq < bodyMinDist * bodyMinDist) {
-                collisionType = "body";
-                minDist = bodyMinDist;
-            } else if (p1HasSaw && p2HasSaw && distSq < sawMinDist * sawMinDist) {
-                collisionType = "saw-clash";
-                minDist = sawMinDist;
-            }
-
-            if (collisionType !== "none") {
-                let dist = Math.sqrt(distSq);
-                let overlap = minDist - dist;
-                if (dist === 0) { dx = 1; dy = 0; dist = 1; }
-
-                let nx = dx / dist; let ny = dy / dist;
-                const bounceFactor = collisionType === "saw-clash" ? 1.5 : 1;
-                let tx = p1.vx; let ty = p1.vy;
-                p1.vx = p2.vx * bounceFactor; p1.vy = p2.vy * bounceFactor;
-                p2.vx = tx * bounceFactor; p2.vy = ty * bounceFactor;
-
-                let sep = (overlap / 2) + 1.5;
-                p1.x -= nx * sep; p1.y -= ny * sep;
-                p2.x += nx * sep; p2.y += ny * sep;
-
-                const p1Clamped = clampToArena(p1.x, p1.y, p1.currentRadius + 8);
-                const p2Clamped = clampToArena(p2.x, p2.y, p2.currentRadius + 8);
-                p1.x = p1Clamped.x; p1.y = p1Clamped.y;
-                p2.x = p2Clamped.x; p2.y = p2Clamped.y;
-
-                if (collisionType === "saw-clash") {
-                    if (pList.length < 200) spawnFloatingText("⚔️ CLASH", (p1.x + p2.x) / 2, (p1.y + p2.y) / 2, "#ffd700");
-                    const p1Tier = p1.getPassiveSawTier ? p1.getPassiveSawTier() : 0;
-                    const p2Tier = p2.getPassiveSawTier ? p2.getPassiveSawTier() : 0;
-                    playSound("buzzsaw", 1.5, 1 + Math.max(p1Tier, p2Tier) * 0.5);
-                    screenShake = Math.max(screenShake, 12);
-                    createExplosion((p1.x + p2.x) / 2, (p1.y + p2.y) / 2, "#fff", { count: 12, speed: 10 });
-                } else {
-                    const relativeSpeed = Math.sqrt((p1.vx - p2.vx) ** 2 + (p1.vy - p2.vy) ** 2);
-                    const now = Date.now();
-                    if (relativeSpeed > 2.6 && (now - (p1.lastBodyHitAt || 0) > 400)) {
-                        p1.lastBodyHitAt = now; p2.lastBodyHitAt = now;
-                        if (pList.length < 200) spawnFloatingText("CHOQUE", (p1.x + p2.x) / 2, (p1.y + p2.y) / 2 - 16, "#fecaca");
-                        screenShake = Math.max(screenShake, 6);
-                        playSound("hit");
-                    }
-                }
-            }
-        }
-    }
-
     // Actualizar y dibujar Jugadores
     let currentClosestToCenter = null;
     let minCenterDist = 120; // coreRadius
@@ -4935,12 +5173,12 @@ function loop() {
     const cx = canvas.width / 2;
     const cy = canvas.height / 2;
 
-    // --- CULLING VIEWPORT ---
     const viewportLeft = camera.x - (canvas.width / 2) / camera.scale - 100;
     const viewportRight = camera.x + (canvas.width / 2) / camera.scale + 100;
     const viewportTop = camera.y - (canvas.height / 2) / camera.scale - 100;
     const viewportBottom = camera.y + (canvas.height / 2) / camera.scale + 100;
 
+    const pList = Object.values(players);
     pList.forEach(p => {
         if (p.opacity > 0.5) {
             const dist = Math.sqrt((p.x - cx) ** 2 + (p.y - cy) ** 2);
@@ -4986,24 +5224,14 @@ function loop() {
     // Hazars (Sierras, etc)
     for (let i = hazards.length - 1; i >= 0; i--) {
         let h = hazards[i];
-        if (h.x < viewportLeft || h.x > viewportRight || h.y < viewportTop || h.y > viewportBottom) {
-            h.update();
-            if (!h.active) hazards.splice(i, 1);
-            continue;
-        }
         h.update();
         h.draw();
-        if (!h.active) hazards.splice(i, 1);
+        if (!h.active || h.life <= 0) hazards.splice(i, 1);
     }
 
     // Proyectiles
     for (let i = projectiles.length - 1; i >= 0; i--) {
         let proj = projectiles[i];
-        if (proj.x < viewportLeft || proj.x > viewportRight || proj.y < viewportTop || proj.y > viewportBottom) {
-            proj.update();
-            if (!proj.active) projectiles.splice(i, 1);
-            continue;
-        }
         proj.update();
         proj.draw();
         if (!proj.active) {
@@ -5016,8 +5244,8 @@ function loop() {
     for (let i = bombs.length - 1; i >= 0; i--) {
         const bomb = bombs[i];
         bomb.update();
-        bomb.draw();
-        if (!bomb.active) bombs.splice(i, 1);
+        if (bomb.active) bomb.draw();
+        else bombs.splice(i, 1);
     }
     // Rayos (Lightning)
     for (let i = lightningBolts.length - 1; i >= 0; i--) {
@@ -5032,6 +5260,13 @@ function loop() {
         let p = particles[i];
         p.x += p.vx; p.y += p.vy;
         p.life -= 0.035; // Vida un poco más larga
+        
+        if (p.life <= 0) {
+            const recycled = particles.splice(i, 1)[0];
+            particlePool.recycle(recycled);
+            continue;
+        }
+
         ctx.globalAlpha = Math.max(0, p.life);
         ctx.fillStyle = p.color;
         
@@ -5048,9 +5283,8 @@ function loop() {
             ctx.arc(p.x, p.y, p.size || 3, 0, Math.PI * 2); 
             ctx.fill();
         }
-        ctx.globalAlpha = 1.0;
-        if (p.life <= 0) particles.splice(i, 1);
     }
+    ctx.globalAlpha = 1.0;
 
     // Dibujar Shockwaves (Ondas de choque)
     for (let i = shockwaves.length - 1; i >= 0; i--) {
