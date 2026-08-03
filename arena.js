@@ -183,15 +183,17 @@ function initBoard() {
     pegs.length = 0;
     buckets.length = 0;
 
-    const rows = 9;  // 9 filas = pirámide más compacta, pegs más grandes
+    const rows = 8;   // 8 filas: pegs y bolas grandes, proporciones correctas
     
-    const maxCols = rows + 3; // 12 columnas en la última fila
-    const gapX = Math.max(Math.min((canvas.width * 0.88) / (maxCols - 1), 65), 32);
-    const gapY = gapX * 1.85;  // Espacio vertical generoso
+    const maxCols = rows + 3; // 11 columnas en la última fila
+    const gapX = Math.min((canvas.width * 0.88) / (maxCols - 1), 65);
+    const gapY = gapX * 2.0;  // Espacio vertical amplio para que las bolas caigan con drama
     const startY = canvas.height * 0.08;
 
-    BALL_R = Math.max(gapX * 0.52, 16);  // Bolas: visibles siempre
-    PEG_R  = Math.max(gapX * 0.28, 8);   // Pegs: MUCHO más grandes
+    // PROPORCIONES CORRECTAS PARA PLINKO:
+    // Ball debe ser ~3x más grande que el peg para que visualmente "rebote" en él
+    BALL_R = gapX * 0.38;  // Bola grande y visible
+    PEG_R  = gapX * 0.14;  // Peg: visible pero mucho más pequeño que la bola
 
     for (let r = 0; r < rows; r++) {
         const cols = r + 3;
