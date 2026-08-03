@@ -235,9 +235,14 @@ initBoard();
 function spawnBall(player, sizeScale = 1, count = 1, delay = 180) {
     for (let i = 0; i < count; i++) {
         setTimeout(() => {
+            // Limitar spawn al ancho de la primera fila de la pirámide
+            const topPegs = pegs.filter(p => p.y === pegs[0].y);
+            const spawnLeft  = topPegs.length ? topPegs[0].x : canvas.width * 0.3;
+            const spawnRight = topPegs.length ? topPegs[topPegs.length - 1].x : canvas.width * 0.7;
+            const spawnX = spawnLeft + Math.random() * (spawnRight - spawnLeft);
             balls.push({
                 player,
-                x: canvas.width / 2 + (Math.random() - 0.5) * 160,
+                x: spawnX,
                 y: -BALL_R * sizeScale - Math.random() * 40,
                 vx: (Math.random() - 0.5) * 4,
                 vy: 1 + Math.random() * 2,
@@ -257,9 +262,13 @@ function spawnDemoBall() {
     const id = "demo_" + Math.floor(Math.random()*10000);
     const color = COLORS[Math.floor(Math.random()*COLORS.length)];
     playerColors[id] = color;
+    const topPegs = pegs.filter(p => p.y === pegs[0].y);
+    const spawnLeft  = topPegs.length ? topPegs[0].x : canvas.width * 0.3;
+    const spawnRight = topPegs.length ? topPegs[topPegs.length - 1].x : canvas.width * 0.7;
+    const spawnX = spawnLeft + Math.random() * (spawnRight - spawnLeft);
     balls.push({
         player: { id, name: "", avatar: "" },
-        x: canvas.width / 2 + (Math.random() - 0.5) * 220,
+        x: spawnX,
         y: -BALL_R,
         vx: (Math.random() - 0.5) * 4,
         vy: 1,
