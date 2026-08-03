@@ -493,6 +493,16 @@ function drawPegs() {
         ctx.shadowBlur = isLit ? 18 : (peg.isBomb ? 10 : 6);
         ctx.shadowColor = isLit ? "#ffffff" : (peg.isBomb ? "#ff0000" : "#ff4757");
         ctx.fill();
+        
+        if (peg.isBomb) {
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = "#ff4757";
+            ctx.font = "bold 9px Rajdhani, sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("-50", peg.x, peg.y - 14);
+        }
+
         if (peg.lit > 0) peg.lit -= 0.04;
     }
     ctx.shadowBlur = 0;
@@ -594,10 +604,10 @@ function physicsStep(b) {
             
             // Si es bomba, castigo!
             if (peg.isBomb && !b.isDemo) {
-                // Pequeña explosión roja
-                explode(b.x, b.y, "#ff0000", 6);
+                // Explosión más grande
+                explode(b.x, b.y, "#ff0000", 18);
                 if (now - b.lastSfxTime > 500) {
-                    floatText(`¡BOMBA!`, b.x, b.y - 15, "#ff0000");
+                    floatText(`-50 pts`, b.x, b.y - 15, "#ff0000");
                     socket.emit("arena:bombHit", { targetId: b.player.id });
                     // No saturar sonido de bomba
                 }
