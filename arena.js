@@ -1,5 +1,16 @@
 const socket = io();
 
+// Mensajes de atracción rotativos (neuromarketing: 1 mensaje claro a la vez)
+const ATTRACT_MESSAGES = [
+    { text: "¡TU CARA CAE EN LA PANTALLA!",   sub: "Manda una Rosa para empezar",       color: "#ff4757" },
+    { text: "¡DA TAP TAP!",                     sub: "Cada 3 taps = una bolita tuya",      color: "#ffa502" },
+    { text: "¿QUIÉN LLEGA AL X10?",             sub: "El que dé más Rosas gana",           color: "#2ed573" },
+    { text: "¡ATACA A TUS AMIGOS!",             sub: "Manda más Rosas = más bolas = más puntos", color: "#1e90ff" },
+    { text: "¿LISTO PARA VOLAR?",              sub: "Un León = Bola Gigante que aplasta todo", color: "#a55eea" },
+];
+let attractIdx = 0;
+setInterval(() => { attractIdx = (attractIdx + 1) % ATTRACT_MESSAGES.length; }, 3000);
+
 // ==========================================
 // DOM & CANVAS SETUP
 // ==========================================
@@ -217,28 +228,28 @@ function spawnBall(player, sizeScale = 1, count = 1, delay = 180) {
     }
 }
 
-// Demo balls (idle screen – caen automaticamente)
+// Demo balls (idle screen – caen automaticamente con colores vibrantes, sin iconos)
 function spawnDemoBall() {
-    const demoPlayer = { id: "demo_" + Math.floor(Math.random()*1000), name: "???", avatar: "" };
-    demoPlayer.color = COLORS[Math.floor(Math.random()*COLORS.length)];
-    playerColors[demoPlayer.id] = demoPlayer.color;
+    const id = "demo_" + Math.floor(Math.random()*10000);
+    const color = COLORS[Math.floor(Math.random()*COLORS.length)];
+    playerColors[id] = color;
     balls.push({
-        player: demoPlayer,
-        x: canvas.width / 2 + (Math.random() - 0.5) * 200,
+        player: { id, name: "", avatar: "" },
+        x: canvas.width / 2 + (Math.random() - 0.5) * 220,
         y: -BALL_R,
         vx: (Math.random() - 0.5) * 4,
         vy: 1,
-        r: BALL_R * 0.7,
+        r: BALL_R * 0.65,
         heavy: false,
-        color: demoPlayer.color,
+        color,
         active: true,
         isDemo: true
     });
 }
-// Arrancar demo balls de atracción antes de que empiece el live
+// Caen cada 700ms para mantener el tablero vivo
 setInterval(() => {
-    if (Object.keys(players).length === 0) spawnDemoBall();
-}, 900);
+    if (Object.keys(players).filter(k => !k.startsWith("demo_")).length === 0) spawnDemoBall();
+}, 700);
 
 // ==========================================
 // FLOATING TEXT
@@ -443,44 +454,54 @@ function drawPegs() {
 
 function drawBall(b) {
     ctx.save();
+
+    // Sombra exterior (glow)
+    ctx.shadowBlur = b.heavy ? 35 : 14;
+    ctx.shadowColor = b.color;
+
     ctx.beginPath();
     ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-
-    // Sombra
-    ctx.shadowBlur = b.heavy ? 30 : 12;
-    ctx.shadowColor = b.color;
     ctx.fillStyle = b.color;
     ctx.fill();
 
-    // Avatar
+    // Avatar (jugador real)
     const img = getAvatar(b.player.avatar);
     if (img && img.complete && img.naturalWidth > 0) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
         ctx.clip();
         ctx.drawImage(img, b.x - b.r, b.y - b.r, b.r * 2, b.r * 2);
+        ctx.restore();
     } else if (b.isDemo) {
-        // Demo: solo un texto de emoji
-        ctx.shadowBlur = 0;
-        ctx.font = `${b.r * 1.2}px sans-serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText("🎰", b.x, b.y);
+        // Demo: círculo con brillo interior, sin emojis de casino
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.r * 0.5, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255,255,255,0.25)";
+        ctx.fill();
     }
-    ctx.restore();
+
+    ctx.shadowBlur = 0;
 
     // Borde
     ctx.beginPath();
     ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-    ctx.strokeStyle = b.heavy ? "#ffffff" : "rgba(255,255,255,0.5)";
+    ctx.strokeStyle = b.heavy ? "#ffffff" : "rgba(255,255,255,0.4)";
     ctx.lineWidth = b.heavy ? 3 : 1.5;
     ctx.stroke();
 
-    // Nombre del jugador debajo de la bola
-    if (!b.isDemo && b.r >= BALL_R * 0.8) {
+    ctx.restore();
+
+    // Nombre del jugador SOLO si tiene avatar real y bola normal
+    if (!b.isDemo && b.r >= BALL_R * 0.8 && b.player.name) {
+        ctx.fillStyle = "rgba(0,0,0,0.6)";
+        const nameW = Math.min(b.player.name.length * 7, 80);
+        ctx.fillRect(b.x - nameW/2, b.y + b.r + 2, nameW, 16);
         ctx.fillStyle = "#ffffff";
-        ctx.font = `bold ${Math.max(10, b.r * 0.55)}px Rajdhani, sans-serif`;
+        ctx.font = `bold 11px Rajdhani, sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
-        ctx.fillText(b.player.name?.substring(0, 10) || "", b.x, b.y + b.r + 3);
+        ctx.fillText(b.player.name.substring(0, 12), b.x, b.y + b.r + 4);
     }
 }
 
@@ -550,55 +571,46 @@ function physicsStep(b) {
 
 function drawIdleScreen() {
     const t = Date.now() * 0.001;
+    const msg = ATTRACT_MESSAGES[attractIdx];
 
-    // Título pulsante
-    const pulse = 1 + Math.sin(t * 2) * 0.03;
-    ctx.save();
-    ctx.translate(canvas.width/2, canvas.height * 0.32);
-    ctx.scale(pulse, pulse);
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.font = `bold ${Math.min(52, canvas.width * 0.07)}px Orbitron, monospace`;
-    ctx.shadowBlur = 30;
-    ctx.shadowColor = "#ff4757";
-    ctx.fillStyle = "#ffffff";
-    ctx.fillText("🎰 PLINKO DE AVATARES", 0, 0);
+    // Panel central semitransparente — único bloque de texto
+    const panelW = Math.min(canvas.width * 0.82, 420);
+    const panelH = 110;
+    const panelX = canvas.width / 2 - panelW / 2;
+    const panelY = canvas.height * 0.35 - panelH / 2;
+
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
+    ctx.beginPath();
+    ctx.roundRect(panelX, panelY, panelW, panelH, 16);
+    ctx.fill();
+
+    // Borde coloreado del panel
+    ctx.strokeStyle = msg.color;
+    ctx.lineWidth = 2;
+    ctx.shadowBlur = 18;
+    ctx.shadowColor = msg.color;
+    ctx.beginPath();
+    ctx.roundRect(panelX, panelY, panelW, panelH, 16);
+    ctx.stroke();
     ctx.shadowBlur = 0;
-    ctx.restore();
 
-    // Subtítulo 1
+    // MENSAJE PRINCIPAL — grande, claro, UN texto
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.font = `bold ${Math.min(22, canvas.width * 0.03)}px Rajdhani, sans-serif`;
-    ctx.fillStyle = "rgba(255,255,255,0.75)";
-    ctx.fillText("¡DONA UNA ROSA Y TU CARA CAE EN LA PANTALLA!", canvas.width/2, canvas.height * 0.42);
+    ctx.font = `bold ${Math.min(28, canvas.width * 0.058)}px Rajdhani, sans-serif`;
+    ctx.fillStyle = msg.color;
+    ctx.fillText(msg.text, canvas.width / 2, panelY + 38);
 
-    // Instrucción de tap parpadeante
-    const blink = Math.sin(t * 4) > 0;
-    ctx.font = `bold ${Math.min(24, canvas.width * 0.032)}px Rajdhani, sans-serif`;
-    ctx.fillStyle = blink ? "#ffa502" : "rgba(255,165,0,0.4)";
-    ctx.fillText("⬇  TAP TAP PARA EMPEZAR  ⬇", canvas.width/2, canvas.height * 0.50);
+    // SUB-MENSAJE — acción concreta
+    ctx.font = `${Math.min(17, canvas.width * 0.036)}px Rajdhani, sans-serif`;
+    ctx.fillStyle = "rgba(255,255,255,0.8)";
+    ctx.fillText(msg.sub, canvas.width / 2, panelY + 76);
 
-    // Reglas compactas
-    const rules = [
-        { icon:"🌹", text:"Rosa = 2 bolas" },
-        { icon:"✨", text:"Galaxia = 20 bolas" },
-        { icon:"🦁", text:"León = Bola Gigante" },
-        { icon:"❤️", text:"Tap Tap = mini bola" },
-    ];
-    const ruleY = canvas.height * 0.58;
-    const ruleW = Math.min(160, canvas.width * 0.2);
-    ctx.font = `bold 14px Rajdhani, sans-serif`;
-    rules.forEach((r, i) => {
-        const x = canvas.width/2 + (i - 1.5) * ruleW;
-        ctx.fillStyle = "rgba(255,255,255,0.15)";
-        ctx.beginPath();
-        ctx.roundRect(x - ruleW/2 + 4, ruleY - 20, ruleW - 8, 44, 8);
-        ctx.fill();
-        ctx.fillStyle = "#fff";
-        ctx.textAlign = "center";
-        ctx.fillText(`${r.icon} ${r.text}`, x, ruleY + 2);
-    });
+    // Flecha animada abajo del panel (CTA)
+    const arrowY = Math.sin(t * 4) * 6;
+    ctx.font = `bold 20px Rajdhani, sans-serif`;
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    ctx.fillText("▼  TAP TAP PARA EMPEZAR  ▼", canvas.width / 2, panelY + panelH + 28 + arrowY);
 }
 
 function drawToasts() {
