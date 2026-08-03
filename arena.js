@@ -91,6 +91,51 @@ function sfxRoundEnd() {
 }
 
 // ===========================================
+// ===========================================
+// MUSICA DE FONDO (BGM Dinámico)
+// ===========================================
+let bgmStep = 0;
+let bgmActive = false;
+let nextBgmTime = 0;
+
+function bgmLoop() {
+    if (!soundEnabled || audioCtx.state === 'suspended') return;
+    const now = audioCtx.currentTime;
+    if (now >= nextBgmTime) {
+        // Velocidad base: 500ms por paso. Aumenta hasta 150ms según bolas
+        const numBalls = typeof balls !== 'undefined' ? balls.length : 0;
+        const ballIntensity = Math.min(numBalls, 100) / 100;
+        const stepDuration = 0.5 - (ballIntensity * 0.35);
+        
+        // Patrón chill synthwave (Escala pentatónica menor)
+        const notes = [196.00, 220.00, 261.63, 293.66, 329.63, 392.00];
+        const seq = [0, 2, 4, 2, 5, 4, 2, 1];
+        
+        const freq = notes[seq[bgmStep % seq.length]] * (ballIntensity > 0.8 ? 2 : 1);
+        
+        // Tocar nota suave
+        playSynth(freq, 'sine', stepDuration * 0.8, 0.05 + (ballIntensity * 0.05));
+        
+        // Bombo / Kick de fondo
+        if (bgmStep % 4 === 0) {
+            playSynth(50, 'square', 0.2, 0.1);
+        }
+
+        nextBgmTime = now + stepDuration;
+        bgmStep++;
+    }
+    requestAnimationFrame(bgmLoop);
+}
+
+function startBGM() {
+    if (bgmActive) return;
+    bgmActive = true;
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    nextBgmTime = audioCtx.currentTime;
+    requestAnimationFrame(bgmLoop);
+}
+
+// ===========================================
 // SISTEMA DE VOZ (TTS en Español)
 // ===========================================
 let voiceQueue = [];
@@ -213,138 +258,127 @@ function getAvatarImage(url) {
 }
 
 // ==========================================
-// LÓGICA DE GUERRA DE TERRITORIOS (GRID)
+// PLINKO PHYSICS ENGINE
 // ==========================================
-const GRID_COLS = 20;
-const GRID_ROWS = 35;
-const TOTAL_TILES = GRID_COLS * GRID_ROWS;
-let TILE_W = canvas.width / GRID_COLS;
-let TILE_H = canvas.height / GRID_ROWS;
+const balls = [];
+const pegs = [];
+const buckets = [];
+const particles = [];
+const announcements = [];
+let screenShake = 0;
+let overlayFlashAlpha = 0;
+let overlayFlashColor = "255,255,255";
+let frameCount = 0;
 
-const grid = new Array(TOTAL_TILES).fill(null);
-const cellFlash = new Array(TOTAL_TILES).fill(0);
+const GRAVITY = 0.2;
+const BALL_RADIUS = 20;
+const PEG_RADIUS = 5;
+const BOUNCE_DAMPING = 0.5;
+
+function initBoard() {
+    pegs.length = 0;
+    buckets.length = 0;
+    
+    // Crear pirámide de clavos (pegs)
+    const rows = 12;
+    const spacingY = canvas.height * 0.06;
+    const spacingX = Math.min(canvas.width * 0.1, 80);
+    const startY = canvas.height * 0.2;
+    
+    for (let r = 0; r < rows; r++) {
+        const cols = r + 3;
+        const rowWidth = (cols - 1) * spacingX;
+        const startX = (canvas.width - rowWidth) / 2;
+        
+        for (let c = 0; c < cols; c++) {
+            pegs.push({
+                x: startX + c * spacingX,
+                y: startY + r * spacingY,
+                r: PEG_RADIUS,
+                lit: 0
+            });
+        }
+    }
+    
+    // Crear canastas (buckets)
+    const bucketCount = 5;
+    const bWidth = canvas.width / bucketCount;
+    const multipliers = [1, 5, 10, 5, 1];
+    const colors = ["#1e90ff", "#a55eea", "#ff4757", "#a55eea", "#1e90ff"];
+    for (let i = 0; i < bucketCount; i++) {
+        buckets.push({
+            x: i * bWidth,
+            y: canvas.height - 60,
+            w: bWidth,
+            h: 60,
+            mult: multipliers[i],
+            color: colors[i],
+            flash: 0
+        });
+    }
+}
+window.addEventListener('resize', initBoard);
+initBoard();
 
 // Colores vibrantes por jugador
 const playerColors = {};
-const COLOR_PALETTE = [
-    "#ff4757", "#2ed573", "#1e90ff", "#ffa502", "#ff6b81",
-    "#7bed9f", "#70a1ff", "#eccc68", "#ff7f50", "#ff4d4d",
-    "#00d8d6", "#0fb9b1", "#a55eea", "#fd79a8", "#fdcb6e",
-    "#6c5ce7", "#00cec9", "#e17055", "#d63031", "#55efc4"
-];
-
+const COLOR_PALETTE = ["#ff4757", "#2ed573", "#1e90ff", "#ffa502", "#ff6b81", "#7bed9f", "#70a1ff", "#eccc68", "#00d8d6"];
 function getPlayerColor(id) {
-    if (!playerColors[id]) {
-        playerColors[id] = COLOR_PALETTE[Object.keys(playerColors).length % COLOR_PALETTE.length];
-    }
+    if (!playerColors[id]) playerColors[id] = COLOR_PALETTE[Object.keys(playerColors).length % COLOR_PALETTE.length];
     return playerColors[id];
 }
 
-function getIndex(col, row) {
-    if (col < 0 || col >= GRID_COLS || row < 0 || row >= GRID_ROWS) return -1;
-    return row * GRID_COLS + col;
-}
-
-function getCellCenter(index) {
-    const col = index % GRID_COLS;
-    const row = Math.floor(index / GRID_COLS);
-    return { x: col * TILE_W + TILE_W / 2, y: row * TILE_H + TILE_H / 2 };
-}
-
-// Conquista con onda expansiva animada
-function conquerArea(targetIndex, attackerId, radius) {
-    const targetCol = targetIndex % GRID_COLS;
-    const targetRow = Math.floor(targetIndex / GRID_COLS);
-    let conquered = 0;
-
-    for (let r = targetRow - radius; r <= targetRow + radius; r++) {
-        for (let c = targetCol - radius; c <= targetCol + radius; c++) {
-            const dist = Math.sqrt(Math.pow(c - targetCol, 2) + Math.pow(r - targetRow, 2));
-            if (dist <= radius) {
-                const idx = getIndex(c, r);
-                if (idx !== -1) {
-                    grid[idx] = attackerId;
-                    cellFlash[idx] = 1.0;
-                    conquered++;
-                }
-            }
-        }
-    }
-    return conquered;
-}
-
-// ==========================================
-// EFECTOS VISUALES
-// ==========================================
-let particles = [];
-let overlayFlashAlpha = 0;
-let overlayFlashColor = "255,255,255";
-let screenShake = 0;
-let announcements = []; // Texto flotante grande en el centro
-
-function spawnFloatingText(text, x, y, color = "#fff") {
-    if (!floatingLayer) return;
-    const el = document.createElement("div");
-    el.className = "floating-text";
-    el.textContent = text;
-    el.style.color = color;
-
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = rect.width / canvas.width;
-    const scaleY = rect.height / canvas.height;
-
-    el.style.left = `${(x * scaleX) + rect.left}px`;
-    el.style.top = `${(y * scaleY) + rect.top}px`;
-
-    floatingLayer.appendChild(el);
-    setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 1200);
-}
-
-function createExplosion(x, y, color, count = 20) {
+function spawnBall(player, sizeScale = 1, count = 1) {
     for (let i = 0; i < count; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const speed = Math.random() * 8 + 2;
+        setTimeout(() => {
+            balls.push({
+                player: player,
+                x: canvas.width / 2 + (Math.random() - 0.5) * 200,
+                y: -50 - (Math.random() * 50),
+                vx: (Math.random() - 0.5) * 5,
+                vy: Math.random() * 2,
+                r: BALL_RADIUS * sizeScale,
+                heavy: sizeScale >= 3,
+                color: getPlayerColor(player.id || player.i),
+                active: true
+            });
+        }, i * (sizeScale < 1 ? 50 : 200));
+    }
+}
+
+function createExplosion(x, y, color, count = 15) {
+    for (let i = 0; i < count; i++) {
         particles.push({
             x, y,
-            vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed,
-            life: 1.0,
-            color: color,
-            size: Math.random() * 5 + 2
+            vx: (Math.random() - 0.5) * 10,
+            vy: (Math.random() - 0.5) * 10,
+            life: 1,
+            color,
+            size: Math.random() * 4 + 2
         });
     }
 }
 
-function announce(text, color = "#ffd700", duration = 2500) {
-    announcements.push({ text, color, birth: Date.now(), duration });
+function announce(text, color = "#fff", duration = 2000) {
+    announcements.push({ text, color, duration, birth: Date.now() });
+}
+
+function spawnFloatingText(text, x, y, color) {
+    const el = document.createElement("div");
+    el.className = "floating-score";
+    el.innerText = text;
+    el.style.left = x + "px";
+    el.style.top = y + "px";
+    el.style.color = color;
+    floatingLayer.appendChild(el);
+    setTimeout(() => el.remove(), 1000);
 }
 
 // ==========================================
-// UNMINIFY - El servidor comprime los datos
+// SOCKET EVENTS OVERRIDE
 // ==========================================
-function unminifyPlayer(p) {
-    return {
-        id: p.i || p.id,
-        name: p.n || p.name,
-        avatar: p.a || p.avatar,
-        score: p.s !== undefined ? p.s : (p.score || 0),
-        hp: p.h !== undefined ? p.h : (p.hp || 100),
-        state: p.st || p.state || "ACTIVE"
-    };
-}
-
-// ==========================================
-// SOCKET EVENTS
-// ==========================================
-socket.on("arena:join", (p) => {
-    const player = unminifyPlayer(p);
-    players[player.id] = player;
-    announce(`🟩 ${player.name} ENTRÓ A LA GUERRA`, getPlayerColor(player.id));
-    // Spawn inicial: conquistar un bloque aleatorio
-    const startIdx = Math.floor(Math.random() * TOTAL_TILES);
-    conquerArea(startIdx, player.id, 1);
-    const pos = getCellCenter(startIdx);
-    createExplosion(pos.x, pos.y, getPlayerColor(player.id), 10);
+socket.on("arena:join", (player) => {
+    spawnBall(player, 1, 1);
     sfxJoin();
     speak(pickRandom(VOICE_JOIN_PHRASES)(player.name));
 });
@@ -352,13 +386,8 @@ socket.on("arena:join", (p) => {
 socket.on("arena:sync", (data) => {
     for (const [, minified] of Object.entries(data)) {
         const p = unminifyPlayer(minified);
-        if (!players[p.id]) {
-            players[p.id] = p;
-        } else {
-            players[p.id].score = p.score;
-            players[p.id].hp = p.hp;
-            players[p.id].state = p.state;
-        }
+        if (!players[p.id]) players[p.id] = p;
+        else { players[p.id].score = p.score; players[p.id].hp = p.hp; }
     }
 });
 
@@ -367,245 +396,54 @@ socket.on("arena:currentRanking", (data) => {
     updateRankingDOM();
 });
 
-socket.on("arena:hallOfFameUpdate", (list) => {
-    persistentHOF = Array.isArray(list) ? list : [];
-});
-
-socket.on("arena:lastRoundWinner", () => {});
-
-socket.on("timerUpdate", (seconds) => {
-    currentRoundSeconds = Math.max(0, Number(seconds) || 0);
-    const mainTimerEl = document.getElementById("main-round-timer");
-    const minutes = String(Math.floor(currentRoundSeconds / 60)).padStart(2, "0");
-    const secs = String(currentRoundSeconds % 60).padStart(2, "0");
-    if (mainTimerEl) mainTimerEl.textContent = `${minutes}:${secs}`;
-});
-
-socket.on("arena:suddenDeath", () => {});
-socket.on("arena:goldenMinute", () => {});
-socket.on("arena:frenzyUpdate", () => {});
-
 socket.on("arena:roundEnd", () => {
-    // Limpiar la cuadrícula para la nueva ronda
-    grid.fill(null);
-    cellFlash.fill(0);
-    announce("⚔️ NUEVA RONDA ⚔️", "#ff4757", 3000);
+    balls.length = 0; // Limpiar bolas
+    announce("⏱️ FIN DEL TIEMPO ⏱️", "#ff4757", 3000);
     overlayFlashAlpha = 0.6;
     overlayFlashColor = "255,71,87";
     sfxRoundEnd();
-    speak("¡Se acabó el tiempo! Comienza una nueva ronda. ¡A conquistar!");
+    speak("¡Se acabó el tiempo! Comienza una nueva ronda.");
 });
 
-// ==========================================
-// REGALO = ATAQUE DE CONQUISTA
-// ==========================================
+socket.on("arena:likesBatch", (batch) => {
+    for (const data of batch) {
+        const ballsToDrop = Math.max(1, Math.floor(data.likeCount / 5)); // Al menos 1 bolita por tap
+        if (ballsToDrop > 0) {
+            const player = players[data.userId];
+            if (player) {
+                spawnBall(player, 0.5, Math.min(ballsToDrop, 5));
+            }
+        }
+    }
+});
+
 socket.on("arena:gift", (data) => {
     const attackerData = data.attacker || {};
     const attacker = players[attackerData.id || attackerData.i];
     if (!attacker) return;
-
-    const targetData = data.target || {};
-    const target = players[targetData.id || targetData.i] || null;
     const diamondsTotal = data.diamondsTotal || 1;
 
-    // Radio basado en el valor del regalo
-    let impactRadius = 1;
-    let label = "🌹 ROSA";
-    if (diamondsTotal >= 100) { impactRadius = 3; label = "⚡ ATAQUE"; }
-    if (diamondsTotal >= 1000) { impactRadius = 5; label = "🌌 GALAXIA"; }
-    if (diamondsTotal >= 5000) { impactRadius = 7; label = "💎 MEGA"; }
-    if (diamondsTotal >= 30000) { impactRadius = 10; label = "🦁 ANIQUILACIÓN"; }
+    let ballCount = 1;
+    let sizeScale = 1;
+    let label = "ROSA";
 
-    // Impacto: priorizar territorio enemigo
-    let impactIdx = Math.floor(Math.random() * TOTAL_TILES);
-    if (target) {
-        const targetTiles = [];
-        for (let i = 0; i < TOTAL_TILES; i++) {
-            if (grid[i] === (target.id || targetData.id || targetData.i)) targetTiles.push(i);
-        }
-        if (targetTiles.length > 0) {
-            impactIdx = targetTiles[Math.floor(Math.random() * targetTiles.length)];
-        }
-    }
+    if (diamondsTotal >= 30000) { ballCount = 1; sizeScale = 4; label = "LEÓN"; sfxMegaBlast(); speak(pickRandom(VOICE_MEGA_PHRASES)(attacker.name)); screenShake = 20; }
+    else if (diamondsTotal >= 1000) { ballCount = 15; sizeScale = 1; label = "GALAXIA"; sfxExplosion(); speak(pickRandom(VOICE_BIG_GIFT_PHRASES)(attacker.name)); screenShake = 10; }
+    else if (diamondsTotal >= 100) { ballCount = 5; sizeScale = 1; label = "ATAQUE"; sfxExplosion(); speak(pickRandom(VOICE_GIFT_PHRASES)(attacker.name, "múltiples")); }
+    else { sfxConquer(); if (Math.random() < 0.2) speak(pickRandom(VOICE_GIFT_PHRASES)(attacker.name, "una")); }
 
-    const pos = getCellCenter(impactIdx);
-    const color = getPlayerColor(attacker.id);
-    const conquered = conquerArea(impactIdx, attacker.id, impactRadius);
-
-    // Efectos visuales épicos
-    createExplosion(pos.x, pos.y, color, Math.min(50, conquered * 2));
-    spawnFloatingText(`+${conquered} 🟩`, pos.x, pos.y - 30, color);
-    announce(`${label} ${attacker.name} → +${conquered} CUADROS`, color, 2000);
-
-    if (diamondsTotal >= 100) {
-        screenShake = Math.min(20, diamondsTotal / 30);
-        overlayFlashAlpha = Math.min(0.6, diamondsTotal / 5000);
-        overlayFlashColor = color.replace("#", "").match(/.{2}/g).map(h => parseInt(h, 16)).join(",");
-        
-        if (diamondsTotal >= 30000) { sfxMegaBlast(); speak(pickRandom(VOICE_MEGA_PHRASES)(attacker.name)); }
-        else if (diamondsTotal >= 1000) { sfxExplosion(); speak(pickRandom(VOICE_BIG_GIFT_PHRASES)(attacker.name)); }
-        else { sfxExplosion(); speak(pickRandom(VOICE_GIFT_PHRASES)(attacker.name, conquered)); }
-    } else {
-        sfxConquer();
-        // Solo un 20% de probabilidad de narrar una simple rosa para no hacer spam de voz
-        if (Math.random() < 0.2) speak(pickRandom(VOICE_GIFT_PHRASES)(attacker.name, conquered));
-    }
+    announce(`${attacker.name} envió ${label}!`, getPlayerColor(attacker.id), 2000);
+    spawnBall(attacker, sizeScale, ballCount);
 });
 
 // ==========================================
-// EXPANSIÓN ORGÁNICA DEL TERRITORIO
+// RENDER LOOP & PHYSICS
 // ==========================================
-function simulateTerritoryGrowth() {
-    let totalScore = 0;
-    const scores = {};
-    const tileCounts = {};
-
-    for (const id in players) {
-        const p = players[id];
-        if (p.state !== "REMOVED" && p.state !== "ELIMINATED" && p.score > 0) {
-            scores[id] = p.score;
-            totalScore += p.score;
-            tileCounts[id] = 0;
-        }
-    }
-    if (totalScore === 0) return;
-
-    for (let i = 0; i < TOTAL_TILES; i++) {
-        if (grid[i] && scores[grid[i]]) tileCounts[grid[i]]++;
-    }
-
-    for (const id in scores) {
-        const targetTiles = Math.floor((scores[id] / totalScore) * TOTAL_TILES);
-        const current = tileCounts[id] || 0;
-
-        if (current < targetTiles) {
-            const ownTiles = [];
-            for (let i = 0; i < TOTAL_TILES; i++) if (grid[i] === id) ownTiles.push(i);
-
-            if (ownTiles.length > 0) {
-                const sourceIdx = ownTiles[Math.floor(Math.random() * ownTiles.length)];
-                const sourceCol = sourceIdx % GRID_COLS;
-                const sourceRow = Math.floor(sourceIdx / GRID_COLS);
-                const dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
-                const dir = dirs[Math.floor(Math.random() * dirs.length)];
-                const targetIdx = getIndex(sourceCol + dir[0], sourceRow + dir[1]);
-
-                if (targetIdx !== -1 && grid[targetIdx] !== id) {
-                    grid[targetIdx] = id;
-                    cellFlash[targetIdx] = 0.3;
-                }
-            } else {
-                const randIdx = Math.floor(Math.random() * TOTAL_TILES);
-                grid[randIdx] = id;
-                cellFlash[randIdx] = 0.8;
-            }
-        }
-    }
-}
-
-// ==========================================
-// UI (Leaderboard con % de territorio)
-// ==========================================
-function formatScoreShort(s) {
-    if (s >= 1e6) return (s / 1e6).toFixed(1).replace(/\.0$/, "") + "M";
-    if (s >= 1e3) return (s / 1e3).toFixed(1).replace(/\.0$/, "") + "k";
-    return String(s);
-}
-
-function countTiles(playerId) {
-    let count = 0;
-    for (let i = 0; i < TOTAL_TILES; i++) if (grid[i] === playerId) count++;
-    return count;
-}
-
-function updateRankingDOM(force = false) {
-    const now = Date.now();
-    if (!force && (now - lastUIUpdate < UI_THROTTLE_MS)) return;
-    lastUIUpdate = now;
-
-    if (!leaderboardEl) return;
-    leaderboardEl.innerHTML = "";
-    const top10 = roundRanking.slice(0, 8);
-    top10.forEach((p, index) => {
-        const pid = p.id || p.i;
-        const name = p.name || p.n;
-        const avatar = p.avatar || p.a || 'https://www.tiktok.com/favicon.ico';
-        const tiles = countTiles(pid);
-        const pct = ((tiles / TOTAL_TILES) * 100).toFixed(1);
-        const color = getPlayerColor(pid);
-
-        const item = document.createElement("div");
-        item.className = "leaderboard-item";
-        item.innerHTML = `
-            <span class="rank-num" style="color:${color}">#${index + 1}</span>
-            <img class="rank-avatar" src="${avatar}" onerror="this.src='https://www.tiktok.com/favicon.ico'" />
-            <span class="rank-name">${name}</span>
-            <span class="rank-score" style="color:${color}">${pct}%</span>
-        `;
-        leaderboardEl.appendChild(item);
-    });
-}
-
-// ==========================================
-// RENDER LOOP (60 FPS)
-// ==========================================
-let frameCount = 0;
-const hasPlayers = () => Object.keys(players).length > 0;
-
-function drawWaitingScreen() {
-    // Animación de fondo "esperando" - onda de color suave
-    const time = Date.now() * 0.001;
-    for (let r = 0; r < GRID_ROWS; r++) {
-        for (let c = 0; c < GRID_COLS; c++) {
-            const cx = c * TILE_W;
-            const cy = r * TILE_H;
-            const wave = Math.sin(c * 0.3 + time) * Math.cos(r * 0.3 + time * 0.7);
-            const alpha = (wave + 1) * 0.03;
-            ctx.fillStyle = `rgba(46, 213, 115, ${alpha})`;
-            ctx.fillRect(cx, cy, TILE_W, TILE_H);
-
-            ctx.strokeStyle = "rgba(46, 213, 115, 0.04)";
-            ctx.lineWidth = 1;
-            ctx.strokeRect(cx, cy, TILE_W, TILE_H);
-        }
-    }
-
-    // Texto central
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-
-    // Título pulsante
-    const pulse = Math.sin(time * 2) * 0.1 + 1;
-    ctx.font = `bold ${Math.floor(48 * pulse)}px Orbitron, monospace`;
-    ctx.fillStyle = "#2ed573";
-    ctx.shadowColor = "#2ed573";
-    ctx.shadowBlur = 20;
-    ctx.fillText("🟩 PIXEL WAR", canvas.width / 2, canvas.height / 2 - 60);
-
-    ctx.shadowBlur = 0;
-    ctx.font = "bold 20px Rajdhani, sans-serif";
-    ctx.fillStyle = "rgba(255,255,255,0.7)";
-    ctx.fillText("¡REGALA PARA CONQUISTAR LA PANTALLA!", canvas.width / 2, canvas.height / 2);
-
-    ctx.font = "bold 16px Rajdhani, sans-serif";
-    ctx.fillStyle = "rgba(255,255,255,0.4)";
-    ctx.fillText("🌹 1 Rosa = 1 Cuadro  |  🌌 Galaxia = Bomba  |  🦁 León = Domina Todo", canvas.width / 2, canvas.height / 2 + 40);
-
-    // Flecha animada
-    const arrowY = Math.sin(time * 3) * 8;
-    ctx.font = "30px sans-serif";
-    ctx.fillStyle = "rgba(255,255,255,0.5)";
-    ctx.fillText("⬇️ DONA PARA EMPEZAR ⬇️", canvas.width / 2, canvas.height / 2 + 100 + arrowY);
-}
-
 function loop() {
     frameCount++;
-
-    // Fondo oscuro
     ctx.fillStyle = "#050810";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Screen Shake
     ctx.save();
     if (screenShake > 0) {
         ctx.translate((Math.random() - 0.5) * screenShake, (Math.random() - 0.5) * screenShake);
@@ -614,65 +452,156 @@ function loop() {
     }
 
     if (!hasPlayers()) {
-        drawWaitingScreen();
+        const time = Date.now() * 0.002;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.font = "bold 40px Rajdhani, sans-serif";
+        ctx.fillStyle = "#fff";
+        ctx.fillText("🎰 PLINKO DE AVATARES 🎰", canvas.width / 2, canvas.height * 0.3);
+        ctx.font = "bold 20px Rajdhani, sans-serif";
+        ctx.fillStyle = "rgba(255,255,255,0.7)";
+        ctx.fillText("¡DONA PARA HACER CAER TU AVATAR!", canvas.width / 2, canvas.height / 2);
+        
+        const arrowY = Math.sin(time * 3) * 8;
+        ctx.font = "30px sans-serif";
+        ctx.fillStyle = "rgba(255,255,255,0.5)";
+        ctx.fillText("⬇️ TAP TAP PARA EMPEZAR ⬇️", canvas.width / 2, canvas.height / 2 + 100 + arrowY);
     } else {
-        // Dibujar el Grid con territorio
-        for (let r = 0; r < GRID_ROWS; r++) {
-            for (let c = 0; c < GRID_COLS; c++) {
-                const idx = getIndex(c, r);
-                const ownerId = grid[idx];
-                const cx = c * TILE_W;
-                const cy = r * TILE_H;
+        // Dibujar canastas
+        for (const b of buckets) {
+            ctx.fillStyle = b.color;
+            ctx.globalAlpha = 0.2 + b.flash;
+            ctx.fillRect(b.x, b.y, b.w, b.h);
+            ctx.globalAlpha = 1;
+            
+            ctx.strokeStyle = b.color;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(b.x, b.y, b.w, b.h);
 
-                // Borde sutil
-                ctx.strokeStyle = "rgba(255,255,255, 0.03)";
-                ctx.lineWidth = 1;
-                ctx.strokeRect(cx, cy, TILE_W, TILE_H);
-
-                if (ownerId && players[ownerId]) {
-                    const color = getPlayerColor(ownerId);
-
-                    // Fondo coloreado (territorio)
-                    ctx.fillStyle = color;
-                    ctx.globalAlpha = 0.45;
-                    ctx.fillRect(cx + 1, cy + 1, TILE_W - 2, TILE_H - 2);
-                    ctx.globalAlpha = 1.0;
-
-                    // Avatar en la celda
-                    const img = getAvatarImage(players[ownerId].avatar);
-                    if (img && img.complete && img.naturalWidth > 0) {
-                        ctx.save();
-                        ctx.beginPath();
-                        const rad = (Math.min(TILE_W, TILE_H) / 2) * 0.75;
-                        ctx.arc(cx + TILE_W / 2, cy + TILE_H / 2, rad, 0, Math.PI * 2);
-                        ctx.clip();
-                        ctx.drawImage(img, cx + TILE_W / 2 - rad, cy + TILE_H / 2 - rad, rad * 2, rad * 2);
-                        ctx.restore();
-                    }
-
-                    // Borde del color del jugador
-                    ctx.strokeStyle = color;
-                    ctx.globalAlpha = 0.6;
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(cx, cy, TILE_W, TILE_H);
-                    ctx.globalAlpha = 1.0;
-                }
-
-                // Flash de conquista
-                if (cellFlash[idx] > 0) {
-                    ctx.fillStyle = "#ffffff";
-                    ctx.globalAlpha = cellFlash[idx];
-                    ctx.fillRect(cx, cy, TILE_W, TILE_H);
-                    cellFlash[idx] *= 0.88;
-                    if (cellFlash[idx] < 0.01) cellFlash[idx] = 0;
-                    ctx.globalAlpha = 1.0;
-                }
-            }
+            ctx.fillStyle = "#fff";
+            ctx.font = "bold 24px Rajdhani";
+            ctx.textAlign = "center";
+            ctx.fillText(`x${b.mult}`, b.x + b.w / 2, b.y + b.h / 2);
+            
+            if (b.flash > 0) b.flash *= 0.9;
         }
 
-        // Expansión orgánica (2 veces por segundo)
-        if (frameCount % 30 === 0) {
-            simulateTerritoryGrowth();
+        // Dibujar clavos (pegs)
+        for (const peg of pegs) {
+            ctx.beginPath();
+            ctx.arc(peg.x, peg.y, peg.r, 0, Math.PI * 2);
+            ctx.fillStyle = peg.lit > 0 ? "#fff" : "#ff4757";
+            ctx.shadowBlur = peg.lit > 0 ? 15 : 5;
+            ctx.shadowColor = "#ff4757";
+            ctx.fill();
+            if (peg.lit > 0) peg.lit -= 0.05;
+        }
+        ctx.shadowBlur = 0;
+
+        // Físicas y dibujado de bolas
+        for (let i = balls.length - 1; i >= 0; i--) {
+            const b = balls[i];
+            if (!b.active) continue;
+
+            // Gravedad
+            b.vy += GRAVITY * (b.heavy ? 1.5 : 1);
+            
+            // Límite de velocidad
+            const speed = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+            if (speed > 20) {
+                b.vx = (b.vx / speed) * 20;
+                b.vy = (b.vy / speed) * 20;
+            }
+
+            b.x += b.vx;
+            b.y += b.vy;
+
+            // Colisión con paredes
+            if (b.x < b.r) { b.x = b.r; b.vx *= -BOUNCE_DAMPING; }
+            if (b.x > canvas.width - b.r) { b.x = canvas.width - b.r; b.vx *= -BOUNCE_DAMPING; }
+
+            // Colisión con clavos (pegs)
+            for (const peg of pegs) {
+                const dx = b.x - peg.x;
+                const dy = b.y - peg.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const minDist = b.r + peg.r;
+                
+                if (dist < minDist) {
+                    // Separar
+                    const overlap = minDist - dist;
+                    const nx = dx / dist;
+                    const ny = dy / dist;
+                    b.x += nx * overlap;
+                    b.y += ny * overlap;
+                    
+                    // Rebote elástico
+                    const dot = b.vx * nx + b.vy * ny;
+                    if (dot < 0) {
+                        b.vx -= (1 + BOUNCE_DAMPING) * dot * nx;
+                        b.vy -= (1 + BOUNCE_DAMPING) * dot * ny;
+                    }
+                    peg.lit = 1;
+                    sfxTap();
+                }
+            }
+
+            // Colisión con otros avatares pesados
+            if (b.heavy) {
+                for (const other of balls) {
+                    if (other === b || !other.active) continue;
+                    const dx = other.x - b.x;
+                    const dy = other.y - b.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const minDist = b.r + other.r;
+                    if (dist < minDist) {
+                        const overlap = minDist - dist;
+                        const nx = dx / dist;
+                        const ny = dy / dist;
+                        other.x += nx * overlap;
+                        other.y += ny * overlap;
+                        other.vx += nx * 5;
+                        other.vy += ny * 5;
+                    }
+                }
+            }
+
+            // Caer en canasta
+            if (b.y > canvas.height - 60) {
+                b.active = false;
+                for (const bucket of buckets) {
+                    if (b.x > bucket.x && b.x < bucket.x + bucket.w) {
+                        bucket.flash = 1;
+                        const pts = bucket.mult;
+                        createExplosion(b.x, b.y, b.color, 10);
+                        spawnFloatingText(`+${pts}`, b.x, b.y - 20, b.color);
+                        socket.emit("arena:tapAttack", { targetId: b.player.id || b.player.i }); 
+                        break;
+                    }
+                }
+                balls.splice(i, 1);
+                continue;
+            }
+
+            // Dibujar avatar
+            const img = getAvatarImage(b.player.avatar || b.player.a);
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+            ctx.fillStyle = b.color;
+            ctx.fill();
+            if (img && img.complete && img.naturalWidth > 0) {
+                ctx.clip();
+                ctx.drawImage(img, b.x - b.r, b.y - b.r, b.r * 2, b.r * 2);
+            }
+            ctx.restore();
+            
+            // Borde
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+            ctx.strokeStyle = b.heavy ? "#fff" : b.color;
+            ctx.lineWidth = b.heavy ? 4 : 2;
+            ctx.stroke();
         }
     }
 
@@ -680,10 +609,9 @@ function loop() {
     for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
         p.x += p.vx; p.y += p.vy;
-        p.vy += 0.15; // Gravedad suave
+        p.vy += 0.15;
         p.life -= 0.025;
         if (p.life <= 0) { particles.splice(i, 1); continue; }
-
         ctx.globalAlpha = p.life;
         ctx.fillStyle = p.color;
         ctx.beginPath();
@@ -692,7 +620,7 @@ function loop() {
     }
     ctx.globalAlpha = 1.0;
 
-    // Anuncios centrales (textos grandes temporales)
+    // Anuncios
     const now = Date.now();
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -700,39 +628,27 @@ function loop() {
         const a = announcements[i];
         const elapsed = now - a.birth;
         if (elapsed > a.duration) { announcements.splice(i, 1); continue; }
-
         const progress = elapsed / a.duration;
         const alpha = progress < 0.1 ? progress / 0.1 : progress > 0.8 ? (1 - progress) / 0.2 : 1;
         const scale = progress < 0.1 ? 0.5 + progress * 5 : 1;
-
         ctx.save();
         ctx.translate(canvas.width / 2, canvas.height * 0.15 + i * 40);
         ctx.scale(scale, scale);
         ctx.globalAlpha = alpha;
         ctx.font = "bold 22px Orbitron, monospace";
         ctx.fillStyle = a.color;
-        ctx.shadowColor = a.color;
-        ctx.shadowBlur = 15;
         ctx.fillText(a.text, 0, 0);
-        ctx.shadowBlur = 0;
         ctx.restore();
     }
-    ctx.globalAlpha = 1.0;
 
-    // Flash overlay global
     if (overlayFlashAlpha > 0.01) {
         ctx.fillStyle = `rgba(${overlayFlashColor}, ${overlayFlashAlpha})`;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         overlayFlashAlpha *= 0.85;
-    } else {
-        overlayFlashAlpha = 0;
     }
 
-    ctx.restore(); // Restore shake
-    
-    // Narración de la IA
+    ctx.restore();
     if (hasPlayers()) narrateLeader();
-    
     requestAnimationFrame(loop);
 }
 
@@ -740,99 +656,33 @@ function loop() {
 // INTERACCIÓN: Click / Tap
 // ==========================================
 function handleCanvasClick(e) {
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-
-    let clientX = e.clientX, clientY = e.clientY;
-    if (e.touches && e.touches.length > 0) {
-        clientX = e.touches[0].clientX;
-        clientY = e.touches[0].clientY;
-    }
-
-    const x = (clientX - rect.left) * scaleX;
-    const y = (clientY - rect.top) * scaleY;
-    const col = Math.floor(x / TILE_W);
-    const row = Math.floor(y / TILE_H);
-    const idx = getIndex(col, row);
-
-    if (idx !== -1) {
-        const ownerId = grid[idx];
-        screenShake = 4;
-        createExplosion(x, y, ownerId ? getPlayerColor(ownerId) : "#2ed573", 8);
-        sfxTap();
-
-        if (ownerId) {
-            socket.emit("arena:tapAttack", { targetId: ownerId });
-            grid[idx] = null;
-            cellFlash[idx] = 1.0;
-            spawnFloatingText("💥", x, y - 20, "#ff4757");
-        } else {
-            cellFlash[idx] = 0.5;
-        }
-    }
+    startBGM();
+    const testPlayer = { id: "host", name: "Host", avatar: "https://www.tiktok.com/favicon.ico" };
+    spawnBall(testPlayer, 0.5, 1); // Simular Tap
+    sfxJoin();
 }
 
 canvas.addEventListener("mousedown", handleCanvasClick);
 canvas.addEventListener("touchstart", (e) => { e.preventDefault(); handleCanvasClick(e); }, { passive: false });
 
-// Arrancar motor
 requestAnimationFrame(loop);
 
-// ==========================================
-// MODO DEBUG (para probar sin TikTok LIVE)
-// ==========================================
 if (DEBUG_MODE) {
-    const debugPanel = document.getElementById("debug-panel");
-    if (debugPanel) debugPanel.style.display = "block";
-
-    const DEMO_AVATARS = [
-        "https://p16-webcast.tiktokcdn.com/webcast-va/new_gifter_badge_v3.png~tplv-obj.image",
-        "https://www.tiktok.com/favicon.ico"
-    ];
-
-    let mockScore = 500;
+    document.getElementById("debug-panel").style.display = "block";
     document.getElementById("debug-spawn-bot")?.addEventListener("click", () => {
-        const id = "bot_" + Math.floor(Math.random() * 1000);
-        const name = ["Warrior", "Shadow", "Dragon", "Phoenix", "Storm"][Math.floor(Math.random() * 5)] + id.slice(-3);
-        players[id] = { id, name, score: mockScore, avatar: DEMO_AVATARS[Math.floor(Math.random() * DEMO_AVATARS.length)], state: "ACTIVE" };
-        roundRanking.push(players[id]);
-        mockScore += 200;
-        roundRanking.sort((a, b) => b.score - a.score);
-        updateRankingDOM(true);
-
-        // Auto-conquista para demo
-        const startIdx = Math.floor(Math.random() * TOTAL_TILES);
-        conquerArea(startIdx, id, 2);
-        const pos = getCellCenter(startIdx);
-        createExplosion(pos.x, pos.y, getPlayerColor(id), 15);
-        announce(`🟩 ${name} ENTRÓ A LA GUERRA`, getPlayerColor(id));
+        const p = { id: "bot_"+Math.random(), name: "Bot", avatar: "https://www.tiktok.com/favicon.ico" };
+        players[p.id] = p;
+        spawnBall(p, 1, 3);
     });
-
     document.getElementById("debug-gift-rose")?.addEventListener("click", () => {
-        if (roundRanking.length > 0) {
-            const attacker = roundRanking[Math.floor(Math.random() * Math.min(3, roundRanking.length))];
-            const impactIdx = Math.floor(Math.random() * TOTAL_TILES);
-            const conquered = conquerArea(impactIdx, attacker.id, 1);
-            const pos = getCellCenter(impactIdx);
-            createExplosion(pos.x, pos.y, getPlayerColor(attacker.id), 12);
-            spawnFloatingText(`+${conquered} 🌹`, pos.x, pos.y - 30, getPlayerColor(attacker.id));
-            announce(`🌹 ${attacker.name} +${conquered} CUADROS`, getPlayerColor(attacker.id));
-            screenShake = 3;
-        }
+        const p = { id: "rose_"+Math.random(), name: "Rose Gifter", avatar: "https://www.tiktok.com/favicon.ico" };
+        spawnBall(p, 1, 5);
+        sfxExplosion();
     });
-
     document.getElementById("debug-gift-galaxy")?.addEventListener("click", () => {
-        if (roundRanking.length > 0) {
-            const attacker = roundRanking[0];
-            const impactIdx = Math.floor(Math.random() * TOTAL_TILES);
-            const conquered = conquerArea(impactIdx, attacker.id, 5);
-            const pos = getCellCenter(impactIdx);
-            createExplosion(pos.x, pos.y, getPlayerColor(attacker.id), 40);
-            spawnFloatingText(`+${conquered} 🌌`, pos.x, pos.y - 30, getPlayerColor(attacker.id));
-            announce(`🌌 GALAXIA! ${attacker.name} CONQUISTÓ ${conquered} CUADROS`, getPlayerColor(attacker.id), 3000);
-            screenShake = 12;
-            overlayFlashAlpha = 0.5;
-        }
+        const p = { id: "galaxy_"+Math.random(), name: "Galaxy Gifter", avatar: "https://www.tiktok.com/favicon.ico" };
+        spawnBall(p, 4, 1);
+        screenShake = 15;
+        sfxMegaBlast();
     });
 }
