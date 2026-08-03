@@ -183,19 +183,15 @@ function initBoard() {
     pegs.length = 0;
     buckets.length = 0;
 
-    const rows = 12;
+    const rows = 9;  // 9 filas = pirámide más compacta, pegs más grandes
     
-    // Escala en base a la pantalla, pero garantizando un mínimo para que los avatares se vean
-    // En una pantalla 390px (iPhone): gapX seria 34px, bolas de 22px = se ven bien
-    // En 520px (TikTok ventana pequeña): gapX 42px, bolas 27px = excelente
-    const maxCols = rows + 3; // 15 columnas en la última fila
-    const gapX = Math.max(Math.min((canvas.width * 0.90) / (maxCols - 1), 60), 28);
-    const gapY = gapX * 2.0;  // Mucho espacio vertical para que caigan bien
-    const startY = canvas.height * 0.10;
+    const maxCols = rows + 3; // 12 columnas en la última fila
+    const gapX = Math.max(Math.min((canvas.width * 0.88) / (maxCols - 1), 65), 32);
+    const gapY = gapX * 1.85;  // Espacio vertical generoso
+    const startY = canvas.height * 0.08;
 
-    // Tamaños fijos grandes - que los avatares se vean siempre
-    BALL_R = Math.max(gapX * 0.58, 15);
-    PEG_R  = Math.max(gapX * 0.13, 4);
+    BALL_R = Math.max(gapX * 0.52, 16);  // Bolas: visibles siempre
+    PEG_R  = Math.max(gapX * 0.28, 8);   // Pegs: MUCHO más grandes
 
     for (let r = 0; r < rows; r++) {
         const cols = r + 3;
