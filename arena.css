@@ -184,12 +184,37 @@ body, html {
 }
 
 /* =========================================
-   RESPONSIVO PARA MÓVILES
+   RESPONSIVO PARA MÓVILES / STREAMING
    ========================================= */
-@media (max-width: 600px) {
-    .pixel-subtitle { display: none; } /* Ocultar controles en pantallas chicas */
+@media (max-width: 700px) {
+    #pixel-header {
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        text-align: center;
+    }
+    
+    .pixel-subtitle { 
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 5px;
+    }
+    
+    .pixel-subtitle span {
+        font-size: 11px;
+        padding: 2px 5px;
+    }
+
     .pixel-title { font-size: 16px; }
-    #arena-leaderboard { width: 160px; top: 60px; }
-    .rank-name { font-size: 12px; }
-    .rank-score { font-size: 11px; }
+    
+    #timer-box { font-size: 14px; }
+    
+    #arena-leaderboard { 
+        width: 150px; 
+        top: 90px; /* Mas abajo por el header mas alto */
+        right: 10px;
+    }
+    .rank-name { font-size: 11px; }
+    .rank-score { font-size: 10px; }
 }
