@@ -223,7 +223,9 @@ function spawnBall(player, sizeScale = 1, count = 1, delay = 180) {
                 r: BALL_R * sizeScale,
                 heavy: sizeScale >= 2.5,
                 color: getColor(player.id),
-                active: true
+                active: true,
+                lastSfxTime: 0,
+                stuckFrames: 0
             });
         }, i * delay);
     }
@@ -244,7 +246,9 @@ function spawnDemoBall() {
         heavy: false,
         color,
         active: true,
-        isDemo: true
+        isDemo: true,
+        lastSfxTime: 0,
+        stuckFrames: 0
     });
 }
 // Caen cada 700ms para mantener el tablero vivo
@@ -544,7 +548,21 @@ function physicsStep(b) {
     if (b.x < b.r)              { b.x = b.r;              b.vx = Math.abs(b.vx) * BOUNCE; }
     if (b.x > canvas.width-b.r) { b.x = canvas.width-b.r; b.vx = -Math.abs(b.vx) * BOUNCE; }
 
+    // Anti-atascamiento: si la bola casi no se mueve, acumula frames atascada
+    if (spd < 0.5 && Math.abs(b.vy) < 0.5) {
+        b.stuckFrames++;
+        if (b.stuckFrames > 60) {
+            // Empujón lateral aleatorio fuerte para sacarla
+            b.vx += (Math.random() > 0.5 ? 2 : -2);
+            b.vy -= 2;
+            b.stuckFrames = 0;
+        }
+    } else {
+        b.stuckFrames = 0;
+    }
+
     // Pegs
+    const now = Date.now();
     for (const peg of pegs) {
         const dx = b.x - peg.x, dy = b.y - peg.y;
         const dist = Math.hypot(dx, dy);
@@ -559,7 +577,12 @@ function physicsStep(b) {
                 b.vy -= (1+BOUNCE)*dot*ny;
             }
             peg.lit = 1;
-            sfxPeg();
+            
+            // Cooldown de sonido para evitar ruido abrumador cuando rebota muy rápido
+            if (now - b.lastSfxTime > 120) {
+                sfxPeg();
+                b.lastSfxTime = now;
+            }
         }
     }
 
