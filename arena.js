@@ -1,49 +1,44 @@
 const socket = io();
 
-// Elementos DOM
+// ==========================================
+// DOM & CANVAS SETUP
+// ==========================================
 const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d", { alpha: false }) || canvas.getContext("2d");
+const ctx = canvas.getContext("2d");
 const leaderboardEl = document.getElementById("arena-leaderboard");
 const floatingLayer = document.getElementById("floating-ui-layer");
 
-const DEBUG_MODE = new window.URLSearchParams(window.location.search).get("debug") === "1";
-const CLEAR_CACHE = new window.URLSearchParams(window.location.search).get("clearCache") === "1";
+const DEBUG_MODE = new URLSearchParams(window.location.search).get("debug") === "1";
 
-// Ajustar Canvas a pantalla completa
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-window.addEventListener('resize', () => {
+window.addEventListener("resize", () => {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-    TILE_W = canvas.width / GRID_COLS;
-    TILE_H = canvas.height / GRID_ROWS;
+    initBoard();
 });
 
-if (CLEAR_CACHE) {
-    console.warn("🧹 Limpiando caché local...");
-    localStorage.clear();
-    sessionStorage.clear();
+// ==========================================
+// ESTADO GLOBAL
+// ==========================================
+let players = {};
+let roundRanking = [];
+let persistentHOF = [];
+
+// ==========================================
+// AUDIO (Web Audio API)
+// ==========================================
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let audioUnlocked = false;
+
+function unlockAudio() {
+    if (audioUnlocked) return;
+    audioCtx.resume().then(() => { audioUnlocked = true; });
 }
 
-let persistentHOF = [];
-let roundRanking = [];
-
-// Variables del juego
-let players = {};
-let currentRoundSeconds = 180;
-
-// Audio
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-let soundEnabled = true; // Sonido activo por defecto
-
-// ===========================================
-// SISTEMA DE SONIDO PROCEDURAL (sin archivos)
-// ===========================================
-function playSynth(freq, type, duration, volume = 0.3) {
-    if (!soundEnabled) return;
+function playSynth(freq, type, duration, volume = 0.2) {
     try {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = type;
@@ -55,199 +50,106 @@ function playSynth(freq, type, duration, volume = 0.3) {
         gain.connect(audioCtx.destination);
         osc.start();
         osc.stop(audioCtx.currentTime + duration);
-    } catch(e) { /* ignore */ }
+    } catch(e) {}
 }
 
-function sfxConquer() {
-    playSynth(600, 'square', 0.15, 0.2);
-    setTimeout(() => playSynth(900, 'square', 0.1, 0.15), 80);
-}
+function sfxPeg()      { playSynth(600 + Math.random()*400, 'sine', 0.08, 0.06); }
+function sfxJoin()     { playSynth(440,'sine',0.1,0.1); setTimeout(()=>playSynth(880,'sine',0.12,0.1),120); }
+function sfxGift()     { playSynth(300,'sawtooth',0.3,0.25); setTimeout(()=>playSynth(600,'square',0.2,0.2),150); }
+function sfxMega()     { [80,120,200,300].forEach((f,i)=>setTimeout(()=>playSynth(f,'sawtooth',0.5,0.35),i*60)); }
+function sfxBucket(m)  { playSynth(220*m,'sine',0.4,0.25); }
+function sfxRoundEnd() { [300,200,100].forEach((f,i)=>setTimeout(()=>playSynth(f,'sawtooth',0.3,0.3),i*180)); }
 
-function sfxExplosion() {
-    playSynth(150, 'sawtooth', 0.4, 0.3);
-    playSynth(80, 'square', 0.5, 0.2);
-}
-
-function sfxMegaBlast() {
-    playSynth(100, 'sawtooth', 0.6, 0.4);
-    setTimeout(() => playSynth(200, 'square', 0.3, 0.3), 100);
-    setTimeout(() => playSynth(400, 'sine', 0.2, 0.2), 250);
-}
-
-function sfxTap() {
-    playSynth(800, 'sine', 0.08, 0.15);
-}
-
-function sfxJoin() {
-    playSynth(440, 'sine', 0.1, 0.15);
-    setTimeout(() => playSynth(660, 'sine', 0.1, 0.15), 100);
-    setTimeout(() => playSynth(880, 'sine', 0.15, 0.12), 200);
-}
-
-function sfxRoundEnd() {
-    playSynth(300, 'sawtooth', 0.3, 0.25);
-    setTimeout(() => playSynth(200, 'sawtooth', 0.4, 0.2), 200);
-    setTimeout(() => playSynth(100, 'sawtooth', 0.5, 0.3), 400);
-}
-
-// ===========================================
-// ===========================================
-// MUSICA DE FONDO (BGM Dinámico)
-// ===========================================
+// ==========================================
+// BGM DINÁMICO
+// ==========================================
+const BGM_NOTES = [196.00, 220.00, 261.63, 293.66, 349.23, 392.00];
+const BGM_SEQ   = [0, 2, 4, 2, 5, 4, 2, 0, 1, 3, 1, 0];
 let bgmStep = 0;
-let bgmActive = false;
-let nextBgmTime = 0;
+let bgmNext = 0;
+let bgmRunning = false;
 
-function bgmLoop() {
-    if (!soundEnabled || audioCtx.state === 'suspended') return;
-    const now = audioCtx.currentTime;
-    if (now >= nextBgmTime) {
-        // Velocidad base: 500ms por paso. Aumenta hasta 150ms según bolas
-        const numBalls = typeof balls !== 'undefined' ? balls.length : 0;
-        const ballIntensity = Math.min(numBalls, 100) / 100;
-        const stepDuration = 0.5 - (ballIntensity * 0.35);
-        
-        // Patrón chill synthwave (Escala pentatónica menor)
-        const notes = [196.00, 220.00, 261.63, 293.66, 329.63, 392.00];
-        const seq = [0, 2, 4, 2, 5, 4, 2, 1];
-        
-        const freq = notes[seq[bgmStep % seq.length]] * (ballIntensity > 0.8 ? 2 : 1);
-        
-        // Tocar nota suave
-        playSynth(freq, 'sine', stepDuration * 0.8, 0.05 + (ballIntensity * 0.05));
-        
-        // Bombo / Kick de fondo
-        if (bgmStep % 4 === 0) {
-            playSynth(50, 'square', 0.2, 0.1);
-        }
-
-        nextBgmTime = now + stepDuration;
+function bgmTick() {
+    if (!bgmRunning) return;
+    const t = audioCtx.currentTime;
+    if (t >= bgmNext) {
+        const intensity = Math.min(balls.length, 80) / 80;
+        const step = 0.45 - intensity * 0.33;
+        const octave = intensity > 0.6 ? 2 : 1;
+        const freq = BGM_NOTES[BGM_SEQ[bgmStep % BGM_SEQ.length]] * octave;
+        playSynth(freq, 'sine', step * 0.7, 0.04 + intensity * 0.04);
+        if (bgmStep % 4 === 0) playSynth(55, 'square', 0.18, 0.08);
+        bgmNext = t + step;
         bgmStep++;
     }
-    requestAnimationFrame(bgmLoop);
+    requestAnimationFrame(bgmTick);
 }
 
 function startBGM() {
-    if (bgmActive) return;
-    bgmActive = true;
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    nextBgmTime = audioCtx.currentTime;
-    requestAnimationFrame(bgmLoop);
+    if (bgmRunning) return;
+    bgmRunning = true;
+    bgmNext = audioCtx.currentTime;
+    requestAnimationFrame(bgmTick);
 }
 
-// ===========================================
-// SISTEMA DE VOZ (TTS en Español)
-// ===========================================
+// ==========================================
+// VOZ (TTS)
+// ==========================================
 let voiceQueue = [];
 let isSpeaking = false;
 let lastVoiceTime = 0;
-const VOICE_COOLDOWN_MS = 2000; // Mínimo 2 segundos entre frases
-
-const VOICE_GIFT_PHRASES = [
-    (name, cuadros) => `${name} conquistó ${cuadros} cuadros. ¡Increíble!`,
-    (name, cuadros) => `¡${name} ataca con fuerza! Más ${cuadros} cuadros suyos.`,
-    (name, cuadros) => `${name} se expande. ${cuadros} cuadros más.`,
-    (name) => `¡Gracias ${name} por la donación!`,
-    (name) => `${name} marca territorio. ¡Quién lo detendrá!`,
-];
-
-const VOICE_BIG_GIFT_PHRASES = [
-    (name) => `¡Atención! ${name} lanzó una GALAXIA. ¡Destrucción total!`,
-    (name) => `¡${name} arrasó la pantalla! ¡Eso es poder!`,
-    (name) => `¡MEGA DONACIÓN de ${name}! ¡La pantalla tiembla!`,
-];
-
-const VOICE_MEGA_PHRASES = [
-    (name) => `¡ANIQUILACIÓN! ${name} acaba de dominar casi toda la pantalla. ¡Es imparable!`,
-    (name) => `¡${name} lo destruyó todo! ¡LEÓN en la pantalla!`,
-];
-
-const VOICE_JOIN_PHRASES = [
-    (name) => `¡${name} entró a la guerra!`,
-    (name) => `Bienvenido ${name}. ¡A conquistar!`,
-];
-
-const VOICE_TOP_PHRASES = [
-    (name, pct) => `${name} lidera con ${pct} por ciento de la pantalla.`,
-    (name) => `${name} va primero. ¿Alguien lo desafía?`,
-];
-
-function getSpanishVoice() {
-    const voices = window.speechSynthesis.getVoices();
-    return voices.find(v => v.lang.startsWith("es")) ||
-           voices.find(v => v.lang.includes("es")) ||
-           voices[0];
-}
+const VOICE_COOLDOWN = 3000;
 
 function speak(text) {
-    if (!soundEnabled || !window.speechSynthesis) return;
-    const now = Date.now();
-    if (now - lastVoiceTime < VOICE_COOLDOWN_MS) {
-        // Encolar si el cooldown no ha pasado
-        voiceQueue.push(text);
-        if (!isSpeaking) processVoiceQueue();
-        return;
-    }
-    lastVoiceTime = now;
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "es-ES";
-    utterance.rate = 1.1;
-    utterance.pitch = 1.0;
-    utterance.volume = 0.9;
-    const voice = getSpanishVoice();
-    if (voice) utterance.voice = voice;
-    utterance.onend = () => {
-        isSpeaking = false;
-        processVoiceQueue();
-    };
+    if (!window.speechSynthesis) return;
+    if (Date.now() - lastVoiceTime < VOICE_COOLDOWN) { voiceQueue.push(text); return; }
+    lastVoiceTime = Date.now();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "es-ES"; u.rate = 1.1; u.volume = 0.9;
+    const voices = window.speechSynthesis.getVoices();
+    const v = voices.find(v => v.lang.startsWith("es")) || voices[0];
+    if (v) u.voice = v;
+    u.onend = () => { isSpeaking = false; if (voiceQueue.length) setTimeout(()=>speak(voiceQueue.shift()),400); };
     isSpeaking = true;
-    window.speechSynthesis.cancel(); // Cancelar cualquier voz previa
-    window.speechSynthesis.speak(utterance);
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
 }
 
-function processVoiceQueue() {
-    if (voiceQueue.length === 0) return;
-    const next = voiceQueue.shift();
-    setTimeout(() => speak(next), 500);
-}
-
-function pickRandom(arr) {
-    return arr[Math.floor(Math.random() * arr.length)];
-}
-
-// Precargar voces (Chrome las carga async)
 if (window.speechSynthesis) {
     window.speechSynthesis.getVoices();
     window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
 }
 
-// Narración periódica del líder (cada 30 segundos)
-let lastLeaderNarration = 0;
-function narrateLeader() {
-    const now = Date.now();
-    if (now - lastLeaderNarration < 30000) return;
-    if (roundRanking.length === 0) return;
-    lastLeaderNarration = now;
+function rnd(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
-    const leader = roundRanking[0];
-    const name = leader.name || leader.n || "Líder";
-    const pid = leader.id || leader.i;
-    let tiles = 0;
-    for (let i = 0; i < TOTAL_TILES; i++) if (grid[i] === pid) tiles++;
-    const pct = ((tiles / TOTAL_TILES) * 100).toFixed(0);
+// ==========================================
+// PLINKO ENGINE
+// ==========================================
+const GRAVITY       = 0.28;
+const BALL_R        = 22;
+const PEG_R         = 6;
+const BOUNCE        = 0.55;
 
-    if (tiles > 0) {
-        speak(pickRandom(VOICE_TOP_PHRASES)(name, pct));
-    }
+const balls      = [];
+const pegs       = [];
+const buckets    = [];
+const particles  = [];
+const toasts     = [];
+let screenShake  = 0;
+let flashAlpha   = 0;
+let flashColor   = "255,255,255";
+
+// Paleta de colores vibrantes
+const COLORS = ["#ff4757","#2ed573","#1e90ff","#ffa502","#ff6b81","#7bed9f","#eccc68","#00d8d6","#a55eea","#ff7f50"];
+const playerColors = {};
+function getColor(id) {
+    if (!playerColors[id]) playerColors[id] = COLORS[Object.keys(playerColors).length % COLORS.length];
+    return playerColors[id];
 }
 
-// UI Throttle
-let lastUIUpdate = 0;
-const UI_THROTTLE_MS = 800;
-
-// Caché de Avatares
+// Avatar cache
 const avatarCache = {};
-function getAvatarImage(url) {
+function getAvatar(url) {
     if (!url) return null;
     if (avatarCache[url]) return avatarCache[url];
     const img = new Image();
@@ -257,360 +159,478 @@ function getAvatarImage(url) {
     return img;
 }
 
-// ==========================================
-// PLINKO PHYSICS ENGINE
-// ==========================================
-const balls = [];
-const pegs = [];
-const buckets = [];
-const particles = [];
-const announcements = [];
-let screenShake = 0;
-let overlayFlashAlpha = 0;
-let overlayFlashColor = "255,255,255";
-let frameCount = 0;
+// Asegurar/crear jugador on-the-fly
+function ensurePlayer(id, name, avatar) {
+    if (!players[id]) players[id] = { id, name: name || id, avatar: avatar || "", score: 0 };
+    return players[id];
+}
 
-const GRAVITY = 0.2;
-const BALL_RADIUS = 20;
-const PEG_RADIUS = 5;
-const BOUNCE_DAMPING = 0.5;
-
+// ==========================================
+// BOARD INIT
+// ==========================================
 function initBoard() {
     pegs.length = 0;
     buckets.length = 0;
-    
-    // Crear pirámide de clavos (pegs)
+
     const rows = 12;
-    const spacingY = canvas.height * 0.06;
-    const spacingX = Math.min(canvas.width * 0.1, 80);
-    const startY = canvas.height * 0.2;
-    
+    const gapY = canvas.height * 0.055;
+    const gapX = Math.min(canvas.width * 0.09, 75);
+    const startY = canvas.height * 0.18;
+
     for (let r = 0; r < rows; r++) {
         const cols = r + 3;
-        const rowWidth = (cols - 1) * spacingX;
-        const startX = (canvas.width - rowWidth) / 2;
-        
+        const rowW = (cols - 1) * gapX;
+        const ox = (canvas.width - rowW) / 2;
         for (let c = 0; c < cols; c++) {
-            pegs.push({
-                x: startX + c * spacingX,
-                y: startY + r * spacingY,
-                r: PEG_RADIUS,
-                lit: 0
-            });
+            pegs.push({ x: ox + c * gapX, y: startY + r * gapY, lit: 0 });
         }
     }
-    
-    // Crear canastas (buckets)
-    const bucketCount = 5;
-    const bWidth = canvas.width / bucketCount;
-    const multipliers = [1, 5, 10, 5, 1];
-    const colors = ["#1e90ff", "#a55eea", "#ff4757", "#a55eea", "#1e90ff"];
-    for (let i = 0; i < bucketCount; i++) {
-        buckets.push({
-            x: i * bWidth,
-            y: canvas.height - 60,
-            w: bWidth,
-            h: 60,
-            mult: multipliers[i],
-            color: colors[i],
-            flash: 0
-        });
+
+    const mults  = [1, 5, 10, 5, 1];
+    const bColors = ["#1e90ff","#a55eea","#ff4757","#a55eea","#1e90ff"];
+    const bW = canvas.width / mults.length;
+    const bY = canvas.height - 70;
+    for (let i = 0; i < mults.length; i++) {
+        buckets.push({ x: i * bW, y: bY, w: bW, h: 70, mult: mults[i], color: bColors[i], flash: 0 });
     }
 }
-window.addEventListener('resize', initBoard);
 initBoard();
 
-// Colores vibrantes por jugador
-const playerColors = {};
-const COLOR_PALETTE = ["#ff4757", "#2ed573", "#1e90ff", "#ffa502", "#ff6b81", "#7bed9f", "#70a1ff", "#eccc68", "#00d8d6"];
-function getPlayerColor(id) {
-    if (!playerColors[id]) playerColors[id] = COLOR_PALETTE[Object.keys(playerColors).length % COLOR_PALETTE.length];
-    return playerColors[id];
-}
-
-function spawnBall(player, sizeScale = 1, count = 1) {
+// ==========================================
+// SPAWN BALLS
+// ==========================================
+function spawnBall(player, sizeScale = 1, count = 1, delay = 180) {
     for (let i = 0; i < count; i++) {
         setTimeout(() => {
             balls.push({
-                player: player,
-                x: canvas.width / 2 + (Math.random() - 0.5) * 200,
-                y: -50 - (Math.random() * 50),
-                vx: (Math.random() - 0.5) * 5,
-                vy: Math.random() * 2,
-                r: BALL_RADIUS * sizeScale,
-                heavy: sizeScale >= 3,
-                color: getPlayerColor(player.id || player.i),
+                player,
+                x: canvas.width / 2 + (Math.random() - 0.5) * 160,
+                y: -BALL_R * sizeScale - Math.random() * 40,
+                vx: (Math.random() - 0.5) * 4,
+                vy: 1 + Math.random() * 2,
+                r: BALL_R * sizeScale,
+                heavy: sizeScale >= 2.5,
+                color: getColor(player.id),
                 active: true
             });
-        }, i * (sizeScale < 1 ? 50 : 200));
+        }, i * delay);
     }
 }
 
-function createExplosion(x, y, color, count = 15) {
-    for (let i = 0; i < count; i++) {
+// Demo balls (idle screen – caen automaticamente)
+function spawnDemoBall() {
+    const demoPlayer = { id: "demo_" + Math.floor(Math.random()*1000), name: "???", avatar: "" };
+    demoPlayer.color = COLORS[Math.floor(Math.random()*COLORS.length)];
+    playerColors[demoPlayer.id] = demoPlayer.color;
+    balls.push({
+        player: demoPlayer,
+        x: canvas.width / 2 + (Math.random() - 0.5) * 200,
+        y: -BALL_R,
+        vx: (Math.random() - 0.5) * 4,
+        vy: 1,
+        r: BALL_R * 0.7,
+        heavy: false,
+        color: demoPlayer.color,
+        active: true,
+        isDemo: true
+    });
+}
+// Arrancar demo balls de atracción antes de que empiece el live
+setInterval(() => {
+    if (Object.keys(players).length === 0) spawnDemoBall();
+}, 900);
+
+// ==========================================
+// FLOATING TEXT
+// ==========================================
+function floatText(text, x, y, color) {
+    const d = document.createElement("div");
+    d.className = "floating-score";
+    d.style.cssText = `position:absolute;left:${x}px;top:${y}px;color:${color};font:bold 18px Orbitron,monospace;pointer-events:none;transition:transform 0.8s ease,opacity 0.8s ease;`;
+    d.innerText = text;
+    floatingLayer.appendChild(d);
+    requestAnimationFrame(() => {
+        d.style.transform = "translateY(-60px)";
+        d.style.opacity = "0";
+    });
+    setTimeout(() => d.remove(), 900);
+}
+
+// ==========================================
+// TOAST ANUNCIOS
+// ==========================================
+function toast(text, color = "#fff", duration = 2500) {
+    toasts.push({ text, color, birth: Date.now(), duration });
+}
+
+// ==========================================
+// PARTICLES
+// ==========================================
+function explode(x, y, color, n = 14) {
+    for (let i = 0; i < n; i++) {
         particles.push({
             x, y,
-            vx: (Math.random() - 0.5) * 10,
-            vy: (Math.random() - 0.5) * 10,
+            vx: (Math.random()-0.5)*12,
+            vy: (Math.random()-0.5)*12,
             life: 1,
             color,
-            size: Math.random() * 4 + 2
+            size: Math.random()*4+2
         });
     }
 }
 
-function announce(text, color = "#fff", duration = 2000) {
-    announcements.push({ text, color, duration, birth: Date.now() });
-}
-
-function spawnFloatingText(text, x, y, color) {
-    const el = document.createElement("div");
-    el.className = "floating-score";
-    el.innerText = text;
-    el.style.left = x + "px";
-    el.style.top = y + "px";
-    el.style.color = color;
-    floatingLayer.appendChild(el);
-    setTimeout(() => el.remove(), 1000);
+// ==========================================
+// LEADERBOARD DOM
+// ==========================================
+function updateLeaderboard() {
+    if (!leaderboardEl) return;
+    leaderboardEl.innerHTML = roundRanking.slice(0, 5).map((p,i) => {
+        const name = p.name || p.n || "?";
+        const score = p.score || p.s || 0;
+        const medals = ["🥇","🥈","🥉","4️⃣","5️⃣"];
+        return `<div class="lb-row">${medals[i]} <span class="lb-name">${name}</span> <span class="lb-score">${score} pts</span></div>`;
+    }).join("");
 }
 
 // ==========================================
-// SOCKET EVENTS OVERRIDE
+// NARRACIÓN DEL LÍDER
 // ==========================================
-socket.on("arena:join", (player) => {
-    spawnBall(player, 1, 1);
-    sfxJoin();
-    speak(pickRandom(VOICE_JOIN_PHRASES)(player.name));
-});
+let lastNarrate = 0;
+function maybeNarrate() {
+    if (Date.now() - lastNarrate < 30000) return;
+    if (!roundRanking.length) return;
+    lastNarrate = Date.now();
+    const top = roundRanking[0];
+    const name = top.name || top.n || "Líder";
+    speak(rnd([
+        () => `¡${name} va en primer lugar! ¿Quién lo destronará?`,
+        () => `${name} domina el Plinko. ¡Tira más bolas para alcanzarlo!`,
+        () => `¡${name} está ganando! ¡Donen para subir en el ranking!`
+    ])());
+}
 
+// ==========================================
+// SOCKET EVENTS
+// ==========================================
 socket.on("arena:sync", (data) => {
-    for (const [, minified] of Object.entries(data)) {
-        const p = unminifyPlayer(minified);
-        if (!players[p.id]) players[p.id] = p;
-        else { players[p.id].score = p.score; players[p.id].hp = p.hp; }
+    for (const [, m] of Object.entries(data)) {
+        const id = m.i || m.id;
+        if (!id) continue;
+        if (!players[id]) players[id] = { id, name: m.n || m.name || id, avatar: m.a || m.avatar || "", score: m.s || 0 };
+        else { players[id].score = m.s || 0; }
     }
 });
 
 socket.on("arena:currentRanking", (data) => {
     roundRanking = data;
-    updateRankingDOM();
+    updateLeaderboard();
 });
 
-socket.on("arena:roundEnd", () => {
-    balls.length = 0; // Limpiar bolas
-    announce("⏱️ FIN DEL TIEMPO ⏱️", "#ff4757", 3000);
-    overlayFlashAlpha = 0.6;
-    overlayFlashColor = "255,71,87";
-    sfxRoundEnd();
-    speak("¡Se acabó el tiempo! Comienza una nueva ronda.");
+socket.on("arena:join", (player) => {
+    ensurePlayer(player.id || player.i, player.name || player.n, player.avatar || player.a);
+    spawnBall(players[player.id || player.i], 1, 1);
+    sfxJoin();
+    speak(rnd([
+        () => `¡${player.name || player.n || "alguien"} se unió al Plinko!`,
+        () => `¡Bienvenido ${player.name || player.n || "jugador"}!`
+    ])());
 });
 
 socket.on("arena:likesBatch", (batch) => {
     for (const data of batch) {
-        const ballsToDrop = Math.max(1, Math.floor(data.likeCount / 5)); // Al menos 1 bolita por tap
-        if (ballsToDrop > 0) {
-            const player = players[data.userId];
-            if (player) {
-                spawnBall(player, 0.5, Math.min(ballsToDrop, 5));
-            }
-        }
+        // Crear jugador si no existe
+        ensurePlayer(data.userId, data.userName, "");
+        const player = players[data.userId];
+        const count = Math.max(1, Math.floor((data.likeCount || 1) / 3));
+        spawnBall(player, 0.55, Math.min(count, 4), 80);
     }
 });
 
 socket.on("arena:gift", (data) => {
-    const attackerData = data.attacker || {};
-    const attacker = players[attackerData.id || attackerData.i];
-    if (!attacker) return;
-    const diamondsTotal = data.diamondsTotal || 1;
+    const aData  = data.attacker || {};
+    const id     = aData.id || aData.i;
+    const name   = aData.name || aData.n || "Donador";
+    const avatar = aData.avatar || aData.a || "";
+    const diamonds = data.diamondsTotal || 1;
 
-    let ballCount = 1;
-    let sizeScale = 1;
-    let label = "ROSA";
+    ensurePlayer(id, name, avatar);
+    const player = players[id];
 
-    if (diamondsTotal >= 30000) { ballCount = 1; sizeScale = 4; label = "LEÓN"; sfxMegaBlast(); speak(pickRandom(VOICE_MEGA_PHRASES)(attacker.name)); screenShake = 20; }
-    else if (diamondsTotal >= 1000) { ballCount = 15; sizeScale = 1; label = "GALAXIA"; sfxExplosion(); speak(pickRandom(VOICE_BIG_GIFT_PHRASES)(attacker.name)); screenShake = 10; }
-    else if (diamondsTotal >= 100) { ballCount = 5; sizeScale = 1; label = "ATAQUE"; sfxExplosion(); speak(pickRandom(VOICE_GIFT_PHRASES)(attacker.name, "múltiples")); }
-    else { sfxConquer(); if (Math.random() < 0.2) speak(pickRandom(VOICE_GIFT_PHRASES)(attacker.name, "una")); }
+    let count = 1, scale = 1, label = "Rosa";
 
-    announce(`${attacker.name} envió ${label}!`, getPlayerColor(attacker.id), 2000);
-    spawnBall(attacker, sizeScale, ballCount);
+    if (diamonds >= 30000)      { count = 1;  scale = 4.5; label = "🦁 LEÓN";    sfxMega();  screenShake = 25; speak(`¡${name} mandó un LEÓN! ¡TEMBLEMOS!`); }
+    else if (diamonds >= 5000)  { count = 20; scale = 1;   label = "🌌 GALAXIA"; sfxMega();  screenShake = 15; speak(`¡${name} lanzó una GALAXIA! ¡Lluvia de avatares!`); }
+    else if (diamonds >= 1000)  { count = 10; scale = 1.2; label = "🚀 ATAQUE";  sfxGift();  screenShake = 8;  speak(`¡${name} atacó con fuerza!`); }
+    else if (diamonds >= 99)    { count = 5;  scale = 1;   label = "💎 REGALO";  sfxGift(); }
+    else                        { count = 2;  scale = 0.9; label = "🌹 Rosa";    sfxPeg();  }
+
+    toast(`${name} envió ${label}!`, getColor(id), 2500);
+    explode(canvas.width / 2, 80, getColor(id), 20);
+    spawnBall(player, scale, count);
+});
+
+socket.on("arena:roundEnd", () => {
+    toast("⏱️ ¡FIN DE LA RONDA!", "#ff4757", 3000);
+    flashAlpha = 0.5; flashColor = "255,71,87";
+    sfxRoundEnd();
+    speak("¡Se acabó el tiempo! Arranca una nueva ronda.");
+    setTimeout(() => balls.length = 0, 3000);
 });
 
 // ==========================================
-// RENDER LOOP & PHYSICS
+// RENDER LOOP
 // ==========================================
-function loop() {
-    frameCount++;
-    ctx.fillStyle = "#050810";
+function drawBackground() {
+    // Fondo negro con gradiente radial para profundidad
+    const grd = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 0, canvas.width/2, canvas.height/2, canvas.width * 0.8);
+    grd.addColorStop(0, "#0d1224");
+    grd.addColorStop(1, "#03050f");
+    ctx.fillStyle = grd;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.save();
-    if (screenShake > 0) {
-        ctx.translate((Math.random() - 0.5) * screenShake, (Math.random() - 0.5) * screenShake);
-        screenShake *= 0.9;
-        if (screenShake < 0.5) screenShake = 0;
+    // Grid de puntos decorativos
+    ctx.fillStyle = "rgba(255,255,255,0.03)";
+    const gs = 40;
+    for (let x = gs; x < canvas.width; x += gs) {
+        for (let y = gs; y < canvas.height; y += gs) {
+            ctx.fillRect(x-1, y-1, 2, 2);
+        }
     }
+}
 
-    if (!hasPlayers()) {
-        const time = Date.now() * 0.002;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.font = "bold 40px Rajdhani, sans-serif";
-        ctx.fillStyle = "#fff";
-        ctx.fillText("🎰 PLINKO DE AVATARES 🎰", canvas.width / 2, canvas.height * 0.3);
-        ctx.font = "bold 20px Rajdhani, sans-serif";
-        ctx.fillStyle = "rgba(255,255,255,0.7)";
-        ctx.fillText("¡DONA PARA HACER CAER TU AVATAR!", canvas.width / 2, canvas.height / 2);
-        
-        const arrowY = Math.sin(time * 3) * 8;
-        ctx.font = "30px sans-serif";
-        ctx.fillStyle = "rgba(255,255,255,0.5)";
-        ctx.fillText("⬇️ TAP TAP PARA EMPEZAR ⬇️", canvas.width / 2, canvas.height / 2 + 100 + arrowY);
-    } else {
-        // Dibujar canastas
-        for (const b of buckets) {
-            ctx.fillStyle = b.color;
-            ctx.globalAlpha = 0.2 + b.flash;
-            ctx.fillRect(b.x, b.y, b.w, b.h);
-            ctx.globalAlpha = 1;
-            
-            ctx.strokeStyle = b.color;
-            ctx.lineWidth = 2;
-            ctx.strokeRect(b.x, b.y, b.w, b.h);
+function drawBuckets() {
+    for (const b of buckets) {
+        // Relleno brillante
+        ctx.fillStyle = b.color;
+        ctx.globalAlpha = 0.15 + b.flash * 0.6;
+        ctx.fillRect(b.x, b.y, b.w, b.h);
+        ctx.globalAlpha = 1;
 
-            ctx.fillStyle = "#fff";
-            ctx.font = "bold 24px Rajdhani";
-            ctx.textAlign = "center";
-            ctx.fillText(`x${b.mult}`, b.x + b.w / 2, b.y + b.h / 2);
-            
-            if (b.flash > 0) b.flash *= 0.9;
-        }
-
-        // Dibujar clavos (pegs)
-        for (const peg of pegs) {
-            ctx.beginPath();
-            ctx.arc(peg.x, peg.y, peg.r, 0, Math.PI * 2);
-            ctx.fillStyle = peg.lit > 0 ? "#fff" : "#ff4757";
-            ctx.shadowBlur = peg.lit > 0 ? 15 : 5;
-            ctx.shadowColor = "#ff4757";
-            ctx.fill();
-            if (peg.lit > 0) peg.lit -= 0.05;
-        }
+        // Borde
+        ctx.strokeStyle = b.color;
+        ctx.lineWidth = b.flash > 0.1 ? 3 : 1.5;
+        ctx.shadowBlur = b.flash > 0.1 ? 20 : 0;
+        ctx.shadowColor = b.color;
+        ctx.strokeRect(b.x + 1, b.y + 1, b.w - 2, b.h - 2);
         ctx.shadowBlur = 0;
 
-        // Físicas y dibujado de bolas
-        for (let i = balls.length - 1; i >= 0; i--) {
-            const b = balls[i];
-            if (!b.active) continue;
+        // Texto multiplicador
+        ctx.fillStyle = "#ffffff";
+        ctx.globalAlpha = 0.85 + b.flash * 0.15;
+        ctx.font = `bold ${b.mult === 10 ? 28 : 22}px Orbitron, monospace`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(`x${b.mult}`, b.x + b.w / 2, b.y + b.h / 2);
+        ctx.globalAlpha = 1;
 
-            // Gravedad
-            b.vy += GRAVITY * (b.heavy ? 1.5 : 1);
-            
-            // Límite de velocidad
-            const speed = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
-            if (speed > 20) {
-                b.vx = (b.vx / speed) * 20;
-                b.vy = (b.vy / speed) * 20;
+        if (b.flash > 0) b.flash *= 0.88;
+    }
+}
+
+function drawPegs() {
+    for (const peg of pegs) {
+        const isLit = peg.lit > 0;
+        ctx.beginPath();
+        ctx.arc(peg.x, peg.y, PEG_R, 0, Math.PI * 2);
+        ctx.fillStyle = isLit ? "#ffffff" : "#ff4757";
+        ctx.shadowBlur = isLit ? 18 : 6;
+        ctx.shadowColor = isLit ? "#ffffff" : "#ff4757";
+        ctx.fill();
+        if (peg.lit > 0) peg.lit -= 0.04;
+    }
+    ctx.shadowBlur = 0;
+}
+
+function drawBall(b) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+
+    // Sombra
+    ctx.shadowBlur = b.heavy ? 30 : 12;
+    ctx.shadowColor = b.color;
+    ctx.fillStyle = b.color;
+    ctx.fill();
+
+    // Avatar
+    const img = getAvatar(b.player.avatar);
+    if (img && img.complete && img.naturalWidth > 0) {
+        ctx.clip();
+        ctx.drawImage(img, b.x - b.r, b.y - b.r, b.r * 2, b.r * 2);
+    } else if (b.isDemo) {
+        // Demo: solo un texto de emoji
+        ctx.shadowBlur = 0;
+        ctx.font = `${b.r * 1.2}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("🎰", b.x, b.y);
+    }
+    ctx.restore();
+
+    // Borde
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+    ctx.strokeStyle = b.heavy ? "#ffffff" : "rgba(255,255,255,0.5)";
+    ctx.lineWidth = b.heavy ? 3 : 1.5;
+    ctx.stroke();
+
+    // Nombre del jugador debajo de la bola
+    if (!b.isDemo && b.r >= BALL_R * 0.8) {
+        ctx.fillStyle = "#ffffff";
+        ctx.font = `bold ${Math.max(10, b.r * 0.55)}px Rajdhani, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillText(b.player.name?.substring(0, 10) || "", b.x, b.y + b.r + 3);
+    }
+}
+
+function physicsStep(b) {
+    b.vy += GRAVITY * (b.heavy ? 1.5 : 1);
+    const spd = Math.hypot(b.vx, b.vy);
+    if (spd > 22) { b.vx = b.vx/spd*22; b.vy = b.vy/spd*22; }
+    b.x += b.vx;
+    b.y += b.vy;
+
+    // Paredes
+    if (b.x < b.r)              { b.x = b.r;              b.vx = Math.abs(b.vx) * BOUNCE; }
+    if (b.x > canvas.width-b.r) { b.x = canvas.width-b.r; b.vx = -Math.abs(b.vx) * BOUNCE; }
+
+    // Pegs
+    for (const peg of pegs) {
+        const dx = b.x - peg.x, dy = b.y - peg.y;
+        const dist = Math.hypot(dx, dy);
+        const min = b.r + PEG_R;
+        if (dist < min && dist > 0) {
+            const nx = dx/dist, ny = dy/dist;
+            b.x += nx*(min-dist);
+            b.y += ny*(min-dist);
+            const dot = b.vx*nx + b.vy*ny;
+            if (dot < 0) {
+                b.vx -= (1+BOUNCE)*dot*nx;
+                b.vy -= (1+BOUNCE)*dot*ny;
             }
-
-            b.x += b.vx;
-            b.y += b.vy;
-
-            // Colisión con paredes
-            if (b.x < b.r) { b.x = b.r; b.vx *= -BOUNCE_DAMPING; }
-            if (b.x > canvas.width - b.r) { b.x = canvas.width - b.r; b.vx *= -BOUNCE_DAMPING; }
-
-            // Colisión con clavos (pegs)
-            for (const peg of pegs) {
-                const dx = b.x - peg.x;
-                const dy = b.y - peg.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                const minDist = b.r + peg.r;
-                
-                if (dist < minDist) {
-                    // Separar
-                    const overlap = minDist - dist;
-                    const nx = dx / dist;
-                    const ny = dy / dist;
-                    b.x += nx * overlap;
-                    b.y += ny * overlap;
-                    
-                    // Rebote elástico
-                    const dot = b.vx * nx + b.vy * ny;
-                    if (dot < 0) {
-                        b.vx -= (1 + BOUNCE_DAMPING) * dot * nx;
-                        b.vy -= (1 + BOUNCE_DAMPING) * dot * ny;
-                    }
-                    peg.lit = 1;
-                    sfxTap();
-                }
-            }
-
-            // Colisión con otros avatares pesados
-            if (b.heavy) {
-                for (const other of balls) {
-                    if (other === b || !other.active) continue;
-                    const dx = other.x - b.x;
-                    const dy = other.y - b.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    const minDist = b.r + other.r;
-                    if (dist < minDist) {
-                        const overlap = minDist - dist;
-                        const nx = dx / dist;
-                        const ny = dy / dist;
-                        other.x += nx * overlap;
-                        other.y += ny * overlap;
-                        other.vx += nx * 5;
-                        other.vy += ny * 5;
-                    }
-                }
-            }
-
-            // Caer en canasta
-            if (b.y > canvas.height - 60) {
-                b.active = false;
-                for (const bucket of buckets) {
-                    if (b.x > bucket.x && b.x < bucket.x + bucket.w) {
-                        bucket.flash = 1;
-                        const pts = bucket.mult;
-                        createExplosion(b.x, b.y, b.color, 10);
-                        spawnFloatingText(`+${pts}`, b.x, b.y - 20, b.color);
-                        socket.emit("arena:tapAttack", { targetId: b.player.id || b.player.i }); 
-                        break;
-                    }
-                }
-                balls.splice(i, 1);
-                continue;
-            }
-
-            // Dibujar avatar
-            const img = getAvatarImage(b.player.avatar || b.player.a);
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-            ctx.fillStyle = b.color;
-            ctx.fill();
-            if (img && img.complete && img.naturalWidth > 0) {
-                ctx.clip();
-                ctx.drawImage(img, b.x - b.r, b.y - b.r, b.r * 2, b.r * 2);
-            }
-            ctx.restore();
-            
-            // Borde
-            ctx.beginPath();
-            ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-            ctx.strokeStyle = b.heavy ? "#fff" : b.color;
-            ctx.lineWidth = b.heavy ? 4 : 2;
-            ctx.stroke();
+            peg.lit = 1;
+            sfxPeg();
         }
     }
 
-    // Partículas
+    // Bola pesada empuja a otras
+    if (b.heavy) {
+        for (const o of balls) {
+            if (o === b || !o.active) continue;
+            const dx = o.x-b.x, dy = o.y-b.y;
+            const dist = Math.hypot(dx,dy);
+            const min = b.r+o.r;
+            if (dist < min && dist > 0) {
+                const nx=dx/dist, ny=dy/dist;
+                o.x += nx*(min-dist);
+                o.y += ny*(min-dist);
+                o.vx += nx*6; o.vy += ny*3;
+            }
+        }
+    }
+
+    // Caída en bucket
+    if (b.y > canvas.height - 70) {
+        b.active = false;
+        for (const bucket of buckets) {
+            if (b.x > bucket.x && b.x < bucket.x + bucket.w) {
+                bucket.flash = 1;
+                explode(b.x, b.y, b.color, b.heavy ? 25 : 10);
+                floatText(`x${bucket.mult}`, b.x, b.y - 30, b.color);
+                if (bucket.mult >= 5) sfxBucket(bucket.mult);
+                if (!b.isDemo) socket.emit("arena:tapAttack", { targetId: b.player.id });
+                break;
+            }
+        }
+        return false; // eliminar
+    }
+    return true; // mantener
+}
+
+function drawIdleScreen() {
+    const t = Date.now() * 0.001;
+
+    // Título pulsante
+    const pulse = 1 + Math.sin(t * 2) * 0.03;
+    ctx.save();
+    ctx.translate(canvas.width/2, canvas.height * 0.32);
+    ctx.scale(pulse, pulse);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = `bold ${Math.min(52, canvas.width * 0.07)}px Orbitron, monospace`;
+    ctx.shadowBlur = 30;
+    ctx.shadowColor = "#ff4757";
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText("🎰 PLINKO DE AVATARES", 0, 0);
+    ctx.shadowBlur = 0;
+    ctx.restore();
+
+    // Subtítulo 1
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = `bold ${Math.min(22, canvas.width * 0.03)}px Rajdhani, sans-serif`;
+    ctx.fillStyle = "rgba(255,255,255,0.75)";
+    ctx.fillText("¡DONA UNA ROSA Y TU CARA CAE EN LA PANTALLA!", canvas.width/2, canvas.height * 0.42);
+
+    // Instrucción de tap parpadeante
+    const blink = Math.sin(t * 4) > 0;
+    ctx.font = `bold ${Math.min(24, canvas.width * 0.032)}px Rajdhani, sans-serif`;
+    ctx.fillStyle = blink ? "#ffa502" : "rgba(255,165,0,0.4)";
+    ctx.fillText("⬇  TAP TAP PARA EMPEZAR  ⬇", canvas.width/2, canvas.height * 0.50);
+
+    // Reglas compactas
+    const rules = [
+        { icon:"🌹", text:"Rosa = 2 bolas" },
+        { icon:"✨", text:"Galaxia = 20 bolas" },
+        { icon:"🦁", text:"León = Bola Gigante" },
+        { icon:"❤️", text:"Tap Tap = mini bola" },
+    ];
+    const ruleY = canvas.height * 0.58;
+    const ruleW = Math.min(160, canvas.width * 0.2);
+    ctx.font = `bold 14px Rajdhani, sans-serif`;
+    rules.forEach((r, i) => {
+        const x = canvas.width/2 + (i - 1.5) * ruleW;
+        ctx.fillStyle = "rgba(255,255,255,0.15)";
+        ctx.beginPath();
+        ctx.roundRect(x - ruleW/2 + 4, ruleY - 20, ruleW - 8, 44, 8);
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.textAlign = "center";
+        ctx.fillText(`${r.icon} ${r.text}`, x, ruleY + 2);
+    });
+}
+
+function drawToasts() {
+    const now = Date.now();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (let i = toasts.length - 1; i >= 0; i--) {
+        const a = toasts[i];
+        const elapsed = now - a.birth;
+        if (elapsed > a.duration) { toasts.splice(i, 1); continue; }
+        const p = elapsed / a.duration;
+        const alpha = p < 0.1 ? p / 0.1 : p > 0.7 ? (1-p)/0.3 : 1;
+        const scale = p < 0.1 ? 0.5 + p * 5 : 1;
+        ctx.save();
+        ctx.translate(canvas.width/2, 80 + i * 42);
+        ctx.scale(scale, scale);
+        ctx.globalAlpha = alpha;
+        ctx.font = `bold 20px Orbitron, monospace`;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = a.color;
+        ctx.fillStyle = a.color;
+        ctx.fillText(a.text, 0, 0);
+        ctx.shadowBlur = 0;
+        ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+}
+
+function drawParticles() {
     for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
-        p.x += p.vx; p.y += p.vy;
-        p.vy += 0.15;
-        p.life -= 0.025;
+        p.x += p.vx; p.y += p.vy; p.vy += 0.2; p.life -= 0.022;
         if (p.life <= 0) { particles.splice(i, 1); continue; }
         ctx.globalAlpha = p.life;
         ctx.fillStyle = p.color;
@@ -618,71 +638,105 @@ function loop() {
         ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
         ctx.fill();
     }
-    ctx.globalAlpha = 1.0;
+    ctx.globalAlpha = 1;
+}
 
-    // Anuncios
-    const now = Date.now();
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    for (let i = announcements.length - 1; i >= 0; i--) {
-        const a = announcements[i];
-        const elapsed = now - a.birth;
-        if (elapsed > a.duration) { announcements.splice(i, 1); continue; }
-        const progress = elapsed / a.duration;
-        const alpha = progress < 0.1 ? progress / 0.1 : progress > 0.8 ? (1 - progress) / 0.2 : 1;
-        const scale = progress < 0.1 ? 0.5 + progress * 5 : 1;
-        ctx.save();
-        ctx.translate(canvas.width / 2, canvas.height * 0.15 + i * 40);
-        ctx.scale(scale, scale);
-        ctx.globalAlpha = alpha;
-        ctx.font = "bold 22px Orbitron, monospace";
-        ctx.fillStyle = a.color;
-        ctx.fillText(a.text, 0, 0);
-        ctx.restore();
+function loop() {
+    // Screen shake
+    ctx.save();
+    if (screenShake > 0) {
+        ctx.translate((Math.random()-0.5)*screenShake, (Math.random()-0.5)*screenShake);
+        screenShake *= 0.88;
+        if (screenShake < 0.5) screenShake = 0;
     }
 
-    if (overlayFlashAlpha > 0.01) {
-        ctx.fillStyle = `rgba(${overlayFlashColor}, ${overlayFlashAlpha})`;
+    drawBackground();
+
+    // Siempre dibujar el tablero (pegs y buckets)
+    drawBuckets();
+    drawPegs();
+
+    // Pantalla de espera (sin jugadores reales)
+    if (Object.keys(players).filter(k => !k.startsWith("demo_")).length === 0) {
+        drawIdleScreen();
+    }
+
+    // Física y dibujo de bolas
+    for (let i = balls.length - 1; i >= 0; i--) {
+        const b = balls[i];
+        if (!b.active) { balls.splice(i, 1); continue; }
+        const alive = physicsStep(b);
+        if (!alive) { balls.splice(i, 1); continue; }
+        drawBall(b);
+    }
+
+    drawParticles();
+    drawToasts();
+
+    // Flash overlay
+    if (flashAlpha > 0.01) {
+        ctx.fillStyle = `rgba(${flashColor},${flashAlpha})`;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        overlayFlashAlpha *= 0.85;
+        flashAlpha *= 0.82;
     }
 
     ctx.restore();
-    if (hasPlayers()) narrateLeader();
+
+    maybeNarrate();
     requestAnimationFrame(loop);
 }
 
 // ==========================================
-// INTERACCIÓN: Click / Tap
+// INTERACCIÓN LOCAL
 // ==========================================
-function handleCanvasClick(e) {
+let tapDebounce = 0;
+function onTap(e) {
+    unlockAudio();
     startBGM();
-    const testPlayer = { id: "host", name: "Host", avatar: "https://www.tiktok.com/favicon.ico" };
-    spawnBall(testPlayer, 0.5, 1); // Simular Tap
-    sfxJoin();
+    // Limitar a 1 tap visual cada 400ms para no saturar
+    const now = Date.now();
+    if (now - tapDebounce < 400) return;
+    tapDebounce = now;
+    const p = { id: "local_tap", name: "TAP", avatar: "" };
+    ensurePlayer(p.id, p.name, p.avatar);
+    spawnBall(players[p.id], 0.55, 1, 0);
+    sfxPeg();
 }
 
-canvas.addEventListener("mousedown", handleCanvasClick);
-canvas.addEventListener("touchstart", (e) => { e.preventDefault(); handleCanvasClick(e); }, { passive: false });
+canvas.addEventListener("mousedown",  onTap);
+canvas.addEventListener("touchstart", (e) => { e.preventDefault(); onTap(e); }, { passive: false });
 
-requestAnimationFrame(loop);
-
+// ==========================================
+// DEBUG PANEL
+// ==========================================
 if (DEBUG_MODE) {
     document.getElementById("debug-panel").style.display = "block";
+
     document.getElementById("debug-spawn-bot")?.addEventListener("click", () => {
-        const p = { id: "bot_"+Math.random(), name: "Bot", avatar: "https://www.tiktok.com/favicon.ico" };
-        players[p.id] = p;
-        spawnBall(p, 1, 3);
+        const id = "bot_" + Date.now();
+        const p = ensurePlayer(id, "Bot_" + Math.floor(Math.random()*99), "");
+        spawnBall(players[id], 1, 3);
+        toast("Bot spawneado", "#2ed573");
     });
+
     document.getElementById("debug-gift-rose")?.addEventListener("click", () => {
-        const p = { id: "rose_"+Math.random(), name: "Rose Gifter", avatar: "https://www.tiktok.com/favicon.ico" };
-        spawnBall(p, 1, 5);
-        sfxExplosion();
+        const id = "rose_" + Date.now();
+        const p = ensurePlayer(id, "RoseGifter", "");
+        spawnBall(players[id], 1, 5);
+        sfxGift();
+        toast("🌹 Rosa simulada", "#ff6b81");
     });
+
     document.getElementById("debug-gift-galaxy")?.addEventListener("click", () => {
-        const p = { id: "galaxy_"+Math.random(), name: "Galaxy Gifter", avatar: "https://www.tiktok.com/favicon.ico" };
-        spawnBall(p, 4, 1);
-        screenShake = 15;
-        sfxMegaBlast();
+        const id = "galaxy_" + Date.now();
+        const p = ensurePlayer(id, "GalaxyGifter", "");
+        spawnBall(players[id], 4.5, 1);
+        screenShake = 20; sfxMega();
+        toast("🦁 León simulado", "#ffa502");
     });
 }
+
+// ==========================================
+// ARRANQUE
+// ==========================================
+requestAnimationFrame(loop);
