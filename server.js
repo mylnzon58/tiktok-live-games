@@ -831,16 +831,18 @@ io.on("connection", (socket) => {
 
     socket.on("arena:tapAttack", (data) => {
         const targetId = data.targetId;
+        if (!targetId) return;
         const target = arena.ensurePlayer({ id: targetId }, "tap-target");
-        if (!target || target.hp <= 0 || target.state === "ELIMINATED") return;
-        const result = arena.applyDamageConsequences({ id: "admin", name: "Admin", score: 5000, roundStats: { damageDealt: 0, kos: 0 } }, target, 20, Date.now(), false);
-        if (result.damage > 0) {
+        if (!target || target.state === "ELIMINATED") return;
+        // Usar applyLikeStrike (10 combo-likes equivale a golpe moderado)
+        const result = arena.applyLikeStrike(targetId, 10, false);
+        if (result && result.damage > 0) {
             io.emit("arena:likeStrike", {
-                attacker: { id: "admin", name: "Admin", avatar: "" },
-                target: { id: target.id, name: target.name },
-                damage: result.damage, scoreLoss: result.scoreLoss, ko: result.ko, likeCount: 5
+                attacker: { id: "plinko", name: "Plinko", avatar: "" },
+                target:   { id: target.id, name: target.name },
+                damage: result.damage, scoreLoss: result.scoreLoss, ko: result.ko, likeCount: 10
             });
-            if (result.ko) io.emit("arena:ko", { attackerId: "admin", targetId: target.id });
+            if (result.ko) io.emit("arena:ko", { attackerId: "plinko", targetId: target.id });
             queueArenaState(true);
         }
     });
