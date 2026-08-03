@@ -272,6 +272,20 @@ function resetRound() {
         io.emit("arena:lastRoundWinner", lastCompletedRoundWinner);
     }
 
+    // Calcular al Rey Global (el que tenga más victorias acumuladas)
+    let globalKing = null;
+    let maxWins = 0;
+    const currentPlayers = arena.getPlayers();
+    for (const [id, p] of Object.entries(currentPlayers)) {
+        if (p.victories && p.victories > maxWins) {
+            maxWins = p.victories;
+            globalKing = { id: p.id, name: p.name, avatar: p.avatar, victories: p.victories };
+        }
+    }
+    if (globalKing) {
+        io.emit("arena:globalKing", globalKing);
+    }
+
     isSuddenDeath = false;
     arenaLeaderVoiceWindow = { leaderId: null, count: 0 };
     io.emit("arena:suddenDeath", false);
@@ -831,18 +845,33 @@ io.on("connection", (socket) => {
 
     socket.on("arena:tapAttack", (data) => {
         const targetId = data.targetId;
+        const mult = data.mult || 1;
         if (!targetId) return;
         const target = arena.ensurePlayer({ id: targetId }, "tap-target");
         if (!target || target.state === "ELIMINATED") return;
-        // Usar applyLikeStrike (10 combo-likes equivale a golpe moderado)
-        const result = arena.applyLikeStrike(targetId, 10, false);
-        if (result && result.damage > 0) {
+        
+        // Multiplicador real de puntos a través de applyBucketBonus
+        const result = arena.applyBucketBonus(targetId, mult);
+        if (result && result.scoreGain > 0) {
+            // Se puede emitir algo si es necesario, pero el cliente ya dibuja floats
+            queueArenaState(true);
+        }
+    });
+
+    socket.on("arena:bombHit", (data) => {
+        const targetId = data.targetId;
+        if (!targetId) return;
+        const target = arena.ensurePlayer({ id: targetId }, "bomb-target");
+        if (!target || target.state === "ELIMINATED") return;
+        
+        // Castigo
+        const result = arena.applyBombPenalty(targetId);
+        if (result && result.scoreLoss > 0) {
             io.emit("arena:likeStrike", {
-                attacker: { id: "plinko", name: "Plinko", avatar: "" },
+                attacker: { id: "bomb", name: "Bomba", avatar: "" },
                 target:   { id: target.id, name: target.name },
-                damage: result.damage, scoreLoss: result.scoreLoss, ko: result.ko, likeCount: 10
+                damage: 0, scoreLoss: result.scoreLoss, ko: false, likeCount: 0
             });
-            if (result.ko) io.emit("arena:ko", { attackerId: "plinko", targetId: target.id });
             queueArenaState(true);
         }
     });

@@ -193,7 +193,9 @@ function initBoard() {
         const rowW = (cols - 1) * gapX;
         const ox = (canvas.width - rowW) / 2;
         for (let c = 0; c < cols; c++) {
-            pegs.push({ x: ox + c * gapX, y: startY + r * gapY, lit: 0 });
+            // Bombas: ~8% de probabilidad en las filas centrales
+            const isBomb = Math.random() < 0.08 && r > 4 && r < rows - 3;
+            pegs.push({ x: ox + c * gapX, y: startY + r * gapY, lit: 0, isBomb });
         }
     }
 
@@ -480,10 +482,16 @@ function drawPegs() {
     for (const peg of pegs) {
         const isLit = peg.lit > 0;
         ctx.beginPath();
-        ctx.arc(peg.x, peg.y, PEG_R, 0, Math.PI * 2);
-        ctx.fillStyle = isLit ? "#ffffff" : "#ff4757";
-        ctx.shadowBlur = isLit ? 18 : 6;
-        ctx.shadowColor = isLit ? "#ffffff" : "#ff4757";
+        // Las bombas son un poco más grandes
+        ctx.arc(peg.x, peg.y, PEG_R + (peg.isBomb ? 2 : 0), 0, Math.PI * 2);
+        ctx.fillStyle = isLit ? "#ffffff" : (peg.isBomb ? "#111111" : "#ff4757");
+        if (peg.isBomb) {
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = "#ff4757";
+            ctx.stroke();
+        }
+        ctx.shadowBlur = isLit ? 18 : (peg.isBomb ? 10 : 6);
+        ctx.shadowColor = isLit ? "#ffffff" : (peg.isBomb ? "#ff0000" : "#ff4757");
         ctx.fill();
         if (peg.lit > 0) peg.lit -= 0.04;
     }
@@ -584,9 +592,21 @@ function physicsStep(b) {
             }
             peg.lit = 1;
             
+            // Si es bomba, castigo!
+            if (peg.isBomb && !b.isDemo) {
+                // Pequeña explosión roja
+                explode(b.x, b.y, "#ff0000", 6);
+                if (now - b.lastSfxTime > 500) {
+                    floatText(`¡BOMBA!`, b.x, b.y - 15, "#ff0000");
+                    socket.emit("arena:bombHit", { targetId: b.player.id });
+                    // No saturar sonido de bomba
+                }
+            }
+            
             // Cooldown de sonido para evitar ruido abrumador cuando rebota muy rápido
             if (now - b.lastSfxTime > 120) {
-                sfxPeg();
+                if (peg.isBomb) sfxRoundEnd(); // Sonido feo
+                else sfxPeg(); // Sonido normal
                 b.lastSfxTime = now;
             }
         }
@@ -646,7 +666,7 @@ function physicsStep(b) {
                         floatText(`x1`, b.x, b.y - 20, "#1e90ff");
                         // Sin sonido para no saturar en x1
                     }
-                    socket.emit("arena:tapAttack", { targetId: b.player.id });
+                    socket.emit("arena:tapAttack", { targetId: b.player.id, mult: m });
                 }
                 break;
             }
@@ -657,9 +677,64 @@ function physicsStep(b) {
 }
 
 // ==========================================
+// REY GLOBAL (TOP DE VICTORIAS)
+// ==========================================
+let globalKingData = null;
+socket.on("arena:globalKing", (king) => {
+    globalKingData = king;
+});
+
 // SCOREBOARD EN CANVAS (top 5 durante juego)
 // ==========================================
 function drawScoreboard() {
+    // Dibujar al Rey Global por encima si existe
+    if (globalKingData) {
+        const boardW = Math.min(canvas.width * 0.45, 230);
+        const boardX = canvas.width - boardW - 8;
+        const kingY = 10;
+        const rowH = 42;
+
+        ctx.fillStyle = "rgba(255,215,0,0.2)";
+        ctx.strokeStyle = "#ffd700";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.roundRect(boardX, kingY, boardW, rowH, 8);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.font = `bold 14px Rajdhani, sans-serif`;
+        ctx.fillStyle = "#ffd700";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(`👑 REY`, boardX + 8, kingY + rowH / 2);
+
+        const name = (globalKingData.name || "?").substring(0, 10);
+        const avatarUrl = globalKingData.avatar || "";
+        const avatarSize = 28;
+        const avatarX = boardX + 55;
+        const avatarY = kingY + rowH / 2 - avatarSize / 2;
+
+        if (avatarUrl) {
+            const img = getAvatar(avatarUrl);
+            if (img && img.complete) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(avatarX + avatarSize/2, avatarY + avatarSize/2, avatarSize/2, 0, Math.PI*2);
+                ctx.clip();
+                ctx.drawImage(img, avatarX, avatarY, avatarSize, avatarSize);
+                ctx.restore();
+            }
+        }
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = `bold 12px Rajdhani, sans-serif`;
+        ctx.fillText(name, avatarX + avatarSize + 8, kingY + rowH / 2 - 6);
+
+        ctx.fillStyle = "#ffd700";
+        ctx.font = `11px Rajdhani, sans-serif`;
+        ctx.fillText(`${globalKingData.victories} VICTORIAS`, avatarX + avatarSize + 8, kingY + rowH / 2 + 8);
+    }
+
     if (roundRanking.length === 0) return;
     const top = roundRanking.slice(0, 5);
     const rowH = 46;
