@@ -183,21 +183,19 @@ function initBoard() {
     pegs.length = 0;
     buckets.length = 0;
 
-    const rows = 10;   // 10 filas para una pirámide perfecta en móvil
+    const rows = 12;
     
-    // Espaciado dinámico basado en el ancho de la pantalla
-    const maxCols = rows + 3;
-    const gapX = Math.min((canvas.width * 0.94) / (maxCols - 1), 70);
-    
-    // TRUCO PARA MÓVILES: Estirar la pirámide verticalmente.
-    // Al hacerla más alta, el espacio en diagonal entre clavos aumenta muchísimo,
-    // lo que nos permite usar BOLAS GIGANTES sin que se queden atoradas.
-    const gapY = gapX * 1.8; 
-    const startY = canvas.height * 0.12;
+    // Escala en base a la pantalla, pero garantizando un mínimo para que los avatares se vean
+    // En una pantalla 390px (iPhone): gapX seria 34px, bolas de 22px = se ven bien
+    // En 520px (TikTok ventana pequeña): gapX 42px, bolas 27px = excelente
+    const maxCols = rows + 3; // 15 columnas en la última fila
+    const gapX = Math.max(Math.min((canvas.width * 0.90) / (maxCols - 1), 60), 28);
+    const gapY = gapX * 2.0;  // Mucho espacio vertical para que caigan bien
+    const startY = canvas.height * 0.10;
 
-    // Bolas enormes (casi el doble de grandes que antes)
-    BALL_R = gapX * 0.68;
-    PEG_R = gapX * 0.15;
+    // Tamaños fijos grandes - que los avatares se vean siempre
+    BALL_R = Math.max(gapX * 0.58, 15);
+    PEG_R  = Math.max(gapX * 0.13, 4);
 
     for (let r = 0; r < rows; r++) {
         const cols = r + 3;
