@@ -186,15 +186,18 @@ function initBoard() {
     const rows = 7;
     const lastRowCols = rows + 3 - 1; // 9 columnas en la última fila
 
+    // Header visible (~30px) + 8% de margen
+    const startY = canvas.height * 0.08;
+    // Altura disponible: desde startY hasta un 92% del alto
+    // Dejamos un gap al final para los buckets
+    const bucketH = Math.round(canvas.height * 0.10); // 10% del alto para los buckets
+    const pyramidBottom = canvas.height * 0.90 - bucketH;
+    const gapY = (pyramidBottom - startY) / (rows - 1);
+
     // gapX: la última fila llena el ancho completo
     const gapX = (canvas.width * 0.96) / lastRowCols;
 
-    // gapY: usar casi toda la altura disponible → pirámide alta y bolas grandes
-    const availableH = canvas.height * 0.82 - 75;
-    const gapY = availableH / rows;
-    const startY = canvas.height * 0.10;
-
-    // Con 7 filas: gapX ~50px en pantalla 470px → bolas de 20px = avatar visible
+    // Tamaños escalados al gapX — bolas siempre visibles
     BALL_R = gapX * 0.40;
     PEG_R  = gapX * 0.17;
 
@@ -204,7 +207,7 @@ function initBoard() {
         const ox = (canvas.width - rowW) / 2;
         for (let c = 0; c < cols; c++) {
             let bombValue = 0;
-            if (r > 1) { // bombas desde fila 2 en adelante
+            if (r > 1) {
                 const bombChance = 0.10 + (r / rows) * 0.20;
                 if (Math.random() < bombChance) {
                     const rand = Math.random();
@@ -218,22 +221,20 @@ function initBoard() {
         }
     }
 
-
-    // Canastas proporcionales con x3 incluido
+    // Buckets: van JUSTO debajo de la última fila de pegs
+    const bY = pyramidBottom + gapY * 0.3;
     const mults   = [1, 3, 5, 10, 5, 3, 1];
     const bColors = ["#1e90ff", "#2ed573", "#a55eea", "#ff4757", "#a55eea", "#2ed573", "#1e90ff"];
-    // Porcentajes del ancho total (suma 100%): el x5 ahora es más difícil que el x3
-    // x1 (20%) | x3 (17%) | x5 (10%) | x10 (6%) | x5 (10%) | x3 (17%) | x1 (20%)
-    const bWidths = [0.20, 0.17, 0.10, 0.06, 0.10, 0.17, 0.20]; 
-    const bY = canvas.height - 75;
+    const bWidths = [0.20, 0.17, 0.10, 0.06, 0.10, 0.17, 0.20];
     
     let currentX = 0;
     for (let i = 0; i < mults.length; i++) {
         const w = canvas.width * bWidths[i];
-        buckets.push({ x: currentX, y: bY, w: w, h: 75, mult: mults[i], color: bColors[i], flash: 0 });
+        buckets.push({ x: currentX, y: bY, w: w, h: bucketH, mult: mults[i], color: bColors[i], flash: 0 });
         currentX += w;
     }
 }
+
 initBoard();
 
 // ==========================================
