@@ -183,17 +183,21 @@ function initBoard() {
     pegs.length = 0;
     buckets.length = 0;
 
-    const rows = 12;   // Reducido a 12 para que los círculos se vean más grandes en móvil
+    const rows = 10;   // 10 filas para una pirámide perfecta en móvil
     
-    // Espaciado dinámico basado en el ancho de la pantalla (hasta un máximo para no verse gigante en PC)
+    // Espaciado dinámico basado en el ancho de la pantalla
     const maxCols = rows + 3;
     const gapX = Math.min((canvas.width * 0.94) / (maxCols - 1), 70);
-    const gapY = gapX * 1.1; 
-    const startY = canvas.height * 0.15;
+    
+    // TRUCO PARA MÓVILES: Estirar la pirámide verticalmente.
+    // Al hacerla más alta, el espacio en diagonal entre clavos aumenta muchísimo,
+    // lo que nos permite usar BOLAS GIGANTES sin que se queden atoradas.
+    const gapY = gapX * 1.8; 
+    const startY = canvas.height * 0.12;
 
-    // Escalar los círculos dinámicamente para que siempre quepan entre los clavos
-    BALL_R = gapX * 0.36;
-    PEG_R = gapX * 0.12;
+    // Bolas enormes (casi el doble de grandes que antes)
+    BALL_R = gapX * 0.68;
+    PEG_R = gapX * 0.15;
 
     for (let r = 0; r < rows; r++) {
         const cols = r + 3;
