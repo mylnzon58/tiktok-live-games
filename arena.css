@@ -1,683 +1,162 @@
 /* ============================================================
-   DIAMOND CLASH — TikTok LIVE  |  Full-screen mobile 9:16
-   Cyberpunk / Neon aesthetic  |  August 2026
+   PIXEL WAR — TikTok LIVE | Full Screen Experience
    ============================================================ */
-*,
-*::before,
-*::after {
+*, *::before, *::after {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
 :root {
-    --neon-cyan: #00f0ff;
-    --neon-magenta: #e84393;
-    --neon-gold: #ffd700;
-    --neon-red: #ff4757;
-    --glass-bg: rgba(8, 12, 24, 0.78);
-    --glass-border: rgba(255, 255, 255, 0.12);
-    --glass-blur: blur(12px);
-    --font-body: 'Rajdhani', sans-serif;
-    --font-cyber: 'Orbitron', sans-serif;
+    --pixel-green: #2ed573;
+    --pixel-red: #ff4757;
+    --font-ui: 'Rajdhani', sans-serif;
+    --font-title: 'Orbitron', sans-serif;
 }
 
-body,
-html {
+body, html {
     width: 100%;
     height: 100%;
-    background: #020408;
+    background: #000;
     overflow: hidden;
-    font-family: var(--font-body);
+    font-family: var(--font-ui);
     color: white;
     user-select: none;
     touch-action: none;
-    display: flex;
-    justify-content: center;
-    align-items: center;
 }
 
 /* =========================================
-   CONTENEDOR MOBILE — OCUPA TODA LA PANTALLA
-   ========================================= */
-#mobile-container {
-    position: relative;
-    width: 100vw;
-    height: 100vh;
-    background: #050810;
-    overflow: hidden;
-}
-
-/* =========================================
-   CANVAS — LLENA TODO EL FONDO
+   CANVAS FULL SCREEN
    ========================================= */
 #gameCanvas {
     position: absolute;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
+    width: 100vw;
+    height: 100vh;
     z-index: 1;
+    display: block;
 }
 
 /* =========================================
-   HEADER (Timer + Logo + CTA marquee)
+   UI LAYER (Overlays invisibles sobre el canvas)
    ========================================= */
-#game-header {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    right: 8px;
-    height: 52px;
-    z-index: 100;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    border-radius: 14px;
-    padding: 4px 10px;
-    backdrop-filter: var(--glass-blur);
-    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.05);
-}
-
-#timer-box {
-    position: relative;
-    width: 42px;
-    height: 42px;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 215, 0, 0.1);
-    border: 2px solid rgba(255, 215, 0, 0.5);
-    border-radius: 50%;
-    box-shadow: 0 0 12px rgba(255, 215, 0, 0.3);
-}
-
-#main-round-timer {
-    font-family: var(--font-cyber);
-    font-size: 10px;
-    font-weight: 900;
-    color: var(--neon-gold);
-    text-shadow: 0 0 8px var(--neon-gold);
-}
-
-#header-center {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.game-logo {
-    font-family: var(--font-cyber);
-    font-size: 12px;
-    font-weight: 900;
-    color: #ffffff;
-    letter-spacing: 2px;
-    text-shadow: 0 0 10px var(--neon-cyan), 0 0 20px rgba(0, 240, 255, 0.3);
-    white-space: nowrap;
-}
-
-#cta-banner {
-    width: 100%;
-    overflow: hidden;
-    margin-top: 1px;
-}
-
-.cta-scroll {
-    display: flex;
-    gap: 30px;
-    white-space: nowrap;
-    animation: ctaMarquee 18s linear infinite;
-    font-size: 9px;
-    font-weight: 800;
-    color: var(--neon-magenta);
-    text-shadow: 0 0 6px rgba(232, 67, 147, 0.5);
-}
-
-@keyframes ctaMarquee {
-    0% { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
-}
-
-/* =========================================
-   TOP ARENA SHOWCASE (Podio Top 3)
-   Positioned upper-right, in the L-shape zone
-   ========================================= */
-#top-arena-showcase {
-    position: absolute;
-    top: 66px;
-    right: 8px;
-    width: 150px;
-    z-index: 90;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    border-radius: 12px;
-    backdrop-filter: var(--glass-blur);
-    padding: 6px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-}
-
-.top-player-item {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    padding: 3px 5px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    transition: background 0.3s;
-}
-
-.top-player-item.rank-1 {
-    background: linear-gradient(90deg, rgba(255, 215, 0, 0.2), rgba(255, 215, 0, 0.03));
-    border-color: rgba(255, 215, 0, 0.5);
-    box-shadow: 0 0 8px rgba(255, 215, 0, 0.2);
-}
-
-.top-player-item.rank-2 {
-    background: linear-gradient(90deg, rgba(192, 192, 192, 0.12), transparent);
-    border-color: rgba(192, 192, 192, 0.3);
-}
-
-.top-player-item.rank-3 {
-    background: linear-gradient(90deg, rgba(205, 127, 50, 0.1), transparent);
-    border-color: rgba(205, 127, 50, 0.25);
-}
-
-.top-player-item.placeholder {
-    opacity: 0.4;
-}
-
-.top-player-avatar {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background-size: cover;
-    background-position: center;
-    border: 2px solid rgba(255, 215, 0, 0.5);
-    flex-shrink: 0;
-    position: relative;
-}
-
-.top-rank-badge {
-    position: absolute;
-    bottom: -2px;
-    right: -4px;
-    width: 14px;
-    height: 14px;
-    background: var(--neon-gold);
-    color: #000;
-    font-family: var(--font-cyber);
-    font-size: 8px;
-    font-weight: 900;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 0 6px var(--neon-gold);
-}
-
-.top-player-name {
-    font-size: 10px;
-    font-weight: 700;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    flex: 1;
-    min-width: 0;
-}
-
-.top-player-victories-badge {
-    font-family: var(--font-cyber);
-    font-size: 7px;
-    font-weight: 900;
-    color: var(--neon-gold);
-    background: rgba(255, 215, 0, 0.15);
-    padding: 1px 4px;
-    border-radius: 4px;
-    white-space: nowrap;
-}
-
-.top-player-score {
-    font-family: var(--font-cyber);
-    font-size: 8px;
-    font-weight: 700;
-    color: var(--neon-cyan);
-    white-space: nowrap;
-}
-
-/* =========================================
-   ANNOUNCER (Event pop-ups)
-   ========================================= */
-#announcer-container {
-    position: absolute;
-    top: 66px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 120;
-    pointer-events: none;
-    width: 60%;
-    display: flex;
-    justify-content: center;
-}
-
-.announcement-text {
-    font-family: var(--font-cyber);
-    font-size: 13px;
-    font-weight: 900;
-    color: var(--accent, #ffffff);
-    text-shadow: 0 0 12px var(--accent, #ffffff), 0 2px 4px #000;
-    background: rgba(0, 0, 0, 0.85);
-    padding: 5px 14px;
-    border-radius: 8px;
-    border: 1px solid var(--accent, #fff);
-    animation: announcePop 2.5s ease forwards;
-    white-space: nowrap;
-    text-align: center;
-}
-
-@keyframes announcePop {
-    0% { opacity: 0; transform: scale(0.5) translateY(-10px); }
-    15% { opacity: 1; transform: scale(1.05) translateY(0); }
-    85% { opacity: 1; transform: scale(1) translateY(0); }
-    100% { opacity: 0; transform: scale(0.9) translateY(10px); }
-}
-
-/* =========================================
-   FRENESÍ COMUNITARIO
-   ========================================= */
-#frenzy-bar-container {
-    position: absolute;
-    top: 66px;
-    left: 8px;
-    width: 150px;
-    height: 20px;
-    z-index: 90;
-    background: rgba(0, 0, 0, 0.6);
-    border: 1px solid rgba(255, 71, 87, 0.35);
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    padding: 2px 6px;
-    gap: 4px;
-}
-
-.frenzy-title {
-    font-size: 7px;
-    font-weight: 800;
-    color: var(--neon-red);
-    white-space: nowrap;
-}
-
-.frenzy-track {
-    flex: 1;
-    height: 5px;
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 3px;
-    overflow: hidden;
-}
-
-#frenzy-fill {
-    width: 0%;
-    height: 100%;
-    background: linear-gradient(90deg, var(--neon-red), var(--neon-gold));
-    border-radius: 3px;
-    transition: width 0.3s ease;
-    box-shadow: 0 0 6px rgba(255, 71, 87, 0.5);
-}
-
-#frenzy-text {
-    font-size: 7px;
-    font-weight: 800;
-    color: rgba(255, 255, 255, 0.7);
-    white-space: nowrap;
-}
-
-/* =========================================
-   LEADERBOARD LATERAL
-   ========================================= */
-#arena-leaderboard {
-    position: absolute;
-    bottom: 90px;
-    right: 8px;
-    width: 135px;
-    max-height: 220px;
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    border-radius: 12px;
-    backdrop-filter: var(--glass-blur);
-    z-index: 90;
-    padding: 6px;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    overflow-y: auto;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-}
-
-.leaderboard-item {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    padding: 2px 4px;
-    border-radius: 6px;
-}
-
-.leaderboard-item:nth-child(1) {
-    background: linear-gradient(90deg, rgba(255, 215, 0, 0.18), transparent);
-    border-color: rgba(255, 215, 0, 0.45);
-}
-
-.leaderboard-item:nth-child(2) {
-    background: linear-gradient(90deg, rgba(192, 192, 192, 0.1), transparent);
-    border-color: rgba(192, 192, 192, 0.25);
-}
-
-.leaderboard-item:nth-child(3) {
-    background: linear-gradient(90deg, rgba(205, 127, 50, 0.1), transparent);
-    border-color: rgba(205, 127, 50, 0.2);
-}
-
-.rank-num {
-    font-family: var(--font-cyber);
-    font-size: 9px;
-    font-weight: 900;
-    color: var(--neon-gold);
-    width: 18px;
-    text-align: center;
-}
-
-.rank-avatar {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    flex-shrink: 0;
-}
-
-.rank-name {
-    font-size: 9px;
-    font-weight: 700;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    flex: 1;
-    min-width: 0;
-}
-
-.rank-score {
-    font-family: var(--font-cyber);
-    font-size: 8px;
-    font-weight: 700;
-    color: var(--neon-gold);
-    white-space: nowrap;
-}
-
-/* =========================================
-   ROUND WINNER / LIVE LEADER SLOT
-   ========================================= */
-#round-winner-slot {
-    position: absolute;
-    bottom: 90px;
-    left: 8px;
-    width: 145px;
-    z-index: 90;
-}
-
-.round-winner-card,
-.live-leader-card {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 7px;
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    border-radius: 10px;
-    backdrop-filter: var(--glass-blur);
-}
-
-.live-leader-card {
-    border-color: rgba(0, 240, 255, 0.4);
-    box-shadow: 0 0 10px rgba(0, 240, 255, 0.15);
-}
-
-.round-winner-avatar {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid var(--neon-gold);
-    flex-shrink: 0;
-}
-
-.round-winner-info {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-}
-
-.round-winner-label {
-    font-family: var(--font-cyber);
-    font-size: 7px;
-    font-weight: 900;
-    color: var(--neon-gold);
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-}
-
-.round-winner-name {
-    font-size: 10px;
-    font-weight: 800;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.round-winner-meta {
-    display: flex;
-    gap: 6px;
-    font-size: 7px;
-    font-weight: 700;
-    color: rgba(255, 255, 255, 0.6);
-}
-
-.round-winner-submeta {
-    font-size: 7px;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.4);
-}
-
-.round-winner-empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 6px;
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    border-radius: 10px;
-    backdrop-filter: var(--glass-blur);
-}
-
-.round-winner-empty-label {
-    font-family: var(--font-cyber);
-    font-size: 7px;
-    font-weight: 900;
-    color: rgba(255, 255, 255, 0.4);
-}
-
-.round-winner-empty-time {
-    font-family: var(--font-cyber);
-    font-size: 11px;
-    font-weight: 900;
-    color: var(--neon-gold);
-}
-
-/* =========================================
-   POWERS GUIDE (dynamically populated)
-   ========================================= */
-#powers-guide {
-    position: absolute;
-    bottom: 36px;
-    left: 8px;
-    right: 8px;
-    z-index: 95;
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    border-radius: 10px;
-    backdrop-filter: var(--glass-blur);
-    padding: 4px 8px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
-}
-
-#powers-guide .powers-row {
-    display: flex;
-    flex-wrap: nowrap;
-    overflow: hidden;
-}
-
-#powers-guide ul {
-    list-style: none;
-    display: flex;
-    gap: 8px;
-    padding: 0;
-    margin: 0;
-}
-
-#powers-guide li {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    white-space: nowrap;
-}
-
-#powers-guide .emoji {
-    font-size: 12px;
-}
-
-#powers-guide .gift-text {
-    font-size: 8px;
-    font-weight: 700;
-    color: rgba(255, 255, 255, 0.6);
-}
-
-#powers-guide .effect-text {
-    color: var(--neon-cyan);
-    font-weight: 800;
-}
-
-#powers-guide .powers-footer {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    margin-top: 2px;
-    padding-top: 2px;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-#powers-guide .powers-timer-label {
-    font-family: var(--font-cyber);
-    font-size: 7px;
-    font-weight: 700;
-    color: rgba(255, 255, 255, 0.4);
-}
-
-#round-time-remaining {
-    font-family: var(--font-cyber);
-    font-size: 10px;
-    font-weight: 900;
-    color: var(--neon-gold);
-    text-shadow: 0 0 6px var(--neon-gold);
-}
-
-/* =========================================
-   BOTONES DE CONTROL
-   ========================================= */
-#switch-btn,
-#sound-btn {
-    position: absolute;
-    bottom: 8px;
-    z-index: 100;
-    background: var(--glass-bg);
-    color: white;
-    padding: 3px 8px;
-    font-size: 9px;
-    font-weight: 700;
-    border-radius: 6px;
-    border: 1px solid var(--glass-border);
-    text-decoration: none;
-    cursor: pointer;
-    backdrop-filter: var(--glass-blur);
-    transition: background 0.2s;
-}
-
-#switch-btn:hover,
-#sound-btn:hover {
-    background: rgba(255, 255, 255, 0.12);
-}
-
-#switch-btn { left: 8px; }
-#sound-btn { right: 8px; }
-
-/* =========================================
-   OVERLAYS (Muerte Súbita / Minuto de Oro)
-   ========================================= */
-#x2-alpha-overlay,
-#golden-minute-overlay {
+#ui-layer {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    pointer-events: none;
-    z-index: 110;
-    display: none;
+    z-index: 10;
+    pointer-events: none; /* Deja pasar los clicks al canvas */
+    display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0, 0, 0, 0.5);
-}
-
-.x2-banner {
-    font-family: var(--font-cyber);
-    font-size: 22px;
-    font-weight: 900;
-    color: var(--neon-red);
-    text-shadow: 0 0 20px var(--neon-red), 0 0 40px rgba(255, 71, 87, 0.4);
-    animation: pulse 1s infinite alternate;
-    letter-spacing: 2px;
-}
-
-.x2-subtitle {
-    font-size: 10px;
-    font-weight: 800;
-    color: #ffffff;
-    background: rgba(255, 71, 87, 0.3);
-    border: 1px solid var(--neon-red);
-    padding: 2px 10px;
-    border-radius: 10px;
-    margin-top: 4px;
-}
-
-@keyframes pulse {
-    0% { transform: scale(1); }
-    100% { transform: scale(1.06); }
 }
 
 /* =========================================
-   FLOATING UI LAYER
+   HEADER (Minimalista)
+   ========================================= */
+#pixel-header {
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    border-bottom: 2px solid var(--pixel-green);
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+}
+
+.pixel-title {
+    font-family: var(--font-title);
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--pixel-green);
+    text-shadow: 0 0 10px rgba(46, 213, 115, 0.5);
+    margin: 0;
+}
+
+.pixel-subtitle {
+    display: flex;
+    gap: 15px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #ddd;
+}
+
+.pixel-subtitle span {
+    background: rgba(255,255,255,0.1);
+    padding: 3px 8px;
+    border-radius: 4px;
+}
+
+#timer-box {
+    font-family: var(--font-title);
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--pixel-red);
+}
+
+/* =========================================
+   LEADERBOARD (Minimalista flotante)
+   ========================================= */
+#arena-leaderboard {
+    position: absolute;
+    top: 70px;
+    right: 15px;
+    width: 220px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    backdrop-filter: blur(5px);
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.leaderboard-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 5px 8px;
+    border-radius: 4px;
+}
+
+.rank-num {
+    font-family: var(--font-title);
+    font-size: 14px;
+    font-weight: 900;
+    color: #ffd700;
+    width: 25px;
+}
+
+.rank-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.rank-name {
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+}
+
+.rank-score {
+    font-family: var(--font-title);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--pixel-green);
+}
+
+/* =========================================
+   TEXTOS FLOTANTES
    ========================================= */
 #floating-ui-layer {
     position: absolute;
@@ -686,75 +165,31 @@ html {
     width: 100%;
     height: 100%;
     pointer-events: none;
-    z-index: 150;
-    overflow: hidden;
 }
 
 .floating-text {
     position: absolute;
-    font-family: var(--font-cyber);
-    font-size: 13px;
+    font-family: var(--font-title);
+    font-size: 24px;
     font-weight: 900;
-    text-shadow: 0 0 8px currentColor, 0 2px 4px #000;
+    text-shadow: 0 0 10px currentColor, 0 3px 6px #000;
     animation: floatUp 1.2s ease-out forwards;
-    white-space: nowrap;
+    pointer-events: none;
 }
 
 @keyframes floatUp {
     0% { opacity: 1; transform: translateY(0) scale(0.8); }
-    20% { transform: translateY(-10px) scale(1.1); }
-    100% { opacity: 0; transform: translateY(-50px) scale(1); }
+    20% { transform: translateY(-15px) scale(1.2); }
+    100% { opacity: 0; transform: translateY(-80px) scale(1); }
 }
 
 /* =========================================
-   COUNTDOWN OVERLAY (created dynamically)
+   RESPONSIVO PARA MÓVILES
    ========================================= */
-.countdown-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 200;
-    pointer-events: none;
-    font-family: var(--font-cyber);
-    font-size: 80px;
-    font-weight: 900;
-    color: var(--neon-gold);
-    text-shadow: 0 0 40px var(--neon-gold), 0 0 80px rgba(255, 215, 0, 0.4);
-}
-
-/* =========================================
-   CHAMPIONS TICKER (hidden by default)
-   ========================================= */
-#champions-ticker {
-    position: absolute;
-    bottom: 70px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 85;
-    font-size: 8px;
-    font-weight: 700;
-    color: rgba(255, 255, 255, 0.5);
-    white-space: nowrap;
-}
-
-/* =========================================
-   RESPONSIVE — Full viewport on all screens
-   ========================================= */
-@media (min-width: 800px) {
-    #mobile-container {
-        max-width: 450px;
-        max-height: 800px;
-        border: 2px solid rgba(255, 255, 255, 0.08);
-        border-radius: 12px;
-        box-shadow: 0 0 60px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 240, 255, 0.15);
-    }
-
-    body {
-        background: radial-gradient(circle at 50% 40%, #0a0e1a, #020408);
-    }
+@media (max-width: 600px) {
+    .pixel-subtitle { display: none; } /* Ocultar controles en pantallas chicas */
+    .pixel-title { font-size: 16px; }
+    #arena-leaderboard { width: 160px; top: 60px; }
+    .rank-name { font-size: 12px; }
+    .rank-score { font-size: 11px; }
 }

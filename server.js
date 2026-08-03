@@ -107,7 +107,7 @@ app.use((req, res, next) => {
 
 // --- ROUTES ---
 // Juego principal: Arena en raíz y en /arena
-app.use(express.static(__dirname));
+app.use(express.static(__dirname, { etag: false, maxAge: 0, lastModified: false }));
 function sendArena(req, res) {
     const fs = require("fs");
     let html = fs.readFileSync(path.join(__dirname, "arena.html"), "utf8");
