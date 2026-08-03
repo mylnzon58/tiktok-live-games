@@ -186,18 +186,23 @@ function initBoard() {
     const rows = 7;
     const lastRowCols = rows + 3 - 1; // 9 columnas en la última fila
 
-    // Header visible (~30px) + 8% de margen
-    const startY = canvas.height * 0.08;
-    // Altura disponible: desde startY hasta un 92% del alto
-    // Dejamos un gap al final para los buckets
-    const bucketH = Math.round(canvas.height * 0.10); // 10% del alto para los buckets
-    const pyramidBottom = canvas.height * 0.90 - bucketH;
-    const gapY = (pyramidBottom - startY) / (rows - 1);
+    // LAYOUT VERTICAL (proporciones del canvas.height):
+    //  8%  → Inicio de la pirámide (debajo del header)
+    // 75%  → Última fila de pegs
+    // 75%~85% → ZONA LIBRE para que las bolas caigan al bucket correcto
+    // 85%  → Inicio de los buckets
+    // 96%  → Fin de los buckets
+    const startY     = canvas.height * 0.08;
+    const pyramidEnd = canvas.height * 0.75;
+    const bY         = canvas.height * 0.85;
+    const bucketH    = canvas.height * 0.11;
 
-    // gapX: la última fila llena el ancho completo
+    const gapY = (pyramidEnd - startY) / (rows - 1);
+
+    // gapX: última fila llena el ancho completo
     const gapX = (canvas.width * 0.96) / lastRowCols;
 
-    // Tamaños escalados al gapX — bolas siempre visibles
+    // Tamaños: bolas del 40% del gapX, pegs del 17%
     BALL_R = gapX * 0.40;
     PEG_R  = gapX * 0.17;
 
@@ -221,12 +226,10 @@ function initBoard() {
         }
     }
 
-    // Buckets: van JUSTO debajo de la última fila de pegs
-    const bY = pyramidBottom + gapY * 0.3;
+    // Buckets con texto escalado al tamaño del canvas
     const mults   = [1, 3, 5, 10, 5, 3, 1];
     const bColors = ["#1e90ff", "#2ed573", "#a55eea", "#ff4757", "#a55eea", "#2ed573", "#1e90ff"];
     const bWidths = [0.20, 0.17, 0.10, 0.06, 0.10, 0.17, 0.20];
-    
     let currentX = 0;
     for (let i = 0; i < mults.length; i++) {
         const w = canvas.width * bWidths[i];
@@ -507,19 +510,21 @@ function drawBuckets() {
         ctx.strokeRect(b.x + 1, b.y + 1, b.w - 2, b.h - 2);
         ctx.shadowBlur = 0;
 
-        // Multiplicador grande
+        // Multiplicador grande — escala con el alto del bucket
         ctx.fillStyle = "#ffffff";
         ctx.globalAlpha = 0.95;
-        ctx.font = `bold ${b.mult === 10 ? 30 : 24}px Orbitron, monospace`;
+        const multSize = Math.max(Math.round(b.h * 0.38), 14);
+        ctx.font = `bold ${multSize}px Orbitron, monospace`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(`x${b.mult}`, b.x + b.w / 2, b.y + b.h / 2 - 8);
+        ctx.fillText(`x${b.mult}`, b.x + b.w / 2, b.y + b.h * 0.38);
 
-        // Etiqueta pequena que explica qué es
-        ctx.font = `bold 10px Rajdhani, sans-serif`;
+        // Etiqueta pequena — escala con el alto del bucket
+        const labelSize = Math.max(Math.round(b.h * 0.18), 9);
+        ctx.font = `bold ${labelSize}px Rajdhani, sans-serif`;
         ctx.fillStyle = "rgba(255,255,255,0.7)";
         const label = b.mult === 10 ? "JACKPOT" : b.mult === 5 ? "MEGA" : b.mult === 3 ? "BONUS" : "PUNTOS";
-        ctx.fillText(label, b.x + b.w / 2, b.y + b.h / 2 + 14);
+        ctx.fillText(label, b.x + b.w / 2, b.y + b.h * 0.72);
         ctx.globalAlpha = 1;
 
         if (b.flash > 0) b.flash *= 0.88;
