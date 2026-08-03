@@ -205,13 +205,18 @@ function initBoard() {
         const rowW = (cols - 1) * gapX;
         const ox = (canvas.width - rowW) / 2;
         for (let c = 0; c < cols; c++) {
-            // Bombas: ~8% de probabilidad en las filas centrales con valores variables
+            // Bombas: aparecen desde la fila 3 en adelante
+            // Probabilidad crece con la fila: más abajo = más peligroso
             let bombValue = 0;
-            if (r > 4 && r < rows - 3 && Math.random() < 0.08) {
-                const rand = Math.random();
-                if (rand < 0.1) bombValue = 1000;
-                else if (rand < 0.3) bombValue = 500;
-                else bombValue = 50;
+            if (r > 2) {
+                const bombChance = 0.10 + (r / rows) * 0.18; // 10%-28% según la fila
+                if (Math.random() < bombChance) {
+                    const rand = Math.random();
+                    if (rand < 0.08)       bombValue = 1000; // 8%  de las bombas = -1000
+                    else if (rand < 0.25)  bombValue = 500;  // 17% de las bombas = -500
+                    else if (rand < 0.55)  bombValue = 100;  // 30% de las bombas = -100
+                    else                   bombValue = 50;   // 45% de las bombas = -50
+                }
             }
             pegs.push({ x: ox + c * gapX, y: startY + r * gapY, lit: 0, isBomb: bombValue > 0, bombValue });
         }
