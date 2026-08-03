@@ -19,7 +19,6 @@ canvas.height = 1350;
 const physicsWorker = new Worker('workers/physics-worker.js');
 physicsWorker.postMessage({ type: 'init', data: { width: 800, height: 1350, cellSize: 100 } });
 
-let lastWorkerProcessedFrame = -1;
 let workerProcessing = false;
 let pendingCollisions = [];
 
@@ -93,8 +92,8 @@ setTimeout(() => {
     camera.y = camera.targetY = canvas.height / 2;
 }, 100);
 let duelBeams = []; // Phase 4
-let arenaHallOfFame = {}; // Kings of the last 12 hours
 let persistentHOF = [];
+let arenaHallOfFame = {};
 let sessionChampions = [];
 let roundRanking = []; // Ranking de la ronda actual (Global para acceso temprano)
 
@@ -159,12 +158,10 @@ window.onerror = function(msg, url, line) {
 let lastRoundWinnerHypeId = null;
 let lastTopDuelVoiceAt = 0;
 let lastRoundRankingAt = 0;
-let lastCountdownSpoken = null;
-let lastAnnouncementText = "";
 let lastAnnouncementQueuedAt = 0;
+let lastCountdownSpoken = null;
 let introHookPlayed = false;
 let globalGlitchIntensity = 0; // Neuromarketing: Distorsión auditiva/visual global
-let globalFlashCount = 0;
 
 // Attempt auto-unlock de AudioContext silencioso
 function tryUnlockAudio() {
@@ -1252,7 +1249,6 @@ let ambientParticles = []; // Partículas ambientales de fondo
 let bombs = []; // Bombas rebotantes lanzadas por regalos
 let positionBatch = {}; // Lote de posiciones para enviar al servidor
 
-let lastHealSoundTime = 0;
 const shockwaves = []; // Para efectos visuales de impactos grandes
 
 let screenShake = 0; // Intensidad de vibración de pantalla
@@ -1407,19 +1403,31 @@ const bgStars = Array.from({ length: NUM_STARS }, () => ({
 }));
 
 function drawBackground() {
-    // Fondo dinámico según intensidad
-    let intensity = Math.min(1, particles.length / 50 + shockwaves.length / 5);
-    let r = 15 + intensity * 40;
-    let g = 20 + intensity * 10;
-    let b = 35 + intensity * 20;
+    let intensity = Math.min(1, particles.length / 40 + shockwaves.length / 4);
+    
+    // Gradiente Cyberpunk Base
+    let grad = ctx.createRadialGradient(
+        canvas.width / 2, canvas.height / 2, 50,
+        canvas.width / 2, canvas.height / 2, Math.max(canvas.width, canvas.height) * 0.8
+    );
+    
+    if (isSuddenDeath) {
+        grad.addColorStop(0, '#2a080c');
+        grad.addColorStop(0.5, '#150306');
+        grad.addColorStop(1, '#050001');
+    } else {
+        let r1 = Math.floor(15 + intensity * 30);
+        let g1 = Math.floor(12 + intensity * 15);
+        let b1 = Math.floor(35 + intensity * 40);
+        grad.addColorStop(0, `rgb(${r1}, ${g1}, ${b1})`);
+        grad.addColorStop(0.6, '#0b0c16');
+        grad.addColorStop(1, '#040509');
+    }
 
-    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 1)`;
+    ctx.fillStyle = grad;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    if (isSuddenDeath) {
-        ctx.fillStyle = "rgba(180, 40, 20, 0.15)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
+    // Flash de impacto / backgroundGrade
     if (backgroundGrade.alpha > 0.01) {
         ctx.fillStyle = `rgba(${backgroundGrade.color}, ${backgroundGrade.alpha})`;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1428,7 +1436,27 @@ function drawBackground() {
         backgroundGrade.alpha = 0;
     }
 
-    ctx.fillStyle = "rgba(255, 255, 255, 0.22)"; 
+    // Grid Hexagonal / Malla Tecnológica de Fondo
+    ctx.save();
+    ctx.strokeStyle = isSuddenDeath ? "rgba(255, 71, 87, 0.06)" : "rgba(0, 240, 255, 0.04)";
+    ctx.lineWidth = 1;
+    const gridSize = 60;
+    for (let x = 0; x < canvas.width; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+    }
+    for (let y = 0; y < canvas.height; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+    }
+    ctx.restore();
+
+    // Estrellas / Partículas de energía
+    ctx.fillStyle = isSuddenDeath ? "rgba(255, 120, 120, 0.4)" : "rgba(0, 240, 255, 0.4)"; 
     for (let i = 0; i < bgStars.length; i++) {
         const s = bgStars[i];
         ctx.fillRect(s.x, s.y, s.size, s.size);
@@ -1443,12 +1471,12 @@ function drawBackground() {
 function drawArenaWalls() {
     const arenaB = getArenaBounds();
     
-    // Dibujar el Rectángulo NEÓN
-    ctx.lineWidth = 14;
+    ctx.save();
+    // Dibujar el Rectángulo NEÓN Cyberpunk
+    ctx.lineWidth = isSuddenDeath ? 12 : 8;
     ctx.lineJoin = "round";
-    ctx.strokeStyle = "rgba(102, 231, 255, 0.7)"; 
-    ctx.shadowBlur = 0; 
-
+    ctx.strokeStyle = isSuddenDeath ? "#ff4757" : "#00f0ff"; 
+    
     // Marco en forma de L
     ctx.beginPath();
     ctx.moveTo(arenaB.left, arenaB.top);
@@ -1460,49 +1488,61 @@ function drawArenaWalls() {
     ctx.closePath();
     ctx.stroke();
 
-    // Efecto de "Ruido Eléctrico"
-    for (let i = 0; i < 15; i++) {
+    // Glow suave de borde
+    ctx.strokeStyle = isSuddenDeath ? "rgba(255, 71, 87, 0.3)" : "rgba(0, 240, 255, 0.3)";
+    ctx.lineWidth = isSuddenDeath ? 24 : 16;
+    ctx.stroke();
+
+    // Efecto de "Chispas / Rayos Eléctricos" en los muros
+    if (Math.random() < 0.4) {
         const side = Math.floor(Math.random() * 4);
         let sx, sy;
-        if (side === 0) { sx = arenaB.left + Math.random() * arenaB.width; sy = arenaB.top; }
-        else if (side === 1) { sx = arenaB.right; sy = arenaB.top + Math.random() * arenaB.height; }
-        else if (side === 2) { sx = arenaB.left + Math.random() * arenaB.width; sy = arenaB.bottom; }
-        else { sx = arenaB.left; sy = arenaB.top + Math.random() * arenaB.height; }
+        if (side === 0) { sx = arenaB.left + Math.random() * (arenaB.right - arenaB.left); sy = arenaB.top; }
+        else if (side === 1) { sx = arenaB.right; sy = arenaB.top + Math.random() * (arenaB.bottom - arenaB.top); }
+        else if (side === 2) { sx = arenaB.left + Math.random() * (arenaB.right - arenaB.left); sy = arenaB.bottom; }
+        else { sx = arenaB.left; sy = arenaB.top + Math.random() * (arenaB.bottom - arenaB.top); }
         
         ctx.beginPath();
-        ctx.arc(sx, sy, 1.5, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+        ctx.arc(sx, sy, Math.random() * 3 + 2, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff";
+        ctx.shadowColor = isSuddenDeath ? "#ff4757" : "#00f0ff";
+        ctx.shadowBlur = 10;
         ctx.fill();
     }
+    ctx.restore();
 
-    // --- NÚCLEO: ZONA REY ---
+    // --- NÚCLEO: ZONA REY (HEXAGONAL CON ENERGÍA) ---
     const coreRadius = 120;
     const kingZonePulse = 0.96 + ((Math.sin(Date.now() / 280) + 1) * 0.04);
     const cx = arenaB.cx, cy = arenaB.cy;
 
-    ctx.fillStyle = "rgba(255, 136, 76, 0.12)";
-    ctx.strokeStyle = "rgba(255, 187, 115, 0.5)";
-    ctx.lineWidth = 2;
-    if (ctx.roundRect) {
-        ctx.beginPath();
-        ctx.roundRect(cx - coreRadius, cy - coreRadius, coreRadius * 2, coreRadius * 2, 16);
-        ctx.fill();
-        ctx.stroke();
-    } else {
-        ctx.beginPath();
-        ctx.rect(cx - coreRadius, cy - coreRadius, coreRadius * 2, coreRadius * 2);
-        ctx.fill();
-        ctx.stroke();
+    ctx.save();
+    ctx.fillStyle = "rgba(255, 215, 0, 0.06)";
+    ctx.strokeStyle = "rgba(255, 215, 0, 0.5)";
+    ctx.lineWidth = 3;
+    
+    // Dibuja Hexágono Central Neon
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+        const angle = (i * Math.PI / 3) + (Date.now() / 4000);
+        const x = cx + coreRadius * kingZonePulse * Math.cos(angle);
+        const y = cy + coreRadius * kingZonePulse * Math.sin(angle);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
     }
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
 
     const kingImageRadius = coreRadius * 0.5 * kingZonePulse;
     if (kingZoneImage.complete && kingZoneImage.naturalWidth > 0) {
         ctx.save();
         ctx.translate(cx, cy);
-        ctx.globalAlpha = 0.3;
+        ctx.globalAlpha = 0.4;
         ctx.drawImage(kingZoneImage, -kingImageRadius, -kingImageRadius, kingImageRadius * 2, kingImageRadius * 2);
         ctx.restore();
     }
+    ctx.restore();
 }
 
 // ==========================================
@@ -2547,7 +2587,6 @@ class Player {
 
     heal(amount) {
         if (this.hp <= 0 && this.state === "ELIMINATED") return;
-        const wasCritical = this.hp < MAX_HP * 0.15;
         this.hp = Math.min(this.hp + amount, MAX_HP);
         this.flash = 1;
         spawnFloatingText(`+${amount}`, this.x, this.y, "#2ed573");
@@ -3116,7 +3155,6 @@ class LaserBeam {
 // ESTADO GLADIADOR (ROUND RULES)
 // ==========================================
 let isSuddenDeath = false;
-let lastArenaChampionId = null;
 
 socket.on("arena:suddenDeath", (active) => {
     isSuddenDeath = active;
@@ -3139,7 +3177,6 @@ socket.on("arena:suddenDeath", (active) => {
 });
 
 socket.on("arena:champion", (id) => {
-    lastArenaChampionId = id;
     console.log("🏆 El campeón reinante es:", id);
 });
 
@@ -3195,14 +3232,11 @@ socket.on("status", (status) => {
     addConsoleLog(status.message || status.error || "Estado actualizado", status.connected ? "success" : (status.step === "error" ? "error" : ""));
 });
 
-function updateConnectionOverlay(status) {
-    // UI removida del Live por petición del usuario para mayor limpieza.
-    // Solo feedback en terminal del servidor.
+function updateConnectionOverlay(_status) {
     return;
 }
 
-function addConsoleLog(text, type = "") {
-    // Consola web removida por limpieza. Logs disponibles en terminal.
+function addConsoleLog(_text, _type = "") {
     return;
 }
 
@@ -3585,7 +3619,8 @@ function updateTopShowcase() {
 // --- CAPA CUENTA REGRESIVA ---
 const countdownOverlay = document.createElement("div");
 countdownOverlay.className = "countdown-overlay";
-document.body.appendChild(countdownOverlay);
+const mobileContainer = document.getElementById("mobile-container") || document.body;
+mobileContainer.appendChild(countdownOverlay);
 
 socket.on("timerUpdate", (seconds) => {
     currentRoundSeconds = Math.max(0, Number(seconds) || 0);
@@ -4924,8 +4959,6 @@ let currentArenaKingId = null;
 
 function updateBubblesLayer() {
     // Eliminado: El dibujado ahora es autoritativo en Player.draw()
-    const container = document.getElementById("arena-bubbles");
-    if (container) container.innerHTML = ""; 
 }
 
 // Bucle principal a 60FPS
@@ -4975,14 +5008,6 @@ function loop() {
         screenShake *= 0.9;
         if (screenShake < 0.5) screenShake = 0;
     }
-
-    // --- CÁMARA DINÁMICA: CENTRALIZAR LÍDERES ---
-    const activeCompetitors = roundRanking.filter(p => (p.state !== "REMOVED" && p.state !== "IDLE") || (players[p.id] && players[p.id].hp > 0));
-    const leaderData = activeCompetitors[0];
-    const runnerUpData = activeCompetitors[1];
-
-    const leader = leaderData ? (players[leaderData.id] || Object.values(players).find(p => p.name === leaderData.name)) : null;
-    const runnerUp = runnerUpData ? (players[runnerUpData.id] || Object.values(players).find(p => p.name === runnerUpData.name)) : null;
 
     // --- CÁMARA DINÁMICA POR CANTIDAD DE JUGADORES (Crowd Zoom) ---
     // Zoom-out escalonado para que no se sientan apretados
@@ -5156,7 +5181,7 @@ function loop() {
         const pListHit = Object.values(players);
         pListHit.forEach(p => {
             if (Number(p.hp ?? 1000) > 0) {
-                try { p.draw(); } catch (e) {}
+                try { p.draw(); } catch {}
             }
         });
         ctx.restore();

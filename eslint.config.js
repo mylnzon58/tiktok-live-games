@@ -19,7 +19,13 @@ module.exports = [
                 io: "readonly",
                 Image: "readonly",
                 requestAnimationFrame: "readonly",
-                fetch: "readonly"
+                fetch: "readonly",
+                Worker: "readonly",
+                localStorage: "readonly",
+                sessionStorage: "readonly",
+                AudioContext: "readonly",
+                webkitAudioContext: "readonly",
+                SpeechSynthesisUtterance: "readonly"
             }
         },
         rules: {
