@@ -860,12 +860,13 @@ io.on("connection", (socket) => {
 
     socket.on("arena:bombHit", (data) => {
         const targetId = data.targetId;
+        const loss = data.loss || 50;
         if (!targetId) return;
         const target = arena.ensurePlayer({ id: targetId }, "bomb-target");
         if (!target || target.state === "ELIMINATED") return;
         
         // Castigo
-        const result = arena.applyBombPenalty(targetId);
+        const result = arena.applyBombPenalty(targetId, loss);
         if (result && result.scoreLoss > 0) {
             io.emit("arena:likeStrike", {
                 attacker: { id: "bomb", name: "Bomba", avatar: "" },

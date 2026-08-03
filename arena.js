@@ -193,9 +193,15 @@ function initBoard() {
         const rowW = (cols - 1) * gapX;
         const ox = (canvas.width - rowW) / 2;
         for (let c = 0; c < cols; c++) {
-            // Bombas: ~8% de probabilidad en las filas centrales
-            const isBomb = Math.random() < 0.08 && r > 4 && r < rows - 3;
-            pegs.push({ x: ox + c * gapX, y: startY + r * gapY, lit: 0, isBomb });
+            // Bombas: ~8% de probabilidad en las filas centrales con valores variables
+            let bombValue = 0;
+            if (r > 4 && r < rows - 3 && Math.random() < 0.08) {
+                const rand = Math.random();
+                if (rand < 0.1) bombValue = 1000;
+                else if (rand < 0.3) bombValue = 500;
+                else bombValue = 50;
+            }
+            pegs.push({ x: ox + c * gapX, y: startY + r * gapY, lit: 0, isBomb: bombValue > 0, bombValue });
         }
     }
 
@@ -500,7 +506,7 @@ function drawPegs() {
             ctx.font = "bold 9px Rajdhani, sans-serif";
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            ctx.fillText("-50", peg.x, peg.y - 14);
+            ctx.fillText(`-${peg.bombValue}`, peg.x, peg.y - 14);
         }
 
         if (peg.lit > 0) peg.lit -= 0.04;
@@ -604,13 +610,14 @@ function physicsStep(b) {
             
             // Si es bomba, castigo!
             if (peg.isBomb && !b.isDemo) {
-                // Explosión más grande
-                explode(b.x, b.y, "#ff0000", 18);
-                if (now - b.lastSfxTime > 500) {
-                    floatText(`-50 pts`, b.x, b.y - 15, "#ff0000");
-                    socket.emit("arena:bombHit", { targetId: b.player.id });
-                    // No saturar sonido de bomba
+                // Explosión más grande proporcional al daño
+                explode(b.x, b.y, "#ff0000", peg.bombValue >= 500 ? 30 : 18);
+                if (now - b.lastSfxTime > 100) {
+                    floatText(`-${peg.bombValue} pts`, b.x, b.y - 15, "#ff0000");
+                    socket.emit("arena:bombHit", { targetId: b.player.id, loss: peg.bombValue });
                 }
+                sfxRoundEnd();
+                return false; // DESTRUYE LA BOLA
             }
             
             // Cooldown de sonido para evitar ruido abrumador cuando rebota muy rápido
