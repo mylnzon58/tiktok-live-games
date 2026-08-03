@@ -183,17 +183,22 @@ function initBoard() {
     pegs.length = 0;
     buckets.length = 0;
 
-    const rows = 8;   // 8 filas: pegs y bolas grandes, proporciones correctas
-    
-    const maxCols = rows + 3; // 11 columnas en la última fila
-    const gapX = Math.min((canvas.width * 0.88) / (maxCols - 1), 65);
-    const gapY = gapX * 2.0;  // Espacio vertical amplio para que las bolas caigan con drama
-    const startY = canvas.height * 0.08;
+    const rows = 10;
+    const lastRowCols = rows + 3 - 1; // columnas en la última fila (12)
 
-    // PROPORCIONES CORRECTAS PARA PLINKO:
-    // Ball debe ser ~3x más grande que el peg para que visualmente "rebote" en él
-    BALL_R = gapX * 0.38;  // Bola grande y visible
-    PEG_R  = gapX * 0.14;  // Peg: visible pero mucho más pequeño que la bola
+    // gapX: el ancho de pantalla se divide entre todas las columnas de abajo
+    // Así la pirámide SIEMPRE ocupa todo el ancho, igual que un Plinko real
+    const gapX = (canvas.width * 0.96) / lastRowCols;
+
+    // gapY: estirar para que la pirámide use casi toda la altura disponible
+    // Dejamos espacio para el header (10%) y las canastas abajo (75px)
+    const availableH = canvas.height * 0.82 - 75;
+    const gapY = availableH / rows;
+    const startY = canvas.height * 0.12;
+
+    // Proporciones correctas: bola ~2.5x el peg, ambos visibles
+    BALL_R = gapX * 0.40;
+    PEG_R  = gapX * 0.17;
 
     for (let r = 0; r < rows; r++) {
         const cols = r + 3;
