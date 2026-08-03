@@ -200,8 +200,9 @@ function initBoard() {
     // Canastas proporcionales con x3 incluido
     const mults   = [1, 3, 5, 10, 5, 3, 1];
     const bColors = ["#1e90ff", "#2ed573", "#a55eea", "#ff4757", "#a55eea", "#2ed573", "#1e90ff"];
-    // Porcentajes del ancho total (suma 100%)
-    const bWidths = [0.20, 0.15, 0.12, 0.06, 0.12, 0.15, 0.20]; 
+    // Porcentajes del ancho total (suma 100%): el x5 ahora es más difícil que el x3
+    // x1 (20%) | x3 (17%) | x5 (10%) | x10 (6%) | x5 (10%) | x3 (17%) | x1 (20%)
+    const bWidths = [0.20, 0.17, 0.10, 0.06, 0.10, 0.17, 0.20]; 
     const bY = canvas.height - 75;
     
     let currentX = 0;
