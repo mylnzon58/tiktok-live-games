@@ -136,10 +136,10 @@ function rnd(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 // ==========================================
 // PLINKO ENGINE
 // ==========================================
-const GRAVITY       = 0.28;
-const BALL_R        = 22;
-const PEG_R         = 6;
-const BOUNCE        = 0.55;
+const GRAVITY       = 0.13;   // Lento = más drama
+const BALL_R        = 20;
+const PEG_R         = 7;      // Clavos más grandes = más rebotes
+const BOUNCE        = 0.62;   // Más elástico = más caos
 
 const balls      = [];
 const pegs       = [];
@@ -183,10 +183,10 @@ function initBoard() {
     pegs.length = 0;
     buckets.length = 0;
 
-    const rows = 12;
-    const gapY = canvas.height * 0.055;
-    const gapX = Math.min(canvas.width * 0.09, 75);
-    const startY = canvas.height * 0.18;
+    const rows = 16;   // Más filas = caida más lenta y caótica
+    const gapY = canvas.height * 0.048;
+    const gapX = Math.min(canvas.width * 0.085, 68);
+    const startY = canvas.height * 0.12;
 
     for (let r = 0; r < rows; r++) {
         const cols = r + 3;
@@ -197,12 +197,13 @@ function initBoard() {
         }
     }
 
-    const mults  = [1, 5, 10, 5, 1];
+    // Canastas con label explicativo
+    const mults   = [1, 5, 10, 5, 1];
     const bColors = ["#1e90ff","#a55eea","#ff4757","#a55eea","#1e90ff"];
     const bW = canvas.width / mults.length;
-    const bY = canvas.height - 70;
+    const bY = canvas.height - 75;
     for (let i = 0; i < mults.length; i++) {
-        buckets.push({ x: i * bW, y: bY, w: bW, h: 70, mult: mults[i], color: bColors[i], flash: 0 });
+        buckets.push({ x: i * bW, y: bY, w: bW, h: 75, mult: mults[i], color: bColors[i], flash: 0 });
     }
 }
 initBoard();
@@ -431,15 +432,14 @@ function drawBackground() {
     }
 }
 
+    // Dibujar canastas con label explicativo
 function drawBuckets() {
     for (const b of buckets) {
-        // Relleno brillante
         ctx.fillStyle = b.color;
         ctx.globalAlpha = 0.15 + b.flash * 0.6;
         ctx.fillRect(b.x, b.y, b.w, b.h);
         ctx.globalAlpha = 1;
 
-        // Borde
         ctx.strokeStyle = b.color;
         ctx.lineWidth = b.flash > 0.1 ? 3 : 1.5;
         ctx.shadowBlur = b.flash > 0.1 ? 20 : 0;
@@ -447,13 +447,19 @@ function drawBuckets() {
         ctx.strokeRect(b.x + 1, b.y + 1, b.w - 2, b.h - 2);
         ctx.shadowBlur = 0;
 
-        // Texto multiplicador
+        // Multiplicador grande
         ctx.fillStyle = "#ffffff";
-        ctx.globalAlpha = 0.85 + b.flash * 0.15;
-        ctx.font = `bold ${b.mult === 10 ? 28 : 22}px Orbitron, monospace`;
+        ctx.globalAlpha = 0.95;
+        ctx.font = `bold ${b.mult === 10 ? 30 : 24}px Orbitron, monospace`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(`x${b.mult}`, b.x + b.w / 2, b.y + b.h / 2);
+        ctx.fillText(`x${b.mult}`, b.x + b.w / 2, b.y + b.h / 2 - 8);
+
+        // Etiqueta pequena que explica qué es
+        ctx.font = `bold 10px Rajdhani, sans-serif`;
+        ctx.fillStyle = "rgba(255,255,255,0.7)";
+        const label = b.mult === 10 ? "JACKPOT" : b.mult === 5 ? "BONUS" : "PUNTOS";
+        ctx.fillText(label, b.x + b.w / 2, b.y + b.h / 2 + 14);
         ctx.globalAlpha = 1;
 
         if (b.flash > 0) b.flash *= 0.88;
@@ -574,21 +580,46 @@ function physicsStep(b) {
     }
 
     // Caída en bucket
-    if (b.y > canvas.height - 70) {
+    if (b.y > canvas.height - 75) {
         b.active = false;
         for (const bucket of buckets) {
             if (b.x > bucket.x && b.x < bucket.x + bucket.w) {
                 bucket.flash = 1;
-                explode(b.x, b.y, b.color, b.heavy ? 25 : 10);
-                floatText(`x${bucket.mult}`, b.x, b.y - 30, b.color);
-                if (bucket.mult >= 5) sfxBucket(bucket.mult);
-                if (!b.isDemo) socket.emit("arena:tapAttack", { targetId: b.player.id });
+                const pName = b.player.name || "";
+                const m = bucket.mult;
+
+                // Explosion proporcional al multiplicador
+                explode(b.x, b.y, b.color, m === 10 ? 40 : m === 5 ? 22 : 10);
+
+                if (!b.isDemo) {
+                    if (m === 10) {
+                        // JACKPOT — pantalla entera
+                        flashAlpha = 0.45; flashColor = "255,215,0";
+                        screenShake = 18;
+                        toast(`${pName} ¡JACKPOT x10! +PUNTOS MAXIMOS`, "#ffd700", 4000);
+                        floatText(`JACKPOT x10`, b.x, b.y - 40, "#ffd700");
+                        sfxBucket(10);
+                        setTimeout(()=>sfxBucket(10), 200);
+                        speak(`¡${pName} cayó en el DIEZ! ¡JACKPOT! ¡Máximos puntos!`);
+                    } else if (m === 5) {
+                        flashAlpha = 0.2; flashColor = "165,90,234";
+                        screenShake = 8;
+                        toast(`${pName} ganó x5 ¡Muy bien!`, "#a55eea", 2500);
+                        floatText(`x5!`, b.x, b.y - 30, "#a55eea");
+                        sfxBucket(5);
+                        if (Math.random() < 0.4) speak(`¡${pName} en el cinco! ¡Bien jugado!`);
+                    } else {
+                        floatText(`x1`, b.x, b.y - 20, "#1e90ff");
+                        // Sin sonido para no saturar en x1
+                    }
+                    socket.emit("arena:tapAttack", { targetId: b.player.id });
+                }
                 break;
             }
         }
-        return false; // eliminar
+        return false;
     }
-    return true; // mantener
+    return true;
 }
 
 // ==========================================
