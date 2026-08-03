@@ -323,6 +323,25 @@ function maybeNarrate() {
 // ==========================================
 // SOCKET EVENTS
 // ==========================================
+// ==========================================
+// TIMER
+// ==========================================
+let currentTimerSeconds = 0;
+let timerFlash = false;
+
+socket.on("timerUpdate", (seconds) => {
+    currentTimerSeconds = seconds;
+    const mins = String(Math.floor(seconds / 60)).padStart(2, "0");
+    const secs = String(seconds % 60).padStart(2, "0");
+    const timerEl = document.getElementById("main-round-timer");
+    if (timerEl) {
+        timerEl.textContent = `${mins}:${secs}`;
+        // Parpadeo rojo en los últimos 30 segundos
+        timerEl.style.color = seconds <= 30 ? (timerFlash ? "#ff4757" : "#fff") : "#ff4757";
+        timerFlash = !timerFlash;
+    }
+});
+
 socket.on("arena:sync", (data) => {
     for (const [, m] of Object.entries(data)) {
         const id = m.i || m.id;
@@ -349,7 +368,6 @@ socket.on("arena:join", (player) => {
 
 socket.on("arena:likesBatch", (batch) => {
     for (const data of batch) {
-        // Crear jugador si no existe
         ensurePlayer(data.userId, data.userName, "");
         const player = players[data.userId];
         const count = Math.max(1, Math.floor((data.likeCount || 1) / 3));
@@ -369,23 +387,27 @@ socket.on("arena:gift", (data) => {
 
     let count = 1, scale = 1, label = "Rosa";
 
-    if (diamonds >= 30000)      { count = 1;  scale = 4.5; label = "🦁 LEÓN";    sfxMega();  screenShake = 25; speak(`¡${name} mandó un LEÓN! ¡TEMBLEMOS!`); }
-    else if (diamonds >= 5000)  { count = 20; scale = 1;   label = "🌌 GALAXIA"; sfxMega();  screenShake = 15; speak(`¡${name} lanzó una GALAXIA! ¡Lluvia de avatares!`); }
-    else if (diamonds >= 1000)  { count = 10; scale = 1.2; label = "🚀 ATAQUE";  sfxGift();  screenShake = 8;  speak(`¡${name} atacó con fuerza!`); }
-    else if (diamonds >= 99)    { count = 5;  scale = 1;   label = "💎 REGALO";  sfxGift(); }
-    else                        { count = 2;  scale = 0.9; label = "🌹 Rosa";    sfxPeg();  }
+    if (diamonds >= 30000)      { count = 1;  scale = 4.5; label = "LEON";    sfxMega();  screenShake = 25; speak(`¡${name} mandó un LEON! ¡TEMBLEMOS!`); }
+    else if (diamonds >= 5000)  { count = 20; scale = 1;   label = "GALAXIA"; sfxMega();  screenShake = 15; speak(`¡${name} lanzó una GALAXIA! ¡Lluvia de avatares!`); }
+    else if (diamonds >= 1000)  { count = 10; scale = 1.2; label = "ATAQUE";  sfxGift();  screenShake = 8;  speak(`¡${name} atacó con fuerza!`); }
+    else if (diamonds >= 99)    { count = 5;  scale = 1;   label = "REGALO";  sfxGift(); }
+    else                        { count = 2;  scale = 0.9; label = "Rosa";    sfxPeg();  }
 
-    toast(`${name} envió ${label}!`, getColor(id), 2500);
+    toast(`${name}: ${label}!`, getColor(id), 2500);
     explode(canvas.width / 2, 80, getColor(id), 20);
     spawnBall(player, scale, count);
 });
 
 socket.on("arena:roundEnd", () => {
-    toast("⏱️ ¡FIN DE LA RONDA!", "#ff4757", 3000);
+    // Mostrar ganador
+    const winner = roundRanking[0];
+    const winnerName = winner ? (winner.name || winner.n || "???") : "???";
+    const winnerScore = winner ? (winner.score || winner.s || 0) : 0;
+    toast(`🏆 GANADOR: ${winnerName} (${winnerScore} pts)`, "#ffd700", 5000);
     flashAlpha = 0.5; flashColor = "255,71,87";
     sfxRoundEnd();
-    speak("¡Se acabó el tiempo! Arranca una nueva ronda.");
-    setTimeout(() => balls.length = 0, 3000);
+    speak(`¡Tiempo! El ganador es ${winnerName} con ${winnerScore} puntos. ¡Felicitaciones!`);
+    setTimeout(() => balls.length = 0, 4000);
 });
 
 // ==========================================
@@ -569,6 +591,54 @@ function physicsStep(b) {
     return true; // mantener
 }
 
+// ==========================================
+// SCOREBOARD EN CANVAS (top 3 durante juego)
+// ==========================================
+function drawScoreboard() {
+    if (roundRanking.length === 0) return;
+    const top = roundRanking.slice(0, 3);
+    const rowH = 38;
+    const boardW = Math.min(canvas.width * 0.42, 200);
+    const boardX = 8;
+    const boardY = 60;
+    const medals = ["1", "2", "3"];
+    const medalColors = ["#ffd700", "#c0c0c0", "#cd7f32"];
+
+    // Fondo
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
+    ctx.beginPath();
+    ctx.roundRect(boardX, boardY, boardW, top.length * rowH + 8, 10);
+    ctx.fill();
+
+    top.forEach((p, i) => {
+        const name  = (p.name || p.n || "?").substring(0, 12);
+        const score = p.score || p.s || 0;
+        const y     = boardY + 8 + i * rowH;
+        const color = getColor(p.id || p.i || name);
+
+        // Medalla / número
+        ctx.font = `bold 14px Rajdhani, sans-serif`;
+        ctx.fillStyle = medalColors[i];
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(`#${medals[i]}`, boardX + 8, y + rowH / 2);
+
+        // Barra de color del jugador
+        ctx.fillStyle = color;
+        ctx.fillRect(boardX + 28, y + 4, 4, rowH - 8);
+
+        // Nombre
+        ctx.fillStyle = "#ffffff";
+        ctx.font = `bold 13px Rajdhani, sans-serif`;
+        ctx.fillText(name, boardX + 38, y + rowH / 2 - 7);
+
+        // Puntos
+        ctx.fillStyle = "rgba(255,255,255,0.6)";
+        ctx.font = `11px Rajdhani, sans-serif`;
+        ctx.fillText(`${score} pts`, boardX + 38, y + rowH / 2 + 8);
+    });
+}
+
 function drawIdleScreen() {
     const t = Date.now() * 0.001;
     const msg = ATTRACT_MESSAGES[attractIdx];
@@ -684,6 +754,10 @@ function loop() {
 
     drawParticles();
     drawToasts();
+
+    // Scoreboard en canvas (top 3 siempre visible durante el juego)
+    const hasRealPlayers = Object.keys(players).filter(k => !k.startsWith("demo_") && !k.startsWith("local_")).length > 0;
+    if (hasRealPlayers) drawScoreboard();
 
     // Flash overlay
     if (flashAlpha > 0.01) {
