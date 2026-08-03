@@ -197,11 +197,11 @@ function initBoard() {
         }
     }
 
-    // Canastas proporcionales: x10 muy difícil (estrecha), x1 muy fácil (ancha)
-    const mults   = [1, 5, 10, 5, 1];
-    const bColors = ["#1e90ff","#a55eea","#ff4757","#a55eea","#1e90ff"];
-    // Porcentajes del ancho total: 32% - 15% - 6% - 15% - 32%
-    const bWidths = [0.32, 0.15, 0.06, 0.15, 0.32]; 
+    // Canastas proporcionales con x3 incluido
+    const mults   = [1, 3, 5, 10, 5, 3, 1];
+    const bColors = ["#1e90ff", "#2ed573", "#a55eea", "#ff4757", "#a55eea", "#2ed573", "#1e90ff"];
+    // Porcentajes del ancho total (suma 100%)
+    const bWidths = [0.20, 0.15, 0.12, 0.06, 0.12, 0.15, 0.20]; 
     const bY = canvas.height - 75;
     
     let currentX = 0;
@@ -467,7 +467,7 @@ function drawBuckets() {
         // Etiqueta pequena que explica qué es
         ctx.font = `bold 10px Rajdhani, sans-serif`;
         ctx.fillStyle = "rgba(255,255,255,0.7)";
-        const label = b.mult === 10 ? "JACKPOT" : b.mult === 5 ? "BONUS" : "PUNTOS";
+        const label = b.mult === 10 ? "JACKPOT" : b.mult === 5 ? "MEGA" : b.mult === 3 ? "BONUS" : "PUNTOS";
         ctx.fillText(label, b.x + b.w / 2, b.y + b.h / 2 + 14);
         ctx.globalAlpha = 1;
 
@@ -636,6 +636,11 @@ function physicsStep(b) {
                         floatText(`x5!`, b.x, b.y - 30, "#a55eea");
                         sfxBucket(5);
                         if (Math.random() < 0.4) speak(`¡${pName} en el cinco! ¡Bien jugado!`);
+                    } else if (m === 3) {
+                        flashAlpha = 0.1; flashColor = "46,213,115";
+                        toast(`${pName} ganó x3`, "#2ed573", 2000);
+                        floatText(`x3`, b.x, b.y - 25, "#2ed573");
+                        sfxBucket(3);
                     } else {
                         floatText(`x1`, b.x, b.y - 20, "#1e90ff");
                         // Sin sonido para no saturar en x1
@@ -651,17 +656,17 @@ function physicsStep(b) {
 }
 
 // ==========================================
-// SCOREBOARD EN CANVAS (top 3 durante juego)
+// SCOREBOARD EN CANVAS (top 5 durante juego)
 // ==========================================
 function drawScoreboard() {
     if (roundRanking.length === 0) return;
-    const top = roundRanking.slice(0, 3);
-    const rowH = 38;
-    const boardW = Math.min(canvas.width * 0.42, 200);
-    const boardX = 8;
+    const top = roundRanking.slice(0, 5);
+    const rowH = 46;
+    const boardW = Math.min(canvas.width * 0.45, 230);
+    const boardX = canvas.width - boardW - 8;
     const boardY = 60;
-    const medals = ["1", "2", "3"];
-    const medalColors = ["#ffd700", "#c0c0c0", "#cd7f32"];
+    const medals = ["1", "2", "3", "4", "5"];
+    const medalColors = ["#ffd700", "#c0c0c0", "#cd7f32", "#87ceeb", "#87ceeb"];
 
     // Fondo
     ctx.fillStyle = "rgba(0,0,0,0.65)";
@@ -674,6 +679,7 @@ function drawScoreboard() {
         const score = p.score || p.s || 0;
         const y     = boardY + 8 + i * rowH;
         const color = getColor(p.id || p.i || name);
+        const avatarUrl = p.avatar || p.a || "";
 
         // Medalla / número
         ctx.font = `bold 14px Rajdhani, sans-serif`;
@@ -686,15 +692,41 @@ function drawScoreboard() {
         ctx.fillStyle = color;
         ctx.fillRect(boardX + 28, y + 4, 4, rowH - 8);
 
+        // Avatar
+        const avatarSize = 30;
+        const avatarX = boardX + 38;
+        const avatarY = y + rowH / 2 - avatarSize / 2;
+        if (avatarUrl) {
+            const img = getAvatar(avatarUrl);
+            if (img && img.complete) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(avatarX + avatarSize/2, avatarY + avatarSize/2, avatarSize/2, 0, Math.PI*2);
+                ctx.clip();
+                ctx.drawImage(img, avatarX, avatarY, avatarSize, avatarSize);
+                ctx.restore();
+            } else {
+                ctx.fillStyle = "#333";
+                ctx.beginPath();
+                ctx.arc(avatarX + avatarSize/2, avatarY + avatarSize/2, avatarSize/2, 0, Math.PI*2);
+                ctx.fill();
+            }
+        } else {
+            ctx.fillStyle = "#333";
+            ctx.beginPath();
+            ctx.arc(avatarX + avatarSize/2, avatarY + avatarSize/2, avatarSize/2, 0, Math.PI*2);
+            ctx.fill();
+        }
+
         // Nombre
         ctx.fillStyle = "#ffffff";
         ctx.font = `bold 13px Rajdhani, sans-serif`;
-        ctx.fillText(name, boardX + 38, y + rowH / 2 - 7);
+        ctx.fillText(name, avatarX + avatarSize + 10, y + rowH / 2 - 7);
 
         // Puntos
         ctx.fillStyle = "rgba(255,255,255,0.6)";
         ctx.font = `11px Rajdhani, sans-serif`;
-        ctx.fillText(`${score} pts`, boardX + 38, y + rowH / 2 + 8);
+        ctx.fillText(`${score} pts`, avatarX + avatarSize + 10, y + rowH / 2 + 8);
     });
 }
 
