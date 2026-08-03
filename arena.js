@@ -183,20 +183,18 @@ function initBoard() {
     pegs.length = 0;
     buckets.length = 0;
 
-    const rows = 10;
-    const lastRowCols = rows + 3 - 1; // columnas en la última fila (12)
+    const rows = 7;
+    const lastRowCols = rows + 3 - 1; // 9 columnas en la última fila
 
-    // gapX: el ancho de pantalla se divide entre todas las columnas de abajo
-    // Así la pirámide SIEMPRE ocupa todo el ancho, igual que un Plinko real
+    // gapX: la última fila llena el ancho completo
     const gapX = (canvas.width * 0.96) / lastRowCols;
 
-    // gapY: estirar para que la pirámide use casi toda la altura disponible
-    // Dejamos espacio para el header (10%) y las canastas abajo (75px)
+    // gapY: usar casi toda la altura disponible → pirámide alta y bolas grandes
     const availableH = canvas.height * 0.82 - 75;
     const gapY = availableH / rows;
-    const startY = canvas.height * 0.12;
+    const startY = canvas.height * 0.10;
 
-    // Proporciones correctas: bola ~2.5x el peg, ambos visibles
+    // Con 7 filas: gapX ~50px en pantalla 470px → bolas de 20px = avatar visible
     BALL_R = gapX * 0.40;
     PEG_R  = gapX * 0.17;
 
@@ -205,22 +203,21 @@ function initBoard() {
         const rowW = (cols - 1) * gapX;
         const ox = (canvas.width - rowW) / 2;
         for (let c = 0; c < cols; c++) {
-            // Bombas: aparecen desde la fila 3 en adelante
-            // Probabilidad crece con la fila: más abajo = más peligroso
             let bombValue = 0;
-            if (r > 2) {
-                const bombChance = 0.10 + (r / rows) * 0.18; // 10%-28% según la fila
+            if (r > 1) { // bombas desde fila 2 en adelante
+                const bombChance = 0.10 + (r / rows) * 0.20;
                 if (Math.random() < bombChance) {
                     const rand = Math.random();
-                    if (rand < 0.08)       bombValue = 1000; // 8%  de las bombas = -1000
-                    else if (rand < 0.25)  bombValue = 500;  // 17% de las bombas = -500
-                    else if (rand < 0.55)  bombValue = 100;  // 30% de las bombas = -100
-                    else                   bombValue = 50;   // 45% de las bombas = -50
+                    if (rand < 0.08)       bombValue = 1000;
+                    else if (rand < 0.25)  bombValue = 500;
+                    else if (rand < 0.55)  bombValue = 100;
+                    else                   bombValue = 50;
                 }
             }
             pegs.push({ x: ox + c * gapX, y: startY + r * gapY, lit: 0, isBomb: bombValue > 0, bombValue });
         }
     }
+
 
     // Canastas proporcionales con x3 incluido
     const mults   = [1, 3, 5, 10, 5, 3, 1];
