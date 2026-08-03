@@ -137,8 +137,8 @@ function rnd(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 // PLINKO ENGINE
 // ==========================================
 const GRAVITY       = 0.13;   // Lento = más drama
-const BALL_R        = 20;
-const PEG_R         = 7;      // Clavos más grandes = más rebotes
+let BALL_R          = 20;     // Ahora es dinámico
+let PEG_R           = 7;      // Ahora es dinámico
 const BOUNCE        = 0.62;   // Más elástico = más caos
 
 const balls      = [];
@@ -183,10 +183,17 @@ function initBoard() {
     pegs.length = 0;
     buckets.length = 0;
 
-    const rows = 16;   // Más filas = caida más lenta y caótica
-    const gapY = canvas.height * 0.048;
-    const gapX = Math.min(canvas.width * 0.085, 68);
-    const startY = canvas.height * 0.12;
+    const rows = 12;   // Reducido a 12 para que los círculos se vean más grandes en móvil
+    
+    // Espaciado dinámico basado en el ancho de la pantalla (hasta un máximo para no verse gigante en PC)
+    const maxCols = rows + 3;
+    const gapX = Math.min((canvas.width * 0.94) / (maxCols - 1), 70);
+    const gapY = gapX * 1.1; 
+    const startY = canvas.height * 0.15;
+
+    // Escalar los círculos dinámicamente para que siempre quepan entre los clavos
+    BALL_R = gapX * 0.36;
+    PEG_R = gapX * 0.12;
 
     for (let r = 0; r < rows; r++) {
         const cols = r + 3;
