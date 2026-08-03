@@ -26,14 +26,24 @@ body, html {
 }
 
 /* =========================================
-   CANVAS FULL SCREEN
+   CANVAS FULL SCREEN (RESTRINGIDO)
    ========================================= */
+#game-container {
+    position: relative;
+    width: 100%;
+    max-width: 550px; /* Ancho máximo de celular ancho */
+    height: 100%;
+    margin: 0 auto;
+    background: #000;
+    overflow: hidden;
+}
+
 #gameCanvas {
     position: absolute;
     top: 0;
     left: 0;
-    width: 100vw;
-    height: 100vh;
+    width: 100%;
+    height: 100%;
     z-index: 1;
     display: block;
 }

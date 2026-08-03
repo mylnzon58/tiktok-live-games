@@ -21,12 +21,13 @@ const floatingLayer = document.getElementById("floating-ui-layer");
 
 const DEBUG_MODE = new URLSearchParams(window.location.search).get("debug") === "1";
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+const gameContainer = document.getElementById("game-container");
+canvas.width = gameContainer.clientWidth;
+canvas.height = gameContainer.clientHeight;
 
 window.addEventListener("resize", () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.width = gameContainer.clientWidth;
+    canvas.height = gameContainer.clientHeight;
     initBoard();
 });
 

@@ -17,28 +17,31 @@
     </script>
 </head>
 <body>
-    <!-- Lienzo de Guerra que ocupa toda la pantalla -->
-    <canvas id="gameCanvas"></canvas>
+    <!-- Contenedor principal para restringir proporciones a móvil -->
+    <div id="game-container">
+        <!-- Lienzo de Guerra que ocupa toda la pantalla -->
+        <canvas id="gameCanvas"></canvas>
 
-    <!-- UI Overlay: Información Minimalista -->
-    <div id="ui-layer">
-        
-        <!-- Header -->
-        <div id="pixel-header">
-            <h1 class="pixel-title">🎰 PLINKO DE AVATARES</h1>
-            <div class="pixel-subtitle">
-                <span>🌹 1 ROSA = 5 BOLAS</span>
-                <span>✨ GALAXIA = 15 BOLAS</span>
-                <span>🦁 LEÓN = BOLA GIGANTE PESADA</span>
+        <!-- UI Overlay: Información Minimalista -->
+        <div id="ui-layer">
+            
+            <!-- Header -->
+            <div id="pixel-header">
+                <h1 class="pixel-title">🎰 PLINKO DE AVATARES</h1>
+                <div class="pixel-subtitle">
+                    <span>🌹 1 ROSA = 5 BOLAS</span>
+                    <span>✨ GALAXIA = 15 BOLAS</span>
+                    <span>🦁 LEÓN = BOLA GIGANTE PESADA</span>
+                </div>
+                <div id="timer-box">FIN: <span id="main-round-timer">00:00</span></div>
             </div>
-            <div id="timer-box">FIN: <span id="main-round-timer">00:00</span></div>
+
+            <!-- Leaderboard (Top Players) (Oculto porque usamos el de canvas) -->
+            <div id="arena-leaderboard" style="display:none;"></div>
+
+            <!-- Capa de Textos Flotantes (Daño/Puntos) -->
+            <div id="floating-ui-layer"></div>
         </div>
-
-        <!-- Leaderboard (Top Players) (Oculto porque usamos el de canvas) -->
-        <div id="arena-leaderboard" style="display:none;"></div>
-
-        <!-- Capa de Textos Flotantes (Daño/Puntos) -->
-        <div id="floating-ui-layer"></div>
     </div>
 
     <!-- Panel de Debug -->
