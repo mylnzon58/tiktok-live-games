@@ -344,20 +344,32 @@ function updateLeaderboard() {
 }
 
 // ==========================================
-// NARRACIÓN DEL LÍDER
+// NARRACIÓN (neuromarketing: urgencia, FOMO, tribu)
 // ==========================================
+const NEURO_IDLE = [
+    () => `¡Lanza una Rosa y tu cara aparece en pantalla!`,
+    () => `¡El que más regala, más bolas tiene y más puntos gana!`,
+    () => `¡Mira esos puntos negativos naranja! ¡Evítalos para mantenerte arriba!`,
+    () => `¡Solo una Rosa y entras al juego ahora mismo!`,
+    () => `¡El JACKPOT x10 está en el centro! ¡Necesitas más bolas para llegar!`,
+    () => `¡Manda un regalito y sube en el ranking antes de que termine la ronda!`,
+];
+const NEURO_LEADER = [
+    (name) => `¡${name} va primero! ¡Manda una Rosa para alcanzarlo, la ronda termina pronto!`,
+    (name) => `¡${name} domina! ¡Lanza regalos para robarle el primer lugar!`,
+    (name) => `¡Solo ${name} está ganando — ¡no dejes que se lleve el torneo solo!`,
+    (name) => `¡${name} tiene más bolas que tú! ¡Manda rosas ahora y súbete al marcador!`,
+];
+
 let lastNarrate = 0;
 function maybeNarrate() {
-    if (Date.now() - lastNarrate < 30000) return;
+    if (Date.now() - lastNarrate < 28000) return;
     if (!roundRanking.length) return;
     lastNarrate = Date.now();
     const top = roundRanking[0];
-    const name = top.name || top.n || "Líder";
-    speak(rnd([
-        () => `¡${name} va en primer lugar! ¿Quién lo destronará?`,
-        () => `${name} domina el Plinko. ¡Tira más bolas para alcanzarlo!`,
-        () => `¡${name} está ganando! ¡Donen para subir en el ranking!`
-    ])());
+    const name = top.name || top.n || "El líder";
+    const fn = Math.random() < 0.55 ? rnd(NEURO_LEADER)(name) : rnd(NEURO_IDLE)();
+    speak(fn);
 }
 
 // ==========================================
@@ -401,8 +413,9 @@ socket.on("arena:join", (player) => {
     spawnBall(players[player.id || player.i], 1, 1);
     sfxJoin();
     speak(rnd([
-        () => `¡${player.name || player.n || "alguien"} se unió al Plinko!`,
-        () => `¡Bienvenido ${player.name || player.n || "jugador"}!`
+        () => `¡${player.name || player.n || "alguien"} entró al juego! ¡Lanza una Rosa para tener más bolas!`,
+        () => `¡Bienvenido ${player.name || player.n || "jugador"}! Manda regalos para subir al top.`,
+        () => `¡${player.name || player.n || "nuevo jugador"} está aquí! ¡Lanza Rosas para ganar más puntos!`
     ])());
 });
 
@@ -427,11 +440,17 @@ socket.on("arena:gift", (data) => {
 
     let count = 1, scale = 1, label = "Rosa";
 
-    if (diamonds >= 30000)      { count = 1;  scale = 4.5; label = "LEON";    sfxMega();  screenShake = 25; speak(`¡${name} mandó un LEON! ¡TEMBLEMOS!`); }
-    else if (diamonds >= 5000)  { count = 20; scale = 1;   label = "GALAXIA"; sfxMega();  screenShake = 15; speak(`¡${name} lanzó una GALAXIA! ¡Lluvia de avatares!`); }
-    else if (diamonds >= 1000)  { count = 10; scale = 1.2; label = "ATAQUE";  sfxGift();  screenShake = 8;  speak(`¡${name} atacó con fuerza!`); }
-    else if (diamonds >= 99)    { count = 5;  scale = 1;   label = "REGALO";  sfxGift(); }
-    else                        { count = 2;  scale = 0.9; label = "Rosa";    sfxPeg();  }
+    if (diamonds >= 30000)      { count = 1;  scale = 4.5; label = "LEON";    sfxMega();  screenShake = 25; speak(`¡${name} mandó un LEÓN! ¡Bola GIGANTE cayendo! ¡Aparta todo!`); }
+    else if (diamonds >= 5000)  { count = 20; scale = 1;   label = "GALAXIA"; sfxMega();  screenShake = 15; speak(`¡${name} lanzó una GALAXIA! ¡Lluvia de veinte bolas! ¡Mira eso!`); }
+    else if (diamonds >= 1000)  { count = 10; scale = 1.2; label = "ATAQUE";  sfxGift();  screenShake = 8;  speak(`¡${name} está jugando en serio! ¡Diez bolas de golpe!`); }
+    else if (diamonds >= 99)    { count = 5;  scale = 1;   label = "REGALO";  sfxGift();  speak(rnd([
+        () => `¡${name} mandó un regalo! ¡Así se sube al marcador!`,
+        () => `¡${name} jugó cinco bolas! ¡Lanza más para llegar al top!`
+    ])()); }
+    else                        { count = 2;  scale = 0.9; label = "Rosa";    sfxPeg(); speak(rnd([
+        () => `¡${name} lanzó una Rosa! ¡Cada Rosa es una bola extra!`,
+        () => `¡${name} está jugando! ¡Manda más Rosas para tener más oportunidades!`
+    ])()); }
 
     toast(`${name}: ${label}!`, getColor(id), 2500);
     explode(canvas.width / 2, 80, getColor(id), 20);
@@ -439,14 +458,13 @@ socket.on("arena:gift", (data) => {
 });
 
 socket.on("arena:roundEnd", () => {
-    // Mostrar ganador
     const winner = roundRanking[0];
     const winnerName = winner ? (winner.name || winner.n || "???") : "???";
     const winnerScore = winner ? (winner.score || winner.s || 0) : 0;
     toast(`🏆 GANADOR: ${winnerName} (${winnerScore} pts)`, "#ffd700", 5000);
     flashAlpha = 0.5; flashColor = "255,71,87";
     sfxRoundEnd();
-    speak(`¡Tiempo! El ganador es ${winnerName} con ${winnerScore} puntos. ¡Felicitaciones!`);
+    speak(`¡Se acabó la ronda! ¡${winnerName} ganó con ${winnerScore} puntos! ¡Lanza una Rosa para entrar a la SIGUIENTE ronda y arrebatarle el trono!`);
     setTimeout(() => balls.length = 0, 4000);
 });
 
@@ -506,28 +524,42 @@ function drawBuckets() {
 }
 
 function drawPegs() {
+    const now = Date.now();
     for (const peg of pegs) {
         const isLit = peg.lit > 0;
+        const r = PEG_R + (peg.isBomb ? PEG_R * 0.5 : 0); // Bombas 50% más grandes
         ctx.beginPath();
-        // Las bombas son un poco más grandes
-        ctx.arc(peg.x, peg.y, PEG_R + (peg.isBomb ? 2 : 0), 0, Math.PI * 2);
-        ctx.fillStyle = isLit ? "#ffffff" : (peg.isBomb ? "#111111" : "#ff4757");
-        if (peg.isBomb) {
-            ctx.lineWidth = 1.5;
-            ctx.strokeStyle = "#ff4757";
-            ctx.stroke();
-        }
-        ctx.shadowBlur = isLit ? 18 : (peg.isBomb ? 10 : 6);
-        ctx.shadowColor = isLit ? "#ffffff" : (peg.isBomb ? "#ff0000" : "#ff4757");
-        ctx.fill();
+        ctx.arc(peg.x, peg.y, r, 0, Math.PI * 2);
         
         if (peg.isBomb) {
+            // Color según valor: naranja=-50, rojo=-500, magenta=-1000
+            const pulse = 0.7 + 0.3 * Math.sin(now * 0.005 + peg.x); // pulso animado
+            if (peg.bombValue >= 1000) {
+                ctx.fillStyle = `rgba(180,0,255,${pulse})`;
+                ctx.shadowColor = "#cc00ff";
+            } else if (peg.bombValue >= 500) {
+                ctx.fillStyle = `rgba(220,30,30,${pulse})`;
+                ctx.shadowColor = "#ff0000";
+            } else {
+                ctx.fillStyle = `rgba(255,120,0,${pulse})`;
+                ctx.shadowColor = "#ff7700";
+            }
+            ctx.shadowBlur = 18;
+            ctx.fill();
+
+            // Número negativo DENTRO del crculo
             ctx.shadowBlur = 0;
-            ctx.fillStyle = "#ff4757";
-            ctx.font = "bold 9px Rajdhani, sans-serif";
+            ctx.fillStyle = "#ffffff";
+            const fontSize = Math.max(Math.floor(r * 0.85), 7);
+            ctx.font = `bold ${fontSize}px Rajdhani, sans-serif`;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            ctx.fillText(`-${peg.bombValue}`, peg.x, peg.y - 14);
+            ctx.fillText(`-${peg.bombValue}`, peg.x, peg.y);
+        } else {
+            ctx.fillStyle = isLit ? "#ffffff" : "#ff4757";
+            ctx.shadowBlur = isLit ? 18 : 6;
+            ctx.shadowColor = isLit ? "#ffffff" : "#ff4757";
+            ctx.fill();
         }
 
         if (peg.lit > 0) peg.lit -= 0.04;
