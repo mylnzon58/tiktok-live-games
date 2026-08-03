@@ -197,13 +197,18 @@ function initBoard() {
         }
     }
 
-    // Canastas con label explicativo
+    // Canastas proporcionales: x10 muy difícil (estrecha), x1 muy fácil (ancha)
     const mults   = [1, 5, 10, 5, 1];
     const bColors = ["#1e90ff","#a55eea","#ff4757","#a55eea","#1e90ff"];
-    const bW = canvas.width / mults.length;
+    // Porcentajes del ancho total: 32% - 15% - 6% - 15% - 32%
+    const bWidths = [0.32, 0.15, 0.06, 0.15, 0.32]; 
     const bY = canvas.height - 75;
+    
+    let currentX = 0;
     for (let i = 0; i < mults.length; i++) {
-        buckets.push({ x: i * bW, y: bY, w: bW, h: 75, mult: mults[i], color: bColors[i], flash: 0 });
+        const w = canvas.width * bWidths[i];
+        buckets.push({ x: currentX, y: bY, w: w, h: 75, mult: mults[i], color: bColors[i], flash: 0 });
+        currentX += w;
     }
 }
 initBoard();
@@ -251,10 +256,10 @@ function spawnDemoBall() {
         stuckFrames: 0
     });
 }
-// Caen cada 700ms para mantener el tablero vivo
+// Caen cada 1400ms para mantener el tablero vivo sin saturarlo
 setInterval(() => {
     if (Object.keys(players).filter(k => !k.startsWith("demo_")).length === 0) spawnDemoBall();
-}, 700);
+}, 1400);
 
 // ==========================================
 // FLOATING TEXT
