@@ -184,8 +184,8 @@ function initBoard() {
     pegs.length = 0;
     buckets.length = 0;
 
-    const rows = 7;
-    const lastRowCols = rows + 3 - 1; // 9 columnas en la última fila
+    const rows = 13;
+    const lastRowCols = rows + 3 - 1; // 15 columnas en la última fila
 
     // LAYOUT VERTICAL (proporciones del canvas.height):
     //  8%  → Inicio de la pirámide (debajo del header)
