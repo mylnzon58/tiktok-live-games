@@ -491,15 +491,15 @@ socket.on("arena:roundEnd", () => {
 // RENDER LOOP
 // ==========================================
 function drawBackground() {
-    // Fondo claro con gradiente radial
+    // Fondo negro con gradiente radial para profundidad
     const grd = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 0, canvas.width/2, canvas.height/2, canvas.width * 0.8);
-    grd.addColorStop(0, "#ffffff");
-    grd.addColorStop(1, "#e2e8f0");
+    grd.addColorStop(0, "#0d1224");
+    grd.addColorStop(1, "#03050f");
     ctx.fillStyle = grd;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Grid de puntos decorativos oscuros
-    ctx.fillStyle = "rgba(0,0,0,0.05)";
+    // Grid de puntos decorativos
+    ctx.fillStyle = "rgba(255,255,255,0.03)";
     const gs = 40;
     for (let x = gs; x < canvas.width; x += gs) {
         for (let y = gs; y < canvas.height; y += gs) {
