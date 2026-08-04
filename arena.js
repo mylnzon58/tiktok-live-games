@@ -196,9 +196,9 @@ function initBoard() {
     // gapY ajustado para que quepan más filas sin achicar gapX
     const gapY = gapX * 1.1; 
 
-    // Tamaños: bolas y pegs gigantes y visibles
-    BALL_R = gapX * 0.40;
-    PEG_R  = gapX * 0.17;
+    // Tamaños: bolas y pegs grandes y visibles
+    BALL_R = gapX * 0.46;
+    PEG_R  = gapX * 0.20;
 
     let maxPyramidY = 0;
     const totalExpectedRows = Math.floor((limitY - startY) / gapY) + 1;
@@ -779,29 +779,33 @@ socket.on("arena:globalKing", (king) => {
 function drawScoreboard() {
     // Dibujar al Rey Global por encima si existe
     if (globalKingData) {
-        const boardW = Math.min(canvas.width * 0.45, 230);
-        const boardX = canvas.width - boardW - 8;
+        const boardW = Math.min(canvas.width * 0.52, 280);
+        const boardX = canvas.width - boardW - 10;
         const kingY = 10;
-        const rowH = 42;
+        const rowH = 52;
 
-        ctx.fillStyle = "rgba(255,215,0,0.2)";
+        // Fondo dorado con glow
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = "#ffd700";
+        ctx.fillStyle = "rgba(255,215,0,0.25)";
         ctx.strokeStyle = "#ffd700";
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.roundRect(boardX, kingY, boardW, rowH, 8);
+        ctx.roundRect(boardX, kingY, boardW, rowH, 10);
         ctx.fill();
         ctx.stroke();
+        ctx.shadowBlur = 0;
 
-        ctx.font = `bold 14px Rajdhani, sans-serif`;
+        ctx.font = `bold 18px Rajdhani, sans-serif`;
         ctx.fillStyle = "#ffd700";
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
-        ctx.fillText(`👑 REY`, boardX + 8, kingY + rowH / 2);
+        ctx.fillText(`\u{1F451} REY`, boardX + 10, kingY + rowH / 2);
 
         const name = (globalKingData.name || "?").substring(0, 10);
         const avatarUrl = globalKingData.avatar || "";
-        const avatarSize = 28;
-        const avatarX = boardX + 55;
+        const avatarSize = 36;
+        const avatarX = boardX + 65;
         const avatarY = kingY + rowH / 2 - avatarSize / 2;
 
         if (avatarUrl) {
@@ -817,50 +821,59 @@ function drawScoreboard() {
         }
 
         ctx.fillStyle = "#ffffff";
-        ctx.font = `bold 12px Rajdhani, sans-serif`;
-        ctx.fillText(name, avatarX + avatarSize + 8, kingY + rowH / 2 - 6);
+        ctx.font = `bold 15px Rajdhani, sans-serif`;
+        ctx.fillText(name, avatarX + avatarSize + 10, kingY + rowH / 2 - 7);
 
         ctx.fillStyle = "#ffd700";
-        ctx.font = `11px Rajdhani, sans-serif`;
-        ctx.fillText(`${globalKingData.victories} VICTORIAS`, avatarX + avatarSize + 8, kingY + rowH / 2 + 8);
+        ctx.font = `bold 13px Rajdhani, sans-serif`;
+        ctx.fillText(`${globalKingData.victories} VICTORIAS`, avatarX + avatarSize + 10, kingY + rowH / 2 + 9);
     }
 
     if (roundRanking.length === 0) return;
     const top = roundRanking.slice(0, 5);
-    const rowH = 46;
-    const boardW = Math.min(canvas.width * 0.45, 230);
-    const boardX = canvas.width - boardW - 8;
-    const boardY = 60;
+    const rowH = 52;
+    const boardW = Math.min(canvas.width * 0.52, 280);
+    const boardX = canvas.width - boardW - 10;
+    const boardY = globalKingData ? 72 : 10;
     const medals = ["1", "2", "3", "4", "5"];
     const medalColors = ["#ffd700", "#c0c0c0", "#cd7f32", "#87ceeb", "#87ceeb"];
 
-    // Fondo
-    ctx.fillStyle = "rgba(0,0,0,0.65)";
+    // Fondo con borde verde elegante
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
+    ctx.strokeStyle = "rgba(46, 213, 115, 0.6)";
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.roundRect(boardX, boardY, boardW, top.length * rowH + 8, 10);
+    ctx.roundRect(boardX, boardY, boardW, top.length * rowH + 30, 10);
     ctx.fill();
+    ctx.stroke();
+
+    // Título
+    ctx.font = `bold 14px Orbitron, monospace`;
+    ctx.fillStyle = "#2ed573";
+    ctx.textAlign = "center";
+    ctx.fillText("TOP RONDA", boardX + boardW / 2, boardY + 16);
 
     top.forEach((p, i) => {
-        const name  = (p.name || p.n || "?").substring(0, 12);
+        const name  = (p.name || p.n || "?").substring(0, 10);
         const score = p.score || p.s || 0;
-        const y     = boardY + 8 + i * rowH;
+        const y     = boardY + 26 + i * rowH;
         const color = getColor(p.id || p.i || name);
         const avatarUrl = p.avatar || p.a || "";
 
         // Medalla / número
-        ctx.font = `bold 14px Rajdhani, sans-serif`;
+        ctx.font = `bold 17px Rajdhani, sans-serif`;
         ctx.fillStyle = medalColors[i];
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
-        ctx.fillText(`#${medals[i]}`, boardX + 8, y + rowH / 2);
+        ctx.fillText(`#${medals[i]}`, boardX + 10, y + rowH / 2);
 
         // Barra de color del jugador
         ctx.fillStyle = color;
-        ctx.fillRect(boardX + 28, y + 4, 4, rowH - 8);
+        ctx.fillRect(boardX + 32, y + 6, 5, rowH - 12);
 
-        // Avatar
-        const avatarSize = 30;
-        const avatarX = boardX + 38;
+        // Avatar más grande
+        const avatarSize = 36;
+        const avatarX = boardX + 44;
         const avatarY = y + rowH / 2 - avatarSize / 2;
         if (avatarUrl) {
             const img = getAvatar(avatarUrl);
@@ -871,6 +884,12 @@ function drawScoreboard() {
                 ctx.clip();
                 ctx.drawImage(img, avatarX, avatarY, avatarSize, avatarSize);
                 ctx.restore();
+                // Anillo
+                ctx.beginPath();
+                ctx.arc(avatarX + avatarSize/2, avatarY + avatarSize/2, avatarSize/2, 0, Math.PI*2);
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.stroke();
             } else {
                 ctx.fillStyle = "#333";
                 ctx.beginPath();
@@ -884,15 +903,15 @@ function drawScoreboard() {
             ctx.fill();
         }
 
-        // Nombre
+        // Nombre más grande
         ctx.fillStyle = "#ffffff";
-        ctx.font = `bold 13px Rajdhani, sans-serif`;
-        ctx.fillText(name, avatarX + avatarSize + 10, y + rowH / 2 - 7);
+        ctx.font = `bold 15px Rajdhani, sans-serif`;
+        ctx.fillText(name, avatarX + avatarSize + 10, y + rowH / 2 - 8);
 
-        // Puntos
-        ctx.fillStyle = "rgba(255,255,255,0.6)";
-        ctx.font = `11px Rajdhani, sans-serif`;
-        ctx.fillText(`${score} pts`, avatarX + avatarSize + 10, y + rowH / 2 + 8);
+        // Puntos en verde
+        ctx.fillStyle = "#2ed573";
+        ctx.font = `bold 13px Orbitron, monospace`;
+        ctx.fillText(`${score} pts`, avatarX + avatarSize + 10, y + rowH / 2 + 9);
     });
 }
 
