@@ -200,17 +200,26 @@ function initBoard() {
 
     const gapY = (pyramidEnd - startY) / (rows - 1);
 
-    // gapX: última fila llena el ancho completo
-    const gapX = (canvas.width * 0.96) / lastRowCols;
+    // gapX: la última fila llena el ancho completo
+    const gapX = (canvas.width * 0.94) / lastRowCols;
+    
+    // gapY proporcional a gapX para mantener la geometría de pirámide
+    // (en lugar de estirar deformando)
+    const gapY = gapX * 1.4;
 
     // Tamaños: bolas del 40% del gapX, pegs del 17%
     BALL_R = gapX * 0.40;
     PEG_R  = gapX * 0.17;
 
+    let maxPyramidY = 0;
+
     for (let r = 0; r < rows; r++) {
         const cols = r + 3;
         const rowW = (cols - 1) * gapX;
         const ox = (canvas.width - rowW) / 2;
+        const py = startY + r * gapY;
+        if (py > maxPyramidY) maxPyramidY = py;
+        
         for (let c = 0; c < cols; c++) {
             let bombValue = 0;
             if (r > 1) {
@@ -227,10 +236,11 @@ function initBoard() {
         }
     }
 
-    // Buckets con texto escalado al tamaño del canvas
+    // Buckets con texto y anchos más equilibrados para evitar overlap
     const mults   = [1, 3, 5, 10, 5, 3, 1];
     const bColors = ["#1e90ff", "#2ed573", "#a55eea", "#ff4757", "#a55eea", "#2ed573", "#1e90ff"];
-    const bWidths = [0.20, 0.17, 0.10, 0.06, 0.10, 0.17, 0.20];
+    // Anchos equilibrados: x10 no puede ser tan fino porque el texto no cabe
+    const bWidths = [0.16, 0.15, 0.14, 0.10, 0.14, 0.15, 0.16];
     let currentX = 0;
     for (let i = 0; i < mults.length; i++) {
         const w = canvas.width * bWidths[i];
@@ -511,17 +521,18 @@ function drawBuckets() {
         ctx.strokeRect(b.x + 1, b.y + 1, b.w - 2, b.h - 2);
         ctx.shadowBlur = 0;
 
-        // Multiplicador grande — escala con el alto del bucket
+        // Multiplicador grande — limitado por el ancho del bucket para no salir
         ctx.fillStyle = "#ffffff";
         ctx.globalAlpha = 0.95;
-        const multSize = Math.max(Math.round(b.h * 0.38), 14);
+        // Limitamos el font-size para que nunca sea más ancho que el bucket
+        const multSize = Math.max(Math.min(Math.round(b.h * 0.38), Math.round(b.w * 0.45)), 12);
         ctx.font = `bold ${multSize}px Orbitron, monospace`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(`x${b.mult}`, b.x + b.w / 2, b.y + b.h * 0.38);
 
-        // Etiqueta pequena — escala con el alto del bucket
-        const labelSize = Math.max(Math.round(b.h * 0.18), 9);
+        // Etiqueta pequena — limitada por el ancho del bucket
+        const labelSize = Math.max(Math.min(Math.round(b.h * 0.18), Math.round(b.w * 0.22)), 8);
         ctx.font = `bold ${labelSize}px Rajdhani, sans-serif`;
         ctx.fillStyle = "rgba(255,255,255,0.7)";
         const label = b.mult === 10 ? "JACKPOT" : b.mult === 5 ? "MEGA" : b.mult === 3 ? "BONUS" : "PUNTOS";
