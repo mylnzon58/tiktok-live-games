@@ -198,8 +198,6 @@ function initBoard() {
     const bY         = canvas.height * 0.85;
     const bucketH    = canvas.height * 0.11;
 
-    const gapY = (pyramidEnd - startY) / (rows - 1);
-
     // gapX: la última fila llena el ancho completo
     const gapX = (canvas.width * 0.94) / lastRowCols;
     
