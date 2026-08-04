@@ -222,12 +222,14 @@ function initBoard() {
         for (let c = 0; c < cols; c++) {
             let bombValue = 0;
             if (r > 1) {
-                const bombChance = 0.10 + (r / totalExpectedRows) * 0.25; // Más bombas abajo
+                // Reducido drásticamente la probabilidad de bombas para que sea más fácil (5% al 20% max)
+                const bombChance = 0.05 + (r / totalExpectedRows) * 0.15; 
                 if (Math.random() < bombChance) {
                     const rand = Math.random();
-                    if (rand < 0.08)       bombValue = 1000;
-                    else if (rand < 0.25)  bombValue = 500;
-                    else if (rand < 0.55)  bombValue = 100;
+                    // Valores más benévolos, bombas de -1000 y -500 muy raras
+                    if (rand < 0.03)       bombValue = 1000;
+                    else if (rand < 0.12)  bombValue = 500;
+                    else if (rand < 0.40)  bombValue = 100;
                     else                   bombValue = 50;
                 }
             }
