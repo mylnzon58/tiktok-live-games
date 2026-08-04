@@ -773,12 +773,15 @@ socket.on("arena:globalKing", (king) => {
 // SCOREBOARD EN CANVAS (top 5 durante juego)
 // ==========================================
 function drawScoreboard() {
-    // Dibujar al Rey Global por encima si existe
+    const startY = 40; // Debajo de los textos de atraccion
+
+    // =============================================
+    // DERECHA: REY GLOBAL (ganador de más rondas)
+    // =============================================
     if (globalKingData) {
-        const boardW = Math.min(canvas.width * 0.52, 280);
+        const boardW = Math.min(canvas.width * 0.45, 230);
         const boardX = canvas.width - boardW - 10;
-        const kingY = 10;
-        const rowH = 52;
+        const rowH = 50;
 
         // Fondo dorado con glow
         ctx.shadowBlur = 8;
@@ -787,22 +790,22 @@ function drawScoreboard() {
         ctx.strokeStyle = "#ffd700";
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.roundRect(boardX, kingY, boardW, rowH, 10);
+        ctx.roundRect(boardX, startY, boardW, rowH, 10);
         ctx.fill();
         ctx.stroke();
         ctx.shadowBlur = 0;
 
-        ctx.font = `bold 18px Rajdhani, sans-serif`;
+        ctx.font = `bold 16px Rajdhani, sans-serif`;
         ctx.fillStyle = "#ffd700";
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
-        ctx.fillText(`\u{1F451} REY`, boardX + 10, kingY + rowH / 2);
+        ctx.fillText(`\u{1F451} REY`, boardX + 8, startY + rowH / 2);
 
-        const name = (globalKingData.name || "?").substring(0, 10);
+        const name = (globalKingData.name || "?").substring(0, 8);
         const avatarUrl = globalKingData.avatar || "";
-        const avatarSize = 36;
-        const avatarX = boardX + 65;
-        const avatarY = kingY + rowH / 2 - avatarSize / 2;
+        const avatarSize = 34;
+        const avatarX = boardX + 60;
+        const avatarY = startY + rowH / 2 - avatarSize / 2;
 
         if (avatarUrl) {
             const img = getAvatar(avatarUrl);
@@ -817,20 +820,23 @@ function drawScoreboard() {
         }
 
         ctx.fillStyle = "#ffffff";
-        ctx.font = `bold 15px Rajdhani, sans-serif`;
-        ctx.fillText(name, avatarX + avatarSize + 10, kingY + rowH / 2 - 7);
+        ctx.font = `bold 14px Rajdhani, sans-serif`;
+        ctx.fillText(name, avatarX + avatarSize + 8, startY + rowH / 2 - 7);
 
         ctx.fillStyle = "#ffd700";
-        ctx.font = `bold 13px Rajdhani, sans-serif`;
-        ctx.fillText(`${globalKingData.victories} VICTORIAS`, avatarX + avatarSize + 10, kingY + rowH / 2 + 9);
+        ctx.font = `bold 12px Rajdhani, sans-serif`;
+        ctx.fillText(`${globalKingData.victories} VICTORIAS`, avatarX + avatarSize + 8, startY + rowH / 2 + 9);
     }
 
+    // =============================================
+    // IZQUIERDA: TOP 5 DE LA RONDA
+    // =============================================
     if (roundRanking.length === 0) return;
+    
     const top = roundRanking.slice(0, 5);
-    const rowH = 52;
-    const boardW = Math.min(canvas.width * 0.52, 280);
-    const boardX = canvas.width - boardW - 10;
-    const boardY = globalKingData ? 72 : 10;
+    const rowH = 50;
+    const boardW = Math.min(canvas.width * 0.45, 230);
+    const boardX = 10;
     const medals = ["1", "2", "3", "4", "5"];
     const medalColors = ["#ffd700", "#c0c0c0", "#cd7f32", "#87ceeb", "#87ceeb"];
 
@@ -839,37 +845,37 @@ function drawScoreboard() {
     ctx.strokeStyle = "rgba(46, 213, 115, 0.6)";
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.roundRect(boardX, boardY, boardW, top.length * rowH + 30, 10);
+    ctx.roundRect(boardX, startY, boardW, top.length * rowH + 28, 10);
     ctx.fill();
     ctx.stroke();
 
     // Título
-    ctx.font = `bold 14px Orbitron, monospace`;
+    ctx.font = `bold 13px Orbitron, monospace`;
     ctx.fillStyle = "#2ed573";
     ctx.textAlign = "center";
-    ctx.fillText("TOP RONDA", boardX + boardW / 2, boardY + 16);
+    ctx.fillText("TOP RONDA", boardX + boardW / 2, startY + 14);
 
     top.forEach((p, i) => {
-        const name  = (p.name || p.n || "?").substring(0, 10);
+        const name  = (p.name || p.n || "?").substring(0, 8);
         const score = p.score || p.s || 0;
-        const y     = boardY + 26 + i * rowH;
+        const y     = startY + 24 + i * rowH;
         const color = getColor(p.id || p.i || name);
         const avatarUrl = p.avatar || p.a || "";
 
         // Medalla / número
-        ctx.font = `bold 17px Rajdhani, sans-serif`;
+        ctx.font = `bold 15px Rajdhani, sans-serif`;
         ctx.fillStyle = medalColors[i];
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
-        ctx.fillText(`#${medals[i]}`, boardX + 10, y + rowH / 2);
+        ctx.fillText(`#${medals[i]}`, boardX + 8, y + rowH / 2);
 
         // Barra de color del jugador
         ctx.fillStyle = color;
-        ctx.fillRect(boardX + 32, y + 6, 5, rowH - 12);
+        ctx.fillRect(boardX + 28, y + 6, 4, rowH - 12);
 
-        // Avatar más grande
-        const avatarSize = 36;
-        const avatarX = boardX + 44;
+        // Avatar
+        const avatarSize = 34;
+        const avatarX = boardX + 38;
         const avatarY = y + rowH / 2 - avatarSize / 2;
         if (avatarUrl) {
             const img = getAvatar(avatarUrl);
@@ -899,15 +905,15 @@ function drawScoreboard() {
             ctx.fill();
         }
 
-        // Nombre más grande
+        // Nombre
         ctx.fillStyle = "#ffffff";
-        ctx.font = `bold 15px Rajdhani, sans-serif`;
-        ctx.fillText(name, avatarX + avatarSize + 10, y + rowH / 2 - 8);
+        ctx.font = `bold 14px Rajdhani, sans-serif`;
+        ctx.fillText(name, avatarX + avatarSize + 8, y + rowH / 2 - 8);
 
         // Puntos en verde
         ctx.fillStyle = "#2ed573";
-        ctx.font = `bold 13px Orbitron, monospace`;
-        ctx.fillText(`${score} pts`, avatarX + avatarSize + 10, y + rowH / 2 + 9);
+        ctx.font = `bold 12px Orbitron, monospace`;
+        ctx.fillText(`${score} pts`, avatarX + avatarSize + 8, y + rowH / 2 + 8);
     });
 }
 
