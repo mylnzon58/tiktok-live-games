@@ -189,16 +189,16 @@ function initBoard() {
     const bY         = canvas.height * 0.85; // 85% inicio buckets
     const bucketH    = canvas.height * 0.11;
 
-    // Queremos que las bolas sean grandes (como cuando había 7 filas = 9 columnas máximo)
-    const maxCols = 9; 
+    // maxCols=7 → gapX ~33% más grande → bolas ~30% más grandes con avatares visibles
+    const maxCols = 7; 
     const gapX = (canvas.width * 0.94) / (maxCols - 1);
     
     // gapY ajustado para que quepan más filas sin achicar gapX
     const gapY = gapX * 1.1; 
 
     // Tamaños: bolas y pegs grandes y visibles
-    BALL_R = gapX * 0.46;
-    PEG_R  = gapX * 0.20;
+    BALL_R = gapX * 0.42;
+    PEG_R  = gapX * 0.18;
 
     let maxPyramidY = 0;
     const totalExpectedRows = Math.floor((limitY - startY) / gapY) + 1;
