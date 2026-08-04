@@ -197,7 +197,7 @@ function initBoard() {
     const gapY = gapX * 1.1; 
 
     // Tamaños: bolas y pegs grandes y visibles
-    BALL_R = gapX * 0.43; // Reducido 14% para que pasen bien por las rendijas
+    BALL_R = gapX * 0.40; // Reducido para que pasen más fácil por las rendijas
     PEG_R  = gapX * 0.18;
 
     let maxPyramidY = 0;
