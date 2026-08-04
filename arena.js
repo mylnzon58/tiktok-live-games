@@ -693,12 +693,8 @@ function physicsStep(b) {
                 return false; // DESTRUYE LA BOLA
             }
             
-            // Cooldown de sonido para evitar ruido abrumador cuando rebota muy rápido
-            if (now - b.lastSfxTime > 120) {
-                if (peg.isBomb) sfxRoundEnd(); // Sonido feo
-                else sfxPeg(); // Sonido normal
-                b.lastSfxTime = now;
-            }
+            // Sin sonido en rebotes normales para no saturar el audio del live
+            // (solo se conservan los sonidos de bombas, buckets y regalos)
         }
     }
 
