@@ -184,44 +184,45 @@ function initBoard() {
     pegs.length = 0;
     buckets.length = 0;
 
-    const rows = 13;
-    const lastRowCols = rows + 3 - 1; // 15 columnas en la última fila
-
-    // LAYOUT VERTICAL (proporciones del canvas.height):
-    //  8%  → Inicio de la pirámide (debajo del header)
-    // 75%  → Última fila de pegs
-    // 75%~85% → ZONA LIBRE para que las bolas caigan al bucket correcto
-    // 85%  → Inicio de los buckets
-    // 96%  → Fin de los buckets
     const startY     = canvas.height * 0.08;
-    const pyramidEnd = canvas.height * 0.75;
-    const bY         = canvas.height * 0.85;
+    const limitY     = canvas.height * 0.70; // 70% lleno de pegs
+    const bY         = canvas.height * 0.85; // 85% inicio buckets
     const bucketH    = canvas.height * 0.11;
 
-    // gapX: la última fila llena el ancho completo
-    const gapX = (canvas.width * 0.94) / lastRowCols;
+    // Queremos que las bolas sean grandes (como cuando había 7 filas = 9 columnas máximo)
+    const maxCols = 9; 
+    const gapX = (canvas.width * 0.94) / (maxCols - 1);
     
-    // gapY proporcional a gapX para mantener la geometría de pirámide
-    // (en lugar de estirar deformando)
-    const gapY = gapX * 1.4;
+    // gapY ajustado para que quepan más filas sin achicar gapX
+    const gapY = gapX * 1.1; 
 
-    // Tamaños: bolas del 40% del gapX, pegs del 17%
+    // Tamaños: bolas y pegs gigantes y visibles
     BALL_R = gapX * 0.40;
     PEG_R  = gapX * 0.17;
 
     let maxPyramidY = 0;
+    const totalExpectedRows = Math.floor((limitY - startY) / gapY) + 1;
 
-    for (let r = 0; r < rows; r++) {
-        const cols = r + 3;
+    let r = 0;
+    while (true) {
+        const py = startY + r * gapY;
+        if (py > limitY) break; // Si pasamos el 70% de la pantalla, paramos.
+
+        if (py > maxPyramidY) maxPyramidY = py;
+
+        // La pirámide crece hasta maxCols. Luego alterna entre maxCols y maxCols-1 (forma de panel de abeja)
+        let cols = r + 3;
+        if (cols > maxCols) {
+            cols = (r - (maxCols - 3)) % 2 === 0 ? maxCols : maxCols - 1;
+        }
+
         const rowW = (cols - 1) * gapX;
         const ox = (canvas.width - rowW) / 2;
-        const py = startY + r * gapY;
-        if (py > maxPyramidY) maxPyramidY = py;
         
         for (let c = 0; c < cols; c++) {
             let bombValue = 0;
             if (r > 1) {
-                const bombChance = 0.10 + (r / rows) * 0.20;
+                const bombChance = 0.10 + (r / totalExpectedRows) * 0.25; // Más bombas abajo
                 if (Math.random() < bombChance) {
                     const rand = Math.random();
                     if (rand < 0.08)       bombValue = 1000;
@@ -232,6 +233,7 @@ function initBoard() {
             }
             pegs.push({ x: ox + c * gapX, y: startY + r * gapY, lit: 0, isBomb: bombValue > 0, bombValue });
         }
+        r++;
     }
 
     // Buckets con texto y anchos más equilibrados para evitar overlap
