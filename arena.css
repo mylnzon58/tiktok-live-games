@@ -31,7 +31,7 @@ body, html {
 #game-container {
     position: relative;
     width: 100%;
-    max-width: 550px; /* Ancho máximo de celular ancho */
+    max-width: 680px; /* Ancho ampliado para aprovechar más espacio lateral */
     height: 100%;
     margin: 0 auto;
     background: #000;
