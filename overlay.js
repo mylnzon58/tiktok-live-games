@@ -1,5 +1,5 @@
 // ============================================================
-// TikTok LIVE Countries Ranking — Overlay Client
+// TikTok LIVE — Ranking de Países — Cliente del overlay
 // ============================================================
 
 const socket = io();
@@ -23,7 +23,7 @@ let speechQueue = [];
 let speechBusy = false;
 
 // ──────────────────────────────────────────────────────────────
-// 🔊 Sistema de Sonido (Web Audio API)
+// Sistema de sonido (Web Audio API)
 // ──────────────────────────────────────────────────────────────
 let audioCtx = null;
 
@@ -59,7 +59,7 @@ function tryUnlockAudio() {
     }
 }
 
-// Revisar contínuamente si ya está running (OBS / TikTok Studio)
+// Revisar continuamente si el contexto ya está en ejecución (OBS / TikTok Studio)
 let ctxUnlocker = setInterval(() => {
     const ctx = getAudioCtx();
     if (ctx.state === 'running') {
@@ -101,7 +101,7 @@ function playBackgroundMusic() {
         osc.start(now);
         osc.stop(now + 0.2);
         step++;
-        setTimeout(nextStep, 200); // More energetic tempo
+        setTimeout(nextStep, 200); // Tempo más enérgico
     }
     nextStep();
 }
@@ -140,7 +140,7 @@ function playBigGiftSound() {
         osc.start(now + i * 0.1);
         osc.stop(now + i * 0.1 + 0.3);
     });
-    // Sub bass boom
+    // Golpe grave (sub bajo)
     const bass = ctx.createOscillator();
     const bassGain = ctx.createGain();
     bass.type = 'sine';
@@ -203,7 +203,7 @@ function playVictorySound() {
     });
 }
 
-// Sonido: warning del timer
+// Sonido: aviso del temporizador
 function playTickSound() {
     const ctx = getAudioCtx();
     const now = ctx.currentTime;
@@ -277,7 +277,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ──────────────────────────────────────────────────────────────
-// Elapsed timer (tiempo transcurrido)
+// Temporizador del tiempo transcurrido
 // ──────────────────────────────────────────────────────────────
 function startElapsed() {
     elapsedSeconds = 0;
@@ -363,7 +363,7 @@ function spawnReaction(emoji) {
     setTimeout(() => el.remove(), 6000);
 }
 
-// 💎 LLUVIA DE DIAMANTES (NEUROMARKETING)
+// Lluvia de diamantes
 function spawnDiamondRain() {
     const container = document.body;
     const count = 50;
@@ -387,7 +387,7 @@ function spawnDiamondRain() {
 function triggerScreenShake(intensity = 15) {
     const overlay = document.getElementById("overlay");
     overlay.style.animation = `none`;
-    overlay.offsetHeight; // trigger reflow
+    overlay.offsetHeight; // Fuerza el reflow del navegador
     overlay.style.animation = `screenShakeOverlay 0.5s ease-out`;
     overlay.style.transform = `translate3d(${Math.round(intensity / 3)}px, 0, 0)`;
     setTimeout(() => {
@@ -396,7 +396,7 @@ function triggerScreenShake(intensity = 15) {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Formatear score — con decimales como la referencia
+// Formateo de puntaje — con decimales como la referencia
 // ──────────────────────────────────────────────────────────────
 function formatScore(n) {
     if (n >= 1000000) return (n / 1000000).toFixed(2) + "M";
@@ -486,7 +486,7 @@ function spawnBarBurst(row, emoji = "✨", count = 6) {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Ranking Update
+// Actualización del ranking
 // ──────────────────────────────────────────────────────────────
 socket.on("rankingUpdate", (countries) => {
     latestCountries = countries || {};
@@ -561,7 +561,7 @@ function renderRanking(countries) {
             });
         }
 
-        // Posición class
+        // Clase de posición
         let posClass = "rank-pos";
         if (pos === 1) posClass += " p1";
         else if (pos === 2) posClass += " p2";
@@ -594,7 +594,7 @@ function renderRanking(countries) {
             existingCrown.remove();
         }
 
-        // Score popup
+        // Popup de puntaje
         if (scoreDiff > 0 && prevScore > 0) {
             const popup = document.createElement("div");
             popup.className = "score-popup";
@@ -625,7 +625,7 @@ function renderRanking(countries) {
     rows.forEach((r) => r.remove());
     container.appendChild(fragment);
 
-    // Guardar scores
+    // Guardar puntajes
     previousScores = {};
     Object.entries(countries).forEach(([code, data]) => {
         previousScores[code] = data.score;
@@ -633,7 +633,7 @@ function renderRanking(countries) {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Leader Changed
+// Cambio de líder
 // ──────────────────────────────────────────────────────────────
 socket.on("leaderChanged", (leader) => {
     const overlay = document.getElementById("leader-change-overlay");
@@ -657,7 +657,7 @@ socket.on("leaderChanged", (leader) => {
 });
 
 // ──────────────────────────────────────────────────────────────
-// Big Gift Effect
+// Efecto de regalo grande
 // ──────────────────────────────────────────────────────────────
 socket.on("bigGift", (data) => {
     const overlay = document.getElementById("big-gift-overlay");
@@ -693,7 +693,7 @@ socket.on("bigGift", (data) => {
 });
 
 // ──────────────────────────────────────────────────────────────
-// Round Reset
+// Reinicio de ronda
 // ──────────────────────────────────────────────────────────────
 socket.on("roundReset", (data) => {
     const overlay = document.getElementById("round-reset-overlay");
@@ -753,13 +753,13 @@ socket.on("status", (data) => {
         dot.className = "disconnected";
         text.textContent = "Stream finalizado";
     } else {
-        dot.className = ""; // Naranja (default blink)
+        dot.className = ""; // Naranja (parpadeo por defecto)
         text.textContent = "Conectando a @" + (data.username || "...");
     }
 });
 
 socket.on("ranking:countryJoined", (data) => {
-    // Si queremos un popup de feedback
+    // Aviso visual de país recién unido
     const container = document.getElementById("reactions-container");
     const el = document.createElement("div");
     el.className = "reaction join-alert";
@@ -771,7 +771,7 @@ socket.on("ranking:countryJoined", (data) => {
     container.appendChild(el);
     setTimeout(() => el.remove(), 4000);
 
-    // Sonidito
+    // Sonido de aviso
     playRankUpSound();
     if (Date.now() - lastJoinVoiceAt > 7000) {
         lastJoinVoiceAt = Date.now();
@@ -780,7 +780,7 @@ socket.on("ranking:countryJoined", (data) => {
 });
 
 socket.on("connect", () => {
-    console.log("✅ Conectado al servidor");
+    console.log("Conectado al servidor");
     const dot = document.getElementById("status-dot");
     const text = document.getElementById("status-text");
     if (dot) dot.className = "dot online";
@@ -788,7 +788,7 @@ socket.on("connect", () => {
 });
 
 socket.on("disconnect", () => {
-    console.log("❌ Desconectado del servidor");
+    console.log("Desconectado del servidor");
     const dot = document.getElementById("status-dot");
     const text = document.getElementById("status-text");
     if (dot) dot.className = "dot offline";
@@ -796,7 +796,7 @@ socket.on("disconnect", () => {
 });
 
 // ──────────────────────────────────────────────────────────────
-// Animación de Regalo Volador en la Barra
+// Animación del regalo volador en la barra
 // ──────────────────────────────────────────────────────────────
 socket.on("ranking:gift", (data) => {
     spawnGiftFly(data);
@@ -850,7 +850,7 @@ function spawnGiftFly(data) {
     setTimeout(() => fly.remove(), 2000);
 }
 
-// 🏆 Actualizar Campeón del Día (12h)
+// Actualización del campeón del día (12h)
 socket.on("ranking:championUpdate", (data) => {
     const section = document.getElementById("champion-section");
     const nameEl = document.getElementById("champion-name");
@@ -878,7 +878,7 @@ socket.on("ranking:championUpdate", (data) => {
     if (followBtn) {
         followBtn.onclick = () => {
             spawnReaction("👤");
-            // Nota: En un overlay real no podemos forzar follow, pero simulamos el feedback
+            // Nota: en un overlay real no se puede forzar el seguimiento; solo se simula la respuesta
             followBtn.textContent = "✅ SIGUIENDO...";
             setTimeout(() => { followBtn.textContent = "👤 SEGUIR AL GANADOR"; }, 3000);
         };

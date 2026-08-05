@@ -43,7 +43,7 @@ function createBombaManager(io) {
     let tickTimer = null;
     let endTimer = null;
     let announceTimer = 0;
-    let likeBuffer = {};       // id -> likes acumulados en ventana
+    let likeBuffer = {};       // id -> likes acumulados en la ventana de tiempo
     const LIKE_WINDOW_MS = 5000;
 
     function playerKey(user) {

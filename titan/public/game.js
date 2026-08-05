@@ -153,7 +153,7 @@ function showAnnouncer(text, color = "#fff") {
     announcerContainer.appendChild(el);
 }
 
-// --- FLOATING TEXT ---
+// --- TEXTOS FLOTANTES ---
 function spawnFloatingText(text, x, y, color = "#fff", size = 22) {
     const el = document.createElement("div");
     el.className = "float-text";
@@ -170,7 +170,7 @@ function centerFloat(text, color = "#fff", size = 28) {
     spawnFloatingText(text, window.innerWidth / 2 - text.length * size * 0.28, window.innerHeight * 0.4, color, size);
 }
 
-// --- PARTICLES (canvas FX) ---
+// --- PARTÍCULAS (efectos en canvas) ---
 let particles = [];
 let shockwaves = [];
 
@@ -246,7 +246,7 @@ function renderFx() {
 }
 renderFx();
 
-// --- TIMER ---
+// --- TEMPORIZADOR ---
 function formatTime(ms) {
     const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
     const m = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
@@ -254,7 +254,7 @@ function formatTime(ms) {
     return m + ":" + s;
 }
 
-// --- RENDER STATE ---
+// --- RENDERIZADO DEL ESTADO ---
 function renderDonors(teamId) {
     const el = teamId === "red" ? donorsRedEl : donorsBlueEl;
     const donors = arguments[2] || [];
@@ -332,7 +332,7 @@ function applyState(state) {
     }
 }
 
-// --- EVENTS ---
+// --- EVENTOS ---
 function handlePush(data) {
     if (!data) return;
     const teamId = data.teamId;

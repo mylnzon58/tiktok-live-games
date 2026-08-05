@@ -41,7 +41,7 @@ const bgMusic = new Audio("https://upload.wikimedia.org/wikipedia/commons/transc
 bgMusic.loop   = true;
 bgMusic.volume = 0.08; // Volumen nivel 1: súper bajo para no tapar a los narradores
 
-// Habilitar audio explicitamente para esquivar bloqueos de Chrome
+// Habilitar el audio explícitamente para evitar los bloqueos de Chrome
 let isUnlocked = false;
 
 function unlockAudio() {
@@ -59,12 +59,12 @@ function unlockAudio() {
     bgMusic.play().catch(() => {});
 }
 
-// Intentar autoplay al cargar, sino esperar primer clic silencioso (como en arena)
+// Intentar autoplay al cargar; si el navegador lo bloquea, esperar el primer clic silencioso (igual que en arena)
 bgMusic.play().then(() => {
     isUnlocked = true; 
     audioOn = true;
 }).catch(() => {
-    // Si lo bloquea, el primer touch/click/tecla lo destraba
+    // Si el navegador lo bloquea, el primer toque, clic o tecla lo desbloquea
     document.addEventListener("click", unlockAudio, { once: true });
     document.addEventListener("keydown", unlockAudio, { once: true });
     document.addEventListener("touchstart", unlockAudio, { once: true });
@@ -82,15 +82,15 @@ function speak(text, isGift = false) {
     if (!audioOn) return;
     if (!window.speechSynthesis) return;
     
-    // Si hay muchos mensajes pendientes, cancelamos para dar paso a lo nuevo (Prioridad Tiempo Real)
+    // Si hay muchos mensajes pendientes, cancelar para dar paso al nuevo (prioridad al tiempo real)
     if (window.speechSynthesis.speaking && isGift) {
         window.speechSynthesis.cancel();
     } else if (window.speechSynthesis.pending > 3) {
-        // Si hay más de 3 en espera y no es un regalo, lo ignoramos para no acumular lag
+        // Si hay más de 3 en espera y no es un regalo, se descarta para no acumular demora
         if (!isGift) return;
     }
     
-    // Limpiar emojis (Safer regex)
+    // Limpiar emojis (expresión regular segura)
     const cleanText = String(text).replace(/[^\x00-\x7FáéíóúÁÉÍÓÚñÑ\s\w.,!?¿¡-]/g, '');
     if (!cleanText.trim()) return;
 
@@ -112,8 +112,8 @@ function spawn(data) {
     
     const bub = document.createElement("div");
     bub.className = `bubble ${isL ? 'slide-l' : 'slide-r'}`;
-    // Tickers pass "centered" on the bar due to CSS flex/transform, 
-    // but we can slightly randomize top within the small lane
+    // Los tickers llegan centrados sobre la barra por el CSS de flex/transform,
+    // pero podemos variar un poco la posición vertical dentro del carril
     bub.style.top = `${Math.random() * 20 + 40}%`; 
 
     bub.innerHTML = `
@@ -147,7 +147,7 @@ socket.on("versus:sync", (state) => {
     state.fighters.forEach(f => {
         DOM.scores[f.id].innerText = f.score.toLocaleString();
         if (DOM.wins[f.id]) DOM.wins[f.id].innerText = f.wins || 0;
-        // Fallback for broken images
+        // Reemplazo para imágenes rotas
         if (DOM.pfps[f.id] && (!DOM.pfps[f.id].src || DOM.pfps[f.id].src.includes('unknown'))) {
             DOM.pfps[f.id].src = f.avatar;
         }

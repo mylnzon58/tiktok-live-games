@@ -1,5 +1,5 @@
 /* ============================================================
-   TikTok LIVE Countries Ranking — Estilos (Referencia Visual)
+   TikTok LIVE — Ranking de Países — Estilos (referencia visual)
    ============================================================ */
 
 *,
@@ -234,7 +234,7 @@ body {
   }
 }
 
-/* ── Scale Bar ── */
+/* ── Barra de escala ── */
 #scale-bar {
   margin-top: 10px;
   padding: 0 80px;
@@ -269,7 +269,7 @@ body {
   box-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
 }
 
-/* ── Status Badge ── */
+/* ── Insignia de estado ── */
 #status-badge {
   display: flex;
   align-items: center;
@@ -314,7 +314,7 @@ body {
 }
 
 /* ═══════════════════════════════════
-   FIXED INSTRUCTIONS & DONATION POWERS
+   Instrucciones fijas y poderes de donación
    ═══════════════════════════════════ */
 #fixed-instructions {
   width: 90%;
@@ -411,7 +411,7 @@ body {
 }
 
 /* ═══════════════════════════════════
-   CHAMPION SECTION (12h)
+   Sección del campeón (12h)
    ═══════════════════════════════════ */
 #champion-section {
   width: 90%;
@@ -487,7 +487,7 @@ body {
 }
 
 /* ═══════════════════════════════════
-   RANKING CONTAINER
+   Contenedor del ranking
    ═══════════════════════════════════ */
 #ranking-container {
   flex: 1;
@@ -501,7 +501,7 @@ body {
   box-sizing: border-box;
 }
 
-/* Empty state */
+/* Estado vacío */
 #ranking-empty {
   display: flex;
   flex-direction: column;
@@ -547,7 +547,7 @@ body {
 }
 
 /* ═══════════════════════════════════
-   RANK BAR — Estilo referencia TikTok
+   Barra de ranking — Estilo de referencia TikTok
    ═══════════════════════════════════ */
 .rank-row {
   display: flex;
@@ -661,7 +661,7 @@ body {
   transition: all 0.3s ease;
 }
 
-/* Country code label */
+/* Etiqueta del código de país */
 .rank-code {
   font-family: var(--font-display);
   font-size: clamp(12px, 2vw, 16px);
@@ -852,7 +852,7 @@ body {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
-/* Shimmer */
+/* Efecto de brillo */
 .rank-bar-fill::after {
   content: '';
   position: absolute;
@@ -958,7 +958,7 @@ body {
   box-shadow: 0 0 12px rgba(251, 191, 36, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
-/* Flag a la derecha de la barra */
+/* Bandera a la derecha de la barra */
 .rank-flag {
   font-size: clamp(24px, 4vw, 32px);
   line-height: 1;
@@ -967,7 +967,7 @@ body {
   text-align: center;
 }
 
-/* Score al final */
+/* Puntaje al final */
 .rank-score {
   font-family: var(--font-display);
   font-size: clamp(12px, 2vw, 18px);
@@ -982,7 +982,7 @@ body {
   text-shadow: 0 0 6px rgba(251, 191, 36, 0.3);
 }
 
-/* Score popup */
+/* Popup de puntaje */
 .score-popup {
   position: absolute;
   right: 90px;
@@ -1051,7 +1051,7 @@ body {
   }
 }
 
-/* Highlight de posición subida */
+/* Resaltado de posición subida */
 .rank-row.rank-up {
   animation: rankUp 0.6s ease-out;
 }
@@ -1098,10 +1098,10 @@ body {
 }
 
 /* ═══════════════════════════════════
-   OVERLAYS — Big Gift, Leader, Reset
+   Overlays — regalo grande, líder, reinicio de ronda
    ═══════════════════════════════════ */
 
-/* Big Gift */
+/* Regalo grande */
 #big-gift-overlay {
   position: fixed;
   inset: 0;
@@ -1207,7 +1207,7 @@ body {
   margin-top: 8px;
 }
 
-/* Leader Change */
+/* Cambio de líder */
 #leader-change-overlay {
   position: fixed;
   inset: 0;
@@ -1283,7 +1283,7 @@ body {
   margin-top: 6px;
 }
 
-/* Round Reset */
+/* Reinicio de ronda */
 #round-reset-overlay {
   position: fixed;
   inset: 0;
@@ -1333,7 +1333,7 @@ body {
 
 #winner-flag {
   font-size: 170px;
-  /* Bandera MASIVA */
+  /* Bandera de gran tamaño */
   line-height: 1;
   filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.4));
   z-index: 1;
@@ -1438,7 +1438,7 @@ body {
   }
 }
 
-/* 💎 LLUVIA DE DIAMANTES (NEUROMARKETING) */
+/* Lluvia de diamantes */
 .diamond-rain {
   position: fixed;
   top: -100px;

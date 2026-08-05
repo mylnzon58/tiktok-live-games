@@ -1,8 +1,8 @@
-# Contratos Socket.IO
+# Contratos de eventos Socket.IO
 
-Regla: **todo evento emitido debe tener consumidor y todo consumidor debe tener emisor**. Este documento es la fuente de verdad actualizada a la fecha de la última validación.
+Regla: todo evento emitido debe tener consumidor, y todo consumidor debe tener emisor. Este documento es la fuente de verdad y refleja el estado de los contratos a la fecha de la última validación.
 
-## Globales (server.js → todos los clientes)
+## Eventos globales (server.js → todos los clientes)
 
 | Evento | Emisor | Consumidores | Payload |
 |--------|--------|--------------|---------|
@@ -16,11 +16,11 @@ Regla: **todo evento emitido debe tener consumidor y todo consumidor debe tener 
 | `arena:sync` | server.js | arena.js, arena-game/arena.js | estado minificado de jugadores |
 | `arena:join` | server.js | arena.js, arena-game/arena.js | jugador nuevo |
 | `arena:leave` | server.js | arena.js, arena-game/arena.js | `{ id }` |
-| `arena:currentRanking` | server.js | arena-game/arena.js | ranking de ronda |
+| `arena:currentRanking` | server.js | arena-game/arena.js | ranking de la ronda |
 | `arena:gift` | server.js | arena.js, arena-game/arena.js | impacto resuelto (attacker, target, scoreGain, damage…) |
-| `arena:likesBatch` | server.js (flush 16ms) | arena.js, arena-game/arena.js | lote de likes acumulados |
+| `arena:likesBatch` | server.js (flush 16 ms) | arena.js, arena-game/arena.js | lote de likes acumulados |
 | `arena:likeStrike` | server.js | arena.js, arena-game/arena.js | strike de likes |
-| `arena:roundEnd` | server.js | arena.js, arena-game/arena.js | ganador de ronda |
+| `arena:roundEnd` | server.js | arena.js, arena-game/arena.js | ganador de la ronda |
 | `arena:lastRoundWinner` | server.js | arena.js, arena-game/arena.js | último ganador persistido |
 | `arena:globalKing` | server.js | arena.js, arena-game/arena.js | rey con más victorias |
 | `arena:champions` | server.js | arena.js, arena-game/arena.js | campeones de sesión |
@@ -38,8 +38,8 @@ Regla: **todo evento emitido debe tener consumidor y todo consumidor debe tener 
 | `arena:powerup` | server.js | arena.js, arena-game/arena.js | powerup (sierra) |
 | `arena:extremeRecognition` | server.js | arena.js, arena-game/arena.js | regalo extremo |
 | `arena:throneInDanger` | server.js | arena.js, arena-game/arena.js | líder amenazado |
-| `arena:chatPower` | server.js | arena.js, arena-game/arena.js | `PODER` en chat |
-| `arena:chatWake` | server.js | arena.js, arena-game/arena.js | `YO` en chat |
+| `arena:chatPower` | server.js | arena.js, arena-game/arena.js | comando `PODER` en chat |
+| `arena:chatWake` | server.js | arena.js, arena-game/arena.js | comando `YO` en chat |
 | `arena:applause` | server.js | arena.js, arena-game/arena.js | aplausos en chat |
 | `arena:leaderChat` | server.js | arena.js, arena-game/arena.js | narración del líder |
 
@@ -48,7 +48,7 @@ Regla: **todo evento emitido debe tener consumidor y todo consumidor debe tener 
 | Evento | Emisor | Consumidor | Payload |
 |--------|--------|------------|---------|
 | `titan:sync` | titan-manager.js | titan/public/game.js | `{ active, phase, timeRemainingMs, teams{red,blue}, charges, bar, winTarget, hof }` |
-| `titan:push` | titan-manager.js | titan/public/game.js | `{ teamId, power, meta{ type, donor, likeCount } }` (likes consolidados por flush 100ms) |
+| `titan:push` | titan-manager.js | titan/public/game.js | `{ teamId, power, meta{ type, donor, likeCount } }` (likes consolidados por flush 100 ms) |
 | `titan:join` | titan-manager.js | titan/public/game.js | `{ teamId, user }` |
 | `titan:roundEnd` | titan-manager.js | titan/public/game.js | `{ winnerId, winnerName, reason, mvp, podium, red, blue, hof }` |
 | `titan:motivate` | titan-manager.js | titan/public/game.js | `{ phrase }` |
@@ -58,7 +58,7 @@ Regla: **todo evento emitido debe tener consumidor y todo consumidor debe tener 
 | Evento | Emisor | Consumidor | Payload |
 |--------|--------|------------|---------|
 | `versus:sync` | versus-manager.js | versus/public/app.js | estado del duelo |
-| `versus:support` | versus-manager.js | versus/public/app.js | apoyo de donante |
+| `versus:support` | versus-manager.js | versus/public/app.js | apoyo de un donante |
 | `versus:motivate` | versus-manager.js | versus/public/app.js | `{ phrase }` |
 | `versus:end` | versus-manager.js | versus/public/app.js | ganador del duelo |
 
@@ -90,7 +90,7 @@ Regla: **todo evento emitido debe tener consumidor y todo consumidor debe tener 
 | `ranking:like` | countries-manager.js | overlay.js | puntos por like a un país |
 | `ranking:countryJoined` | countries-manager.js | overlay.js | usuario unido a un país |
 | `leaderChanged` | countries-manager.js | overlay.js | cambio de líder |
-| `bigGift` | countries-manager.js | overlay.js | regalo ≥1000 💎 |
+| `bigGift` | countries-manager.js | overlay.js | regalo de 1000 o más diamantes |
 | `roundReset` | countries-manager.js | overlay.js | nueva ronda |
 | `ranking:championUpdate` | countries-manager.js | overlay.js | campeón persistido |
 

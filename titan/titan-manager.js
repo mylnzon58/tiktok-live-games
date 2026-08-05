@@ -51,7 +51,7 @@ function createTitanManager(io) {
         bar: 0.5 // 0 = rojo ganando, 1 = azul ganando
     };
 
-    let allegiance = {}; // userId -> teamId
+    let allegiance = {}; // id de usuario -> id de equipo
     let comboState = { team: null, gifts: 0, until: 0 };
     let announceTimer = 0;
     let tickTimer = null;
@@ -204,7 +204,7 @@ function createTitanManager(io) {
     function pickTeam(uid, event) {
         if (allegiance[uid]) return allegiance[uid];
 
-        // Sabotaje/chaos: los regalos de fuego/rayo van al equipo PERDEDOR para provocar caos
+        // Sabotaje: los regalos de fuego/rayo van al equipo perdedor para provocar caos
         const gift = event.gift || {};
         const isChaos = TITAN_CONFIG.sabotageCategories.includes(gift.category) || (gift.totalDiamonds || 0) >= 1000;
         if (isChaos) {

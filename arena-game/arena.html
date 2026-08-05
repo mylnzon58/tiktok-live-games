@@ -13,22 +13,22 @@
 </head>
 
 <body>
-    <!-- Overlay Fase Final -->
+    <!-- Overlay de la fase final -->
     <div id="x2-alpha-overlay">
         <h1 class="x2-banner">FASE FINAL</h1>
         <div class="x2-subtitle">IMPACTO REFORZADO</div>
     </div>
 
-    <!-- Golden Minute Overlay -->
+    <!-- Overlay del minuto de oro -->
     <div id="golden-minute-overlay">
         <h1 class="x2-banner" style="color:#ffd700; text-shadow:0 0 20px #ffaa00;">¡MINUTO DE ORO!</h1>
         <div class="x2-subtitle" style="border-color:#ffd700; background:rgba(255, 215, 0, 0.12); color:#ffd700;">PUNTOS X2 EN TODO</div>
     </div>
 
-    <!-- Temporizador Principal Gigante -->
+    <!-- Temporizador principal en grande -->
     <div id="main-round-timer">05:00</div>
 
-    <!-- Guía de Poderes Superior (Nueva) -->
+    <!-- Guía de poderes superior -->
     <div id="top-powers-guide">
         <div class="header-guide-title">GUÍA DE PODERES ESPECIALES</div>
         <div class="header-guide-items">
@@ -40,10 +40,10 @@
         </div>
     </div>
 
-    <!-- Visual Announcer (Phase 3) -->
+    <!-- Anuncios visuales (narrador) -->
     <div id="announcer-container"></div>
 
-    <!-- Metas Comunitarias (Neuromarketing) -->
+    <!-- Metas comunitarias (barra de frenesí) -->
     <div id="frenzy-bar-container">
         <div class="frenzy-title">🔥 FRENESÍ COMUNITARIO 🔥</div>
         <div class="frenzy-track">
@@ -52,20 +52,20 @@
         <div id="frenzy-text">0 / 3000</div>
     </div>
 
-    <!-- Hall of Fame Lateral (Se moverá por CSS al lateral derecho) -->
+    <!-- Salón de la fama lateral (posicionado a la derecha por CSS) -->
     <div id="top-arena-showcase"></div>
     <div id="arena-leaderboard"></div>
 
-    <!-- Switch Button para ver overlay de países (opcional) -->
+    <!-- Botón para cambiar al overlay de países (opcional) -->
     <a href="/overlay" id="switch-btn">🌎 Ver Países</a>
 
-    <!-- Botón habilitar Sonido -->
+    <!-- Botón para habilitar el sonido -->
     <button id="sound-btn">🔇 Activar Sonido</button>
 
-    <!-- El Lienzo de Batalla -->
+    <!-- Canvas de batalla -->
     <canvas id="gameCanvas"></canvas>
 
-    <!-- Panel de Desarrollo (Debug Mode) -->
+    <!-- Panel de desarrollo (modo depuración) -->
     <div id="debug-panel" style="display:none; position: fixed; top: 10px; left: 10px; z-index: 10000; background: rgba(0,0,0,0.8); padding: 10px; border: 1px solid #ff4757; border-radius: 8px;">
         <h3 style="color: #ff4757; margin: 0 0 10px 0; font-family: Rajdhani;">MODO DESARROLLO</h3>
         <button id="debug-spawn-bot" style="background: #333; color: white; border: 1px solid #666; padding: 5px 10px; cursor: pointer; margin-bottom: 5px; width: 100%;">Spawn Bot</button><br>
@@ -75,7 +75,7 @@
         <button id="debug-toggle-sd" style="background: #333; color: white; border: 1px solid #666; padding: 5px 10px; cursor: pointer; width: 100%;">Toggle Fase Final</button>
     </div>
 
-    <!-- Efectos y UI Flotante HTMl (si los hay) -->
+    <!-- Efectos y UI flotante en HTML (si los hay) -->
     <div id="floating-ui-layer"></div>
 
     <!-- Capa de burbujas de jugadores (encima del canvas y de la UI para que siempre se vean) -->

@@ -64,7 +64,7 @@
             u.lang = "es-ES";
             u.rate = 1.05;
             speechSynthesis.speak(u);
-        } catch { /* noop */ }
+        } catch { /* no hace nada */ }
     }
 
     // ---- FX ----
@@ -140,7 +140,7 @@
         }
     }
 
-    // ---- Render ----
+    // ---- Renderizado ----
     function fmtTime(ms) {
         const s = Math.max(0, Math.ceil(ms / 1000));
         const m = Math.floor(s / 60);

@@ -16,7 +16,7 @@ body {
     color: #fff;
 }
 
-/* ---- Timer ---- */
+/* ---- Temporizador ---- */
 #main-timer {
     position: fixed;
     top: 14px;
@@ -38,7 +38,7 @@ body {
     z-index: 20;
 }
 
-/* ---- How to play ---- */
+/* ---- Cómo jugar ---- */
 #how-to-play {
     position: fixed;
     top: 14px;
@@ -72,7 +72,7 @@ body {
     color: #7ee081;
 }
 
-/* ---- Announcer ---- */
+/* ---- Anunciador ---- */
 #announcer-container {
     position: fixed;
     top: 120px;
@@ -107,7 +107,7 @@ body {
     100% { transform: scale(1) translateY(0); opacity: 1; }
 }
 
-/* ---- Track ---- */
+/* ---- Pista ---- */
 #track {
     position: absolute;
     inset: 0;
@@ -223,7 +223,7 @@ body {
     100% { opacity: 0; transform: translateY(-50%) translateX(14px) scale(.6); }
 }
 
-/* ---- Ranking ---- */
+/* ---- Posiciones ---- */
 #ranking-panel {
     position: fixed;
     right: 18px;
@@ -261,7 +261,7 @@ body {
 
 .rank-row.first { background: rgba(255, 209, 102, .15); border: 1px solid rgba(255, 209, 102, .4); }
 
-/* ---- Status ---- */
+/* ---- Estado ---- */
 #status-bar {
     position: fixed;
     bottom: 10px;
@@ -320,7 +320,7 @@ body {
     z-index: 35;
 }
 
-/* ---- Overlay ---- */
+/* ---- Overlay de ronda ---- */
 #round-overlay {
     position: fixed;
     inset: 0;
@@ -371,7 +371,7 @@ body {
     50% { opacity: 1; }
 }
 
-/* ---- Sound ---- */
+/* ---- Sonido ---- */
 #sound-btn {
     position: fixed;
     bottom: 10px;

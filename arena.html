@@ -8,24 +8,24 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%232ed573'/></svg>" />
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600;700;800&display=swap" rel="stylesheet" />
     
-    <!-- Evitar cache CSS con versión dinámica generada por JS más abajo, pero ponemos uno por defecto -->
+    <!-- Evitar caché de CSS con una versión dinámica generada por JS más abajo; aquí va el valor por defecto -->
     <link id="main-css" rel="stylesheet" href="/arena.css" />
     
     <script>
-        // Forzar recarga sin cache
+        // Forzar la recarga sin caché
         document.getElementById('main-css').href = "/arena.css?v=" + new Date().getTime();
     </script>
 </head>
 <body>
     <!-- Contenedor principal para restringir proporciones a móvil -->
     <div id="game-container">
-        <!-- Lienzo de Guerra que ocupa toda la pantalla -->
+        <!-- Canvas del juego que ocupa toda la pantalla -->
         <canvas id="gameCanvas"></canvas>
 
-        <!-- UI Overlay: Información Minimalista -->
+        <!-- Overlay de UI: información minimalista -->
         <div id="ui-layer">
             
-            <!-- Header -->
+            <!-- Encabezado -->
             <div id="pixel-header">
                 <h1 class="pixel-title">🎰 PLINKO DE AVATARES</h1>
                 <div class="pixel-subtitle">
@@ -36,15 +36,15 @@
                 <div id="timer-box">FIN: <span id="main-round-timer">00:00</span></div>
             </div>
 
-            <!-- Leaderboard (Top Players) (Oculto porque usamos el de canvas) -->
+            <!-- Ranking (mejores jugadores). Oculto: se usa el del canvas -->
             <div id="arena-leaderboard" style="display:none;"></div>
 
-            <!-- Capa de Textos Flotantes (Daño/Puntos) -->
+            <!-- Capa de textos flotantes (daño/puntos) -->
             <div id="floating-ui-layer"></div>
         </div>
     </div>
 
-    <!-- Panel de Debug -->
+    <!-- Panel de depuración -->
     <div id="debug-panel" style="display:none; position: fixed; bottom: 10px; right: 10px; z-index: 10000; background: rgba(0,0,0,0.8); padding: 10px; border: 1px solid #2ed573; border-radius: 8px;">
         <button id="debug-spawn-bot" style="background: #333; color: white; border: 1px solid #666; padding: 5px; margin-bottom: 5px; width: 100%;">Spawn Bot</button><br>
         <button id="debug-gift-rose" style="background: #333; color: white; border: 1px solid #666; padding: 5px; margin-bottom: 5px; width: 100%;">Ataque Rosa</button><br>
