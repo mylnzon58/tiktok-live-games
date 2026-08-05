@@ -15,10 +15,9 @@ server.js ──── normaliza (lib/live-event-adapter) ──── despacha
    │  app.get/app.use (rutas HTTP)            │ arena-manager (lib/)         │
    │   /  /titan  /arena  /arenagame          │ countries-manager (lib/)     │
    │   /overlay  /versus  /bomba              │ titan-manager (titan/)        │
-   │   /carrera  /subasta                     │ versus-manager (versus/)      │
+   │   /carrera                               │ versus-manager (versus/)      │
    │                                          │ bomba-manager (bomba/)        │
    │                                          │ carrera-manager (carrera/)    │
-   │                                          │ subasta-manager (subasta/)    │
    │                                          └─────────────────────────────┘
    │                                                    │ io.emit
    │                                                    ▼
@@ -26,7 +25,6 @@ server.js ──── normaliza (lib/live-event-adapter) ──── despacha
    │                              arena.js · arena-game/arena.js · overlay.js
    │                              titan/public/game.js · versus/public/app.js
    │                              bomba/public/game.js · carrera/public/game.js
-   │                              subasta/public/game.js
 ```
 
 ## Responsabilidades por capa
@@ -47,7 +45,6 @@ server.js ──── normaliza (lib/live-event-adapter) ──── despacha
 - **versus/versus-manager.js** — Versus Político: duelo por chat/gifts, sincronización a nuevos clientes.
 - **bomba/bomba-manager.js** — La Bomba: patata caliente, rondas de 3 min, mecha aleatoria 12–30 s, regalos/likes/chat pasan la bomba, explosión = −300 pts, HOF persistido en `bomba_hof.json` (top 20).
 - **carrera/carrera-manager.js** — Carrera de Avatares: 6 carriles visuales, regalos impulsan (0.6 %/💎), likes en cola vaciada en el tick, chat `GO/VAMO/DALE` = +1.5 %, primero en meta gana.
-- **subasta/subasta-manager.js** — Subasta Real: cada regalo es una puja por un premio; al terminar el tiempo el mayor pujador gana. Rondas de 3 min.
 
 ### Clientes (solo presentación)
 Renderizan el estado que reciben por socket. Nunca calculan puntajes ni deciden ganadores. La latencia de juegos se mitiga con batches del lado servidor (`arena:likesBatch` cada 16 ms, `titan:push` consolidado cada 100 ms).

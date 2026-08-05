@@ -8,13 +8,12 @@ Proyecto de juegos interactivos para streamers de TikTok LIVE (para OBS/Streamla
 |------|-------|-------------|
 | `/` | **Hub de juegos** | Landing page con acceso a todos los juegos y estado del LIVE |
 | `/titan` | **Guerra de Titanes** | Gift battle por equipos: tira y afloja, caos y empuje final |
-| `/arena` | **Plinko de Avatares** | El avatar cae como bola por la pirámide hasta el JACKPOT x10 |
+| `/arena` | **Plinko de Avatares** | El avatar cae como bola por la pirámide hasta el multiplicador x10 |
 | `/arenagame` | **Tap Tap Arena** | Combate PvP clásico: HP, sierras, KO, zona rey, muerte súbita |
 | `/overlay` | **Batalla de Países** | Ranking por países/equipos (secundario) |
 | `/versus` | **Versus Político** | Milei vs Cristina: el chat vota con keywords |
 | `/bomba` | **La Bomba** | Patata caliente: pásala con regalos, taps o escribiendo PASA |
 | `/carrera` | **Carrera de Avatares** | Regalos impulsan tu avatar; el primero en meta gana |
-| `/subasta` | **Subasta Real** | Cada regalo es una puja; el mayor pujador gana el premio |
 
 Separación conceptual obligatoria:
 - Los juegos comparten servidor y conexión LIVE, pero son productos distintos con su propio cliente.
@@ -31,8 +30,8 @@ La arquitectura está separada por responsabilidad (cada manager es dueño del e
 - `lib/live-event-adapter.js`: normalización de eventos de TikTok LIVE
 - `lib/storage.js`: persistencia JSON de estado de runtime
 - `titan/titan-manager.js` y `versus/versus-manager.js`: estado autoritativo de sus juegos
-- `bomba/bomba-manager.js`, `carrera/carrera-manager.js`, `subasta/subasta-manager.js`: estado autoritativo de los juegos nuevos
-- Clientes (`arena-game/arena.js`, `arena.js`, `overlay.js`, `titan/public/game.js`, `versus/public/app.js`, `bomba/public/game.js`, `carrera/public/game.js`, `subasta/public/game.js`): render, UI y efectos — nunca deciden puntajes
+- `bomba/bomba-manager.js`, `carrera/carrera-manager.js`: estado autoritativo de los juegos nuevos
+- Clientes (`arena-game/arena.js`, `arena.js`, `overlay.js`, `titan/public/game.js`, `versus/public/app.js`, `bomba/public/game.js`, `carrera/public/game.js`): render, UI y efectos — nunca deciden puntajes
 
 Los JSON de runtime (`arena_champions.json`, `arena_hof.json`, `titan_hof.json`, `countries_champion.json`, `bomba_hof.json`) no se versionan. El catálogo `gift-catalog.json` sí es editable y versionable.
 
@@ -288,15 +287,6 @@ Eventos `carrera:*` (Carrera de Avatares `/carrera`):
 | `carrera:motivate` | Frases del locutor |
 | `carrera:roundEnd` | Fin de carrera con ganador y podio |
 
-Eventos `subasta:*` (Subasta Real `/subasta`):
-
-| Evento | Descripción |
-|--------|-------------|
-| `subasta:sync` | Estado completo (premio, pujas, timer) |
-| `subasta:bid` | Nueva puja de un jugador |
-| `subasta:winner` | Ganador de la subasta con podio |
-| `subasta:motivate` | Frases del locutor |
-
 Entradas cliente→servidor (debug interno, solo desarrollo):
 
 | Evento | Descripción |
@@ -340,9 +330,6 @@ mylnzon58GameRankPaisTik/
 │   └── public/ (index.html, game.js, style.css)
 ├── carrera/              ← Carrera de Avatares (/carrera)
 │   ├── carrera-manager.js
-│   └── public/ (index.html, game.js, style.css)
-├── subasta/              ← Subasta Real (/subasta)
-│   ├── subasta-manager.js
 │   └── public/ (index.html, game.js, style.css)
 ├── lib/
 │   ├── arena-manager.js

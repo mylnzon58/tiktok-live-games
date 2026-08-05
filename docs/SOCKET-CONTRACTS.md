@@ -81,15 +81,6 @@ Regla: **todo evento emitido debe tener consumidor y todo consumidor debe tener 
 | `carrera:motivate` | carrera-manager.js | carrera/public/game.js | `{ phrase }` |
 | `carrera:roundEnd` | carrera-manager.js | carrera/public/game.js | `{ winnerId, winnerName, winnerAvatar, podium[], timeRemainingMs }` |
 
-## Subasta Real (`/subasta`)
-
-| Evento | Emisor | Consumidor | Payload |
-|--------|--------|------------|---------|
-| `subasta:sync` | subasta-manager.js | subasta/public/game.js | `{ active, phase, timeRemainingMs, prize, round, bids[], winner }` |
-| `subasta:bid` | subasta-manager.js | subasta/public/game.js | `{ bidder, diamonds, total, giftName }` |
-| `subasta:winner` | subasta-manager.js | subasta/public/game.js | `{ prize, winner, podium[] }` |
-| `subasta:motivate` | subasta-manager.js | subasta/public/game.js | `{ phrase }` |
-
 ## Overlay / Batalla de Países (`/overlay`)
 
 | Evento | Emisor | Consumidor | Payload |

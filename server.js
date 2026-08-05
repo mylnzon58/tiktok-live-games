@@ -29,7 +29,6 @@ const versusManager = require("./versus/versus-manager")(io);
 const titanManager = require("./titan/titan-manager")(io);
 const bombaManager = require("./bomba/bomba-manager")(io);
 const carreraManager = require("./carrera/carrera-manager")(io);
-const subastaManager = require("./subasta/subasta-manager")(io);
 const giftCatalog = createGiftCatalog();
 
 const championsStorage = createStorage("arena_champions.json", []);
@@ -148,8 +147,6 @@ app.use("/titan", express.static(path.join(__dirname, "titan/public")));
 app.use("/bomba", express.static(path.join(__dirname, "bomba/public")));
 // Carrera de Avatares: regalos impulsan a tu avatar hacia la meta
 app.use("/carrera", express.static(path.join(__dirname, "carrera/public")));
-// Subasta Real: regalos son pujas por un premio
-app.use("/subasta", express.static(path.join(__dirname, "subasta/public")));
 // Overlay de países (secundario)
 app.get("/overlay", (req, res) => res.sendFile(path.join(__dirname, "overlay.html")));
 app.get("/api/gifts", (req, res) => res.json(giftCatalog.getCatalogSnapshot()));
@@ -792,7 +789,6 @@ function bindTikTokListeners(connection) {
             countriesManager.handleCountriesGift(event);
             bombaManager.handleBombaGift(event);
             carreraManager.handleCarreraGift(event);
-            subastaManager.handleSubastaGift(event);
         } catch (error) {
             console.error("Gift error:", error.message);
         }
@@ -810,7 +806,6 @@ function bindTikTokListeners(connection) {
         countriesManager.handleCountriesLike(event);
         bombaManager.handleBombaLike(event);
         carreraManager.handleCarreraLike(event);
-        subastaManager.handleSubastaLike(event);
     });
 
     connection.on("chat", (rawData) => {
@@ -825,7 +820,6 @@ function bindTikTokListeners(connection) {
         countriesManager.handleCountriesChat(event);
         bombaManager.handleBombaChat(event);
         carreraManager.handleCarreraChat(event);
-        subastaManager.handleSubastaChat(event);
     });
 }
 
@@ -849,7 +843,6 @@ io.on("connection", (socket) => {
     countriesManager.syncClient(socket);
     bombaManager.syncClient(socket);
     carreraManager.syncClient(socket);
-    subastaManager.syncClient(socket);
 
     socket.on("arena:tapAttack", (data) => {
         const targetId = data.targetId;
@@ -993,5 +986,4 @@ server.listen(PORT, () => {
     countriesManager.start();
     bombaManager.start();
     carreraManager.start();
-    subastaManager.start();
 });
