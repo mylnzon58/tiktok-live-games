@@ -12,16 +12,22 @@ server.js ──── normaliza (lib/live-event-adapter) ──── despacha
    │                                                       │
    │  io.emit globales: status, timerUpdate                ▼
    │                                          ┌─────────────────────────────┐
-   │                                          │ arena-manager (lib/)         │
-   │  app.get/app.use (rutas HTTP)            │ countries-manager (lib/)     │
-   │   /  /titan  /arena  /arenagame          │ titan-manager (titan/)        │
-   │   /overlay  /versus                      │ versus-manager (versus/)      │
+   │  app.get/app.use (rutas HTTP)            │ arena-manager (lib/)         │
+   │   /  /titan  /arena  /arenagame          │ countries-manager (lib/)     │
+   │   /overlay  /versus  /bomba              │ titan-manager (titan/)        │
+   │   /carrera  /ruleta  /subasta  /slots    │ versus-manager (versus/)      │
+   │                                          │ bomba-manager (bomba/)        │
+   │                                          │ carrera-manager (carrera/)    │
+   │                                          │ ruleta-manager (ruleta/)      │
+   │                                          │ subasta-manager (subasta/)    │
+   │                                          │ slots-manager (slots/)        │
    │                                          └─────────────────────────────┘
    │                                                    │ io.emit
    │                                                    ▼
    │                              Clientes (render/UI, sin autoridad de puntaje)
    │                              arena.js · arena-game/arena.js · overlay.js
    │                              titan/public/game.js · versus/public/app.js
+   │                              bomba/carrera/ruleta/subasta/slots/public/game.js
 ```
 
 ## Responsabilidades por capa
@@ -40,6 +46,11 @@ server.js ──── normaliza (lib/live-event-adapter) ──── despacha
 - **lib/countries-manager.js** — ranking de países del overlay: rondas de 7 min, campeón persistido en `countries_champion.json`, banderas por regional indicators.
 - **titan/titan-manager.js** — Guerra de Titanes: rondas de 5 min, win target 8000, cargas por likes (bacheadas cada 100 ms), empuje por regalos, combos, caos, catch-up ×1.3, empuje final ×2, HOF persistido en `titan_hof.json`.
 - **versus/versus-manager.js** — Versus Político: duelo por chat/gifts, sincronización a nuevos clientes.
+- **bomba/bomba-manager.js** — La Bomba: patata caliente, rondas de 3 min, mecha aleatoria 12–30 s, regalos/likes/chat pasan la bomba, explosión = −300 pts, HOF persistido en `bomba_hof.json` (top 20).
+- **carrera/carrera-manager.js** — Carrera de Avatares: 6 carriles visuales, regalos impulsan (0.6 %/💎), likes en cola vaciada en el tick, chat `GO/VAMO/DALE` = +1.5 %, primero en meta gana.
+- **ruleta/ruleta-manager.js** — Ruleta de la Fortuna: el chat elige color (ROJO/NEGRO/VERDE), los regalos apuestan y giran (≥10 💎), VERDE paga x10, demás x1–x5.
+- **subasta/subasta-manager.js** — Subasta Real: cada regalo es una puja por un premio; al terminar el tiempo el mayor pujador gana. Rondas de 3 min.
+- **slots/slots-manager.js** — Tragamonedas Live: regalos ≥5 💎 jalan la palanca, 2 iguales = x5, triple = JACKPOT x25. Rondas de 4 min.
 
 ### Clientes (solo presentación)
 Renderizan el estado que reciben por socket. Nunca calculan puntajes ni deciden ganadores. La latencia de juegos se mitiga con batches del lado servidor (`arena:likesBatch` cada 16 ms, `titan:push` consolidado cada 100 ms).

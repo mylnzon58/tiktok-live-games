@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>🎡 RULETA DE LA FORTUNA — TikTok LIVE</title>
+    <link rel="stylesheet" href="/ruleta/style.css?v=1" />
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Rajdhani:wght@600;700;800&display=swap"
+        rel="stylesheet" />
+</head>
+
+<body>
+    <!-- Temporizador -->
+    <div id="main-timer">04:00</div>
+    <div id="round-label">RONDA EN CURSO</div>
+
+    <!-- Guía rápida -->
+    <div id="how-to-play">
+        <div class="guide-title">¿CÓMO JUGAR?</div>
+        <div class="guide-items">
+            <span>💬 Escribe <b>ROJO</b>, <b>NEGRO</b> o <b>VERDE</b> para elegir color</span>
+            <span>🌹 Manda un regalo para apostar tu color</span>
+            <span>🔴 ROJO y ⚫ NEGRO pagan hasta x5</span>
+            <span>🟢 VERDE paga <b>x10</b> — ¡solo suerte!</span>
+        </div>
+    </div>
+
+    <!-- Anunciador -->
+    <div id="announcer-container"></div>
+
+    <!-- Escena -->
+    <div id="scene">
+        <div id="wheel-wrap">
+            <div id="wheel"></div>
+            <div id="wheel-pointer">▼</div>
+            <div id="wheel-center">🎡</div>
+        </div>
+        <div id="bets-panel">
+            <div id="bet-red" class="bet-slot red">
+                <div class="bet-color">ROJO</div>
+                <div class="bet-total" id="bet-red-total">0 💎</div>
+            </div>
+            <div id="bet-black" class="bet-slot black">
+                <div class="bet-color">NEGRO</div>
+                <div class="bet-total" id="bet-black-total">0 💎</div>
+            </div>
+            <div id="bet-green" class="bet-slot green">
+                <div class="bet-color">VERDE x10</div>
+                <div class="bet-total" id="bet-green-total">0 💎</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ranking -->
+    <div id="ranking-panel">
+        <div class="panel-title">🏆 GANADORES</div>
+        <div id="ranking-list"></div>
+        <div id="spin-stats">Giros: 0 · Jackpots: 0</div>
+    </div>
+
+    <!-- FX -->
+    <div id="floating-ui-layer"></div>
+    <canvas id="fx-canvas"></canvas>
+
+    <div id="status-bar">
+        <span id="status-dot" class="dot"></span>
+        <span id="status-text">Conectando...</span>
+    </div>
+
+    <!-- Overlay -->
+    <div id="round-overlay" class="hidden"></div>
+
+    <!-- Botón sonido -->
+    <button id="sound-btn">🔊 Activar Sonido</button>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/ruleta/game.js?v=1"></script>
+</body>
+
+</html>

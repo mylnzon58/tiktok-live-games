@@ -5,8 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "lint": "eslint server.js lib titan arena-game versus",
-    "check": "node --check server.js && node --check lib/countries-manager.js && node --check lib/arena-manager.js && node --check titan/titan-manager.js && node --check versus/versus-manager.js"
+    "lint": "eslint server.js lib titan arena-game versus bomba carrera ruleta subasta slots",
+    "check": "node --check server.js && node --check lib/countries-manager.js && node --check lib/arena-manager.js && node --check titan/titan-manager.js && node --check versus/versus-manager.js && node --check bomba/bomba-manager.js && node --check carrera/carrera-manager.js && node --check ruleta/ruleta-manager.js && node --check subasta/subasta-manager.js && node --check slots/slots-manager.js"
   },
   "dependencies": {
     "axios": "^1.13.6",

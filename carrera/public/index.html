@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>🏁 CARRERA DE AVATARES — TikTok LIVE</title>
+    <link rel="stylesheet" href="/carrera/style.css?v=1" />
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Rajdhani:wght@600;700;800&display=swap"
+        rel="stylesheet" />
+</head>
+
+<body>
+    <!-- Temporizador -->
+    <div id="main-timer">04:00</div>
+    <div id="round-label">CARRERA EN CURSO</div>
+
+    <!-- Guía rápida -->
+    <div id="how-to-play">
+        <div class="guide-title">¿CÓMO JUGAR?</div>
+        <div class="guide-items">
+            <span>🌹 Un regalo saca TU avatar a la pista y lo impulsa</span>
+            <span>💬 Escribe <b>GO</b>, <b>VAMO</b> o <b>DALE</b> para un mini impulso</span>
+            <span>❤️ Likes = mini impulso (solo si ya estás corriendo)</span>
+            <span>🏁 El primero en cruzar la meta GANA la ronda</span>
+        </div>
+    </div>
+
+    <!-- Anunciador -->
+    <div id="announcer-container"></div>
+
+    <!-- La pista -->
+    <div id="track">
+        <div id="finish-line"></div>
+        <div id="lanes"></div>
+    </div>
+
+    <!-- Ranking -->
+    <div id="ranking-panel">
+        <div class="panel-title">🏆 POSICIONES</div>
+        <div id="ranking-list"></div>
+    </div>
+
+    <!-- FX -->
+    <div id="floating-ui-layer"></div>
+    <canvas id="fx-canvas"></canvas>
+
+    <div id="status-bar">
+        <span id="status-dot" class="dot"></span>
+        <span id="status-text">Conectando...</span>
+    </div>
+
+    <!-- Overlay de ronda -->
+    <div id="round-overlay" class="hidden"></div>
+
+    <!-- Botón sonido -->
+    <button id="sound-btn">🔊 Activar Sonido</button>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/carrera/game.js?v=1"></script>
+</body>
+
+</html>

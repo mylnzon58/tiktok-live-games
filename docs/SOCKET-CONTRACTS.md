@@ -62,6 +62,54 @@ Regla: **todo evento emitido debe tener consumidor y todo consumidor debe tener 
 | `versus:motivate` | versus-manager.js | versus/public/app.js | `{ phrase }` |
 | `versus:end` | versus-manager.js | versus/public/app.js | ganador del duelo |
 
+## La Bomba (`/bomba`)
+
+| Evento | Emisor | Consumidor | Payload |
+|--------|--------|------------|---------|
+| `bomba:sync` | bomba-manager.js | bomba/public/game.js | `{ active, phase, timeRemainingMs, fuseMs, holder, players[], explosionCount, hof[] }` |
+| `bomba:pass` | bomba-manager.js | bomba/public/game.js | `{ toId, toName, toAvatar, byId, byName, reason, fuseMs }` |
+| `bomba:boom` | bomba-manager.js | bomba/public/game.js | `{ victimId, victimName, victimAvatar, penalty, newScore }` |
+| `bomba:motivate` | bomba-manager.js | bomba/public/game.js | `{ phrase }` |
+| `bomba:roundEnd` | bomba-manager.js | bomba/public/game.js | `{ winnerId, winnerName, winnerAvatar, podium[], hof[] }` |
+
+## Carrera de Avatares (`/carrera`)
+
+| Evento | Emisor | Consumidor | Payload |
+|--------|--------|------------|---------|
+| `carrera:sync` | carrera-manager.js | carrera/public/game.js | `{ active, phase, timeRemainingMs, racers[], finishProgress }` |
+| `carrera:push` | carrera-manager.js | carrera/public/game.js | `{ racerId, amount, progress, reason, donor }` |
+| `carrera:motivate` | carrera-manager.js | carrera/public/game.js | `{ phrase }` |
+| `carrera:roundEnd` | carrera-manager.js | carrera/public/game.js | `{ winnerId, winnerName, winnerAvatar, podium[], timeRemainingMs }` |
+
+## Ruleta de la Fortuna (`/ruleta`)
+
+| Evento | Emisor | Consumidor | Payload |
+|--------|--------|------------|---------|
+| `ruleta:sync` | ruleta-manager.js | ruleta/public/game.js | `{ active, phase, timeRemainingMs, bets{red,black,green}, result, lastMultiplier, spinCount, winners[] }` |
+| `ruleta:spin` | ruleta-manager.js | ruleta/public/game.js | `{ byId, byName, diamonds, color }` |
+| `ruleta:result` | ruleta-manager.js | ruleta/public/game.js | `{ color, multiplier, totalWon, winners[] }` |
+| `ruleta:motivate` | ruleta-manager.js | ruleta/public/game.js | `{ phrase }` |
+| `ruleta:roundEnd` | ruleta-manager.js | ruleta/public/game.js | `{ podium[], totalSpins, result }` |
+
+## Subasta Real (`/subasta`)
+
+| Evento | Emisor | Consumidor | Payload |
+|--------|--------|------------|---------|
+| `subasta:sync` | subasta-manager.js | subasta/public/game.js | `{ active, phase, timeRemainingMs, prize, round, bids[], winner }` |
+| `subasta:bid` | subasta-manager.js | subasta/public/game.js | `{ bidder, diamonds, total, giftName }` |
+| `subasta:winner` | subasta-manager.js | subasta/public/game.js | `{ prize, winner, podium[] }` |
+| `subasta:motivate` | subasta-manager.js | subasta/public/game.js | `{ phrase }` |
+
+## Tragamonedas Live (`/slots`)
+
+| Evento | Emisor | Consumidor | Payload |
+|--------|--------|------------|---------|
+| `slots:sync` | slots-manager.js | slots/public/game.js | `{ active, phase, timeRemainingMs, reels[], lastResult, spins, jackpots, totalWon, players[] }` |
+| `slots:spin` | slots-manager.js | slots/public/game.js | `{ playerId, playerName, diamonds }` |
+| `slots:result` | slots-manager.js | slots/public/game.js | `{ symbols[], jackpot, multiplier, won, playerId, playerName }` |
+| `slots:motivate` | slots-manager.js | slots/public/game.js | `{ phrase }` |
+| `slots:roundEnd` | slots-manager.js | slots/public/game.js | `{ podium[], totalSpins, jackpots, totalWon }` |
+
 ## Overlay / Batalla de Países (`/overlay`)
 
 | Evento | Emisor | Consumidor | Payload |
