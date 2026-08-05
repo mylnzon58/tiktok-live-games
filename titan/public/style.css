@@ -1,4 +1,4 @@
-﻿* {
+* {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -49,7 +49,7 @@ body {
     50% { transform: translateX(-50%) scale(1.12); }
 }
 
-/* --- GuÃ­a --- */
+/* --- Guía --- */
 #powers-guide {
     position: fixed;
     bottom: 46px;
@@ -667,7 +667,7 @@ body {
     100% { transform: scale(1); }
 }
 
-/* --- BotÃ³n sonido --- */
+/* --- Botón sonido --- */
 #sound-btn {
     position: fixed;
     top: 10px;

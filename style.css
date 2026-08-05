@@ -1,5 +1,5 @@
-﻿/* ============================================================
-   TikTok LIVE Countries Ranking â€” Estilos (Referencia Visual)
+/* ============================================================
+   TikTok LIVE Countries Ranking — Estilos (Referencia Visual)
    ============================================================ */
 
 *,
@@ -40,7 +40,7 @@ body {
   display: block;
 }
 
-/* â”€â”€ Estrellas â”€â”€ */
+/* ── Estrellas ── */
 #stars-container {
   position: fixed;
   inset: 0;
@@ -70,7 +70,7 @@ body {
   }
 }
 
-/* â”€â”€ PartÃ­culas â”€â”€ */
+/* ── Partículas ── */
 #particles-container {
   position: fixed;
   inset: 0;
@@ -106,7 +106,7 @@ body {
   }
 }
 
-/* â”€â”€ Overlay principal â”€â”€ */
+/* ── Overlay principal ── */
 #overlay {
   position: relative;
   z-index: 10;
@@ -120,9 +120,9 @@ body {
   box-sizing: border-box;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   HEADER â€” Marco ornamental estilo referencia
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════
+   HEADER — Marco ornamental estilo referencia
+   ═══════════════════════════════════ */
 #header {
   position: relative;
   padding: 10px 10px;
@@ -234,7 +234,7 @@ body {
   }
 }
 
-/* â”€â”€ Scale Bar â”€â”€ */
+/* ── Scale Bar ── */
 #scale-bar {
   margin-top: 10px;
   padding: 0 80px;
@@ -269,7 +269,7 @@ body {
   box-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
 }
 
-/* â”€â”€ Status Badge â”€â”€ */
+/* ── Status Badge ── */
 #status-badge {
   display: flex;
   align-items: center;
@@ -313,9 +313,9 @@ body {
   }
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ═══════════════════════════════════
    FIXED INSTRUCTIONS & DONATION POWERS
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ═══════════════════════════════════ */
 #fixed-instructions {
   width: 90%;
   margin: 10px auto;
@@ -410,9 +410,9 @@ body {
   border: 1px dashed rgba(255, 255, 255, 0.2);
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ═══════════════════════════════════
    CHAMPION SECTION (12h)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ═══════════════════════════════════ */
 #champion-section {
   width: 90%;
   margin: 10px auto;
@@ -486,9 +486,9 @@ body {
   transform: scale(1.05);
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ═══════════════════════════════════
    RANKING CONTAINER
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ═══════════════════════════════════ */
 #ranking-container {
   flex: 1;
   display: flex;
@@ -546,9 +546,9 @@ body {
   }
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   RANK BAR â€” Estilo referencia TikTok
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════
+   RANK BAR — Estilo referencia TikTok
+   ═══════════════════════════════════ */
 .rank-row {
   display: flex;
   align-items: center;
@@ -578,7 +578,7 @@ body {
   }
 }
 
-/* PosiciÃ³n nÃºmero */
+/* Posición número */
 .rank-pos {
   font-family: var(--font-display);
   font-size: clamp(14px, 2vw, 18px);
@@ -604,7 +604,7 @@ body {
   font-size: clamp(16px, 2.5vw, 20px);
 }
 
-/* Avatares del paÃ­s */
+/* Avatares del país */
 .rank-avatars {
   display: flex;
   align-items: center;
@@ -671,7 +671,7 @@ body {
   color: var(--text-primary);
 }
 
-/* â”€â”€ Barra de progreso coloreada â”€â”€ */
+/* ── Barra de progreso coloreada ── */
 .rank-bar-outer {
   flex-grow: 1;
   height: 28px;
@@ -871,7 +871,7 @@ body {
   }
 }
 
-/* Colores de barra â€” vibrantes como la referencia */
+/* Colores de barra — vibrantes como la referencia */
 .bar-c0 {
   background: linear-gradient(90deg, #ff6b6b, #ee5a24);
 }
@@ -952,7 +952,7 @@ body {
   background: linear-gradient(90deg, #70a1ff, #1e90ff);
 }
 
-/* Barra del lÃ­der â€” dorada */
+/* Barra del líder — dorada */
 .bar-leader {
   background: linear-gradient(90deg, #fbbf24, #f59e0b, #ef4444) !important;
   box-shadow: 0 0 12px rgba(251, 191, 36, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
@@ -1013,7 +1013,7 @@ body {
   }
 }
 
-/* Corona lÃ­der */
+/* Corona líder */
 .rank-crown {
   position: absolute;
   top: -10px;
@@ -1051,7 +1051,7 @@ body {
   }
 }
 
-/* Highlight de posiciÃ³n subida */
+/* Highlight de posición subida */
 .rank-row.rank-up {
   animation: rankUp 0.6s ease-out;
 }
@@ -1093,13 +1093,13 @@ body {
 
   #title {
     font-size: 21px;
-    /* Forzar tÃ­tulo mÃ¡s pequeÃ±o en vertical */
+    /* Forzar título más pequeño en vertical */
   }
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   OVERLAYS â€” Big Gift, Leader, Reset
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════
+   OVERLAYS — Big Gift, Leader, Reset
+   ═══════════════════════════════════ */
 
 /* Big Gift */
 #big-gift-overlay {
@@ -1401,7 +1401,7 @@ body {
   animation: pulse 1s ease-in-out infinite;
 }
 
-/* â”€â”€ Reacciones flotantes â”€â”€ */
+/* ── Reacciones flotantes ── */
 #reactions-container {
   position: fixed;
   right: 15px;
@@ -1438,7 +1438,7 @@ body {
   }
 }
 
-/* ðŸ’Ž LLUVIA DE DIAMANTES (NEUROMARKETING) */
+/* 💎 LLUVIA DE DIAMANTES (NEUROMARKETING) */
 .diamond-rain {
   position: fixed;
   top: -100px;

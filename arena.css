@@ -1,5 +1,5 @@
-﻿/* ============================================================
-   PIXEL WAR â€” TikTok LIVE | Full Screen Experience
+/* ============================================================
+   PIXEL WAR — TikTok LIVE | Full Screen Experience
    ============================================================ */
 *, *::before, *::after {
     margin: 0;
@@ -31,7 +31,7 @@ body, html {
 #game-container {
     position: relative;
     width: 100%;
-    max-width: 680px; /* Ancho ampliado para aprovechar mÃ¡s espacio lateral */
+    max-width: 680px; /* Ancho ampliado para aprovechar más espacio lateral */
     height: 100%;
     margin: 0 auto;
     background: #000;
@@ -194,7 +194,7 @@ body, html {
 }
 
 /* =========================================
-   RESPONSIVO PARA MÃ“VILES / STREAMING
+   RESPONSIVO PARA MÓVILES / STREAMING
    ========================================= */
 @media (max-width: 700px) {
     #pixel-header {
