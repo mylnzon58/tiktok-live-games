@@ -311,8 +311,25 @@
         }
 
         .card .icon {
-            font-size: 34px;
-            line-height: 1;
+            display: grid;
+            place-items: center;
+            width: 46px;
+            height: 46px;
+            border-radius: 13px;
+            border: 1px solid rgba(227, 176, 75, 0.28);
+            background: var(--gold-soft);
+            color: var(--gold);
+            flex: none;
+        }
+
+        .card .icon svg {
+            width: 25px;
+            height: 25px;
+        }
+
+        .card:hover .icon {
+            border-color: rgba(227, 176, 75, 0.55);
+            box-shadow: 0 6px 22px rgba(227, 176, 75, 0.18);
         }
 
         .card h3 {
@@ -522,6 +539,32 @@
             color: #5b6472;
         }
 
+        .setup-list {
+            margin-top: 6px;
+            font-size: 14.5px;
+            line-height: 2.15;
+        }
+
+        .chk {
+            display: inline-block;
+            width: 17px;
+            height: 17px;
+            margin-right: 9px;
+            vertical-align: -3px;
+            color: var(--gold);
+        }
+
+        .chk svg {
+            width: 17px;
+            height: 17px;
+        }
+
+        .btn-ico {
+            width: 16px;
+            height: 16px;
+            flex: none;
+        }
+
         /* ---------- FOOTER ---------- */
         footer {
             margin-top: 80px;
@@ -712,7 +755,13 @@
             <div class="grid">
                 <a class="card" data-demo="/titan">
                     <span class="num">01</span>
-                    <span class="icon">⚔️</span>
+                    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M7.5 20.5 18.5 9.5" />
+                            <path d="M7.2 15.8l5 5" />
+                            <path d="M16.5 3.5 5.5 14.5" />
+                            <path d="M12.5 3.9l3.6 3.6" />
+                        </svg></span>
                     <h3>Guerra de Titanes</h3>
                     <p>Gift battle por equipos: el chat elige ROJO o AZUL y empuja la cuerda con regalos. El formato
                         batalla que más regalos genera.</p>
@@ -720,7 +769,11 @@
                 </a>
                 <a class="card" data-demo="/arenagame">
                     <span class="num">02</span>
-                    <span class="icon">🥊</span>
+                    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M12 3.2 19.5 6v5.8c0 4.8-3.3 8-7.5 9-4.2-1-7.5-4.2-7.5-9V6L12 3.2Z" />
+                            <path d="M9.2 12.2l2.1 2.1 3.6-4" />
+                        </svg></span>
                     <h3>Tap Tap Arena</h3>
                     <p>Combate PvP: avatares con HP, sierras, KO y muerte súbita. Los regalos atacan, los likes curan.
                     </p>
@@ -728,7 +781,13 @@
                 </a>
                 <a class="card" data-demo="/arena">
                     <span class="num">03</span>
-                    <span class="icon">🌀</span>
+                    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="17.2" r="2.3" />
+                            <path d="M7.5 4.5h.01M12 3.2h.01M16.5 4.5h.01" />
+                            <path d="M9.6 9h.01M14.4 9h.01" />
+                            <path d="M6.8 13.8h.01M17.2 13.8h.01" />
+                        </svg></span>
                     <h3>Plinko de Avatares</h3>
                     <p>Tu avatar cae por la pirámide hasta el multiplicador x10. Regalos grandes = más bolas y
                         potenciadores.</p>
@@ -736,21 +795,36 @@
                 </a>
                 <a class="card" data-demo="/overlay">
                     <span class="num">04</span>
-                    <span class="icon">🌍</span>
+                    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="8.3" />
+                            <path d="M3.7 12h16.6" />
+                            <path d="M12 3.7c2.6 2.5 3.9 5.2 3.9 8.3s-1.3 5.8-3.9 8.3c-2.6-2.5-3.9-5.2-3.9-8.3S9.4 6.2 12 3.7Z" />
+                        </svg></span>
                     <h3>Batalla de Países</h3>
                     <p>Ranking por países y equipos con banderas. Tus regalos empujan a tu país a la cima.</p>
                     <span class="tag">Equipos</span>
                 </a>
                 <a class="card" data-demo="/versus">
                     <span class="num">05</span>
-                    <span class="icon">🗳️</span>
+                    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="4.6" y="9" width="14.8" height="11" rx="1.8" />
+                            <path d="M3.2 6.4h17.6" />
+                            <path d="M9.4 14.2l1.9 1.9 3.4-3.9" />
+                        </svg></span>
                     <h3>Versus Político</h3>
                     <p>El chat vota con keywords y los regalos definen al ganador en cada ronda.</p>
                     <span class="tag">Votación</span>
                 </a>
                 <a class="card" data-demo="/bomba">
                     <span class="num">06</span>
-                    <span class="icon">💣</span>
+                    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="13" cy="15" r="6.2" />
+                            <path d="M13.3 8.8c1 0 1.8-.5 2.5-3.4" />
+                            <path d="M15.8 4.4l.7 1.5 1.5.7-1.5.7-.7 1.5-.7-1.5-1.5-.7 1.5-.7Z" />
+                        </svg></span>
                     <h3>La Bomba</h3>
                     <p>Patata caliente en vivo: quien tenga la bomba cuando explote pierde puntos. Pasala con regalos,
                         taps o escribiendo PASA.</p>
@@ -758,7 +832,13 @@
                 </a>
                 <a class="card" data-demo="/carrera">
                     <span class="num">07</span>
-                    <span class="icon">🏁</span>
+                    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M5.5 22V3.8" />
+                            <path d="M5.5 4.6h10.8l-2.1 2.6 2.1 2.6H5.5Z" />
+                            <path d="M14 13.2h5.5" />
+                            <path d="M12.5 16.2h7" />
+                        </svg></span>
                     <h3>Carrera de Avatares</h3>
                     <p>Tu avatar corre contra el chat: los regalos lo impulsan, los likes le dan turbo y el primero en
                         meta gana.</p>
@@ -849,11 +929,24 @@
                 <div class="panel-box">
                     <h3>Qué incluye</h3>
                     <p style="margin-top:6px; font-size:14.5px; line-height:1.9;">
-                        ✓ Instalación completa del servidor y los siete juegos<br />
-                        ✓ Conexión con tu cuenta de TikTok<br />
-                        ✓ Prueba en vivo con tu directo<br />
-                        ✓ Guía de transmisión en TikTok Studio<br />
-                        ✓ Soporte por WhatsApp hasta dejarlo andando
+                        <span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M4.5 12.5 10 18 19.5 6.5" /></svg></span>Instalación completa del servidor y los
+                        siete juegos<br />
+                        <span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M4.5 12.5 10 18 19.5 6.5" /></svg></span>Conexión con tu cuenta de TikTok<br />
+                        <span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M4.5 12.5 10 18 19.5 6.5" /></svg></span>Prueba en vivo con tu directo<br />
+                        <span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M4.5 12.5 10 18 19.5 6.5" /></svg></span>Guía de transmisión en TikTok
+                        Studio<br />
+                        <span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M4.5 12.5 10 18 19.5 6.5" /></svg></span>Soporte por WhatsApp hasta dejarlo
+                        andando
                     </p>
                 </div>
             </div>
@@ -879,7 +972,13 @@
                     </div>
                     <div class="actions" style="margin-top:14px;">
                         <a class="btn btn-ghost" href="https://www.buymeacoffee.com/digitaldevel" target="_blank"
-                            rel="noopener">Invitar un cafecito ☕</a>
+                            rel="noopener"><svg class="btn-ico" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                                stroke-linejoin="round" aria-hidden="true">
+                                <path d="M4 9.5h13v5.2a4.3 4.3 0 0 1-4.3 4.3H8.3A4.3 4.3 0 0 1 4 14.7V9.5Z" />
+                                <path d="M17 11.5h1.6a2.4 2.4 0 0 1 0 4.8H17" />
+                                <path d="M7.7 7.4c0-1.1.9-1.1.9-2.2M11.9 7.4c0-1.1.9-1.1.9-2.2" />
+                            </svg> Invitar un cafecito</a>
                     </div>
                     <p class="donate-foot">Argentina: alias Brubank <b>juanmonzon</b> · Internacional: Buy Me a Coffee.
                         La donación es opcional y de corazón — sin compromiso, sin presión.</p>
