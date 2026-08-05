@@ -9,13 +9,13 @@ const floatingLayer = document.getElementById("floating-ui-layer");
 const DEBUG_MODE = new window.URLSearchParams(window.location.search).get("debug") === "1";
 const CLEAR_CACHE = new window.URLSearchParams(window.location.search).get("clearCache") === "1";
 
-// Ajustar Canvas a dimensiones 800x1350 para TikTok Live
+// Ajustar el canvas a 800x1350 para TikTok Live
 canvas.width = 800;
 canvas.height = 1350;
 
-// LIMPIEZA DE CACHE SI SE SOLICITA
+// Limpieza de caché si se solicita
 if (CLEAR_CACHE) {
-    console.warn("🧹 Limpiando caché local...");
+    console.warn("Limpiando caché local...");
     localStorage.clear();
     sessionStorage.clear();
 }
@@ -24,7 +24,7 @@ window.addEventListener("resize", () => {
     camera.y = camera.targetY = canvas.height / 2;
 });
 
-// CONFIGURACIÓN DE CÁMARA DINÁMICA (centro desde el inicio para que las bolas se vean)
+// Configuración de cámara dinámica (centrada desde el inicio para ver las bolas)
 let camera = {
     x: canvas.width / 2,
     y: canvas.height / 2,
@@ -52,7 +52,7 @@ function getArenaBounds() {
 function clampToArena(x, y, margin = 20) {
     const b = getArenaBounds();
     let rBound = b.right - margin;
-    // Bloqueo superior derecho (L) - Donde está el showcase
+    // Bloqueo superior derecho (L): zona del showcase
     if (y < 530) rBound = Math.min(rBound, 645 - margin);
 
     return {
@@ -74,12 +74,12 @@ setTimeout(() => {
     camera.x = camera.targetX = canvas.width / 2;
     camera.y = camera.targetY = canvas.height / 2;
 }, 100);
-let duelBeams = []; // Phase 4
+let duelBeams = []; // Fase 4
 let persistentHOF = [];
 let sessionChampions = [];
 
 // ==========================================
-// MOTOR DE AUDIO (SYNTH)
+// Motor de audio (sintetizador)
 // ==========================================
 let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 let masterAudioGain = audioCtx.createGain();
@@ -91,7 +91,7 @@ let soundEnabled = true;
 if (window.speechSynthesis) {
     window.speechSynthesis.onvoiceschanged = () => {
         preferredVoices.es = resolvePreferredVoice();
-        console.log("Voces de Arena sincronizadas:", preferredVoices.es?.voice?.name);
+        console.log("Voces de arena sincronizadas:", preferredVoices.es?.voice?.name);
     };
 }
 let preferredVoices = { es: null, en: null };
@@ -108,7 +108,7 @@ let lastPromoTipAt = 0;
 let currentRoundSeconds = 3 * 60;
 let lastRoundLeaderId = null;
 let lastRoundLeaderCueAt = 0;
-let playerStreaks = {}; // Phase 4: Kill Streaks Dopamine
+let playerStreaks = {}; // Fase 4: rachas de eliminaciones
 let lastClutchCueAt = 0;
 let lastFinalStretchCueAt = 0;
 let lastReentryCueAt = 0;
@@ -116,7 +116,7 @@ let lastVisibleCompetitorCount = 0;
 let lastCompletedRoundWinner = null;
 let lastRoundWinnerHypeAt = 0;
 
-// Captura de errores para visualizar en pantalla (Debug)
+// Captura de errores para visualizarlos en pantalla (depuración)
 window.onerror = function(msg, url, line) {
     if (floatingLayer) {
         const errDiv = document.createElement("div");
@@ -137,9 +137,9 @@ let lastCountdownSpoken = null;
 let lastAnnouncementText = "";
 let lastAnnouncementQueuedAt = 0;
 let introHookPlayed = false;
-let globalGlitchIntensity = 0; // Neuromarketing: Distorsión auditiva/visual global
+let globalGlitchIntensity = 0; // Distorsión auditiva/visual global
 
-// Attempt auto-unlock de AudioContext silencioso
+// Intenta desbloquear el AudioContext en silencio
 function tryUnlockAudio() {
     if (audioCtx.state === 'suspended') {
         audioCtx.resume().then(() => {
@@ -153,7 +153,7 @@ function tryUnlockAudio() {
 function checkAudioState() {
     if (audioCtx.state === 'running' || audioCtx.state === 'closed') {
         if (!isBgmPlaying && typeof startBgm === 'function' && soundEnabled) {
-            console.log("🔊 Reactivando BGM...");
+            console.log("Reactivando BGM...");
             startBgm();
         }
         document.removeEventListener('click', tryUnlockAudio);
@@ -169,7 +169,7 @@ document.addEventListener('click', tryUnlockAudio);
 document.addEventListener('touchstart', tryUnlockAudio);
 document.addEventListener('keydown', tryUnlockAudio);
 
-// Revisar contínuamente si ya está running (Navegadores comunes o si OBS permite autoplay)
+// Revisar continuamente si el contexto ya está en running (navegadores comunes o si OBS permite autoplay)
 let ctxUnlocker = setInterval(() => {
     if (audioCtx.state === 'running') {
         clearInterval(ctxUnlocker);
@@ -187,7 +187,7 @@ soundBtn.classList.add('active');
 soundBtn.addEventListener('click', (e) => {
     e.stopPropagation();
 
-    // Si estaba pausado el contexto, asegúrate de levantarlo primero
+    // Si el contexto estaba pausado, se reactiva primero
     if (audioCtx.state === 'suspended') {
         audioCtx.resume().then(() => checkAudioState());
     }
@@ -200,7 +200,7 @@ soundBtn.addEventListener('click', (e) => {
         startBgm();
         playSound("heal"); // Sonido de feedback
     } else {
-        // Detener TODO el audio
+        // Detener todo el audio
         stopBgm();
     }
 });
@@ -254,7 +254,7 @@ function flushSpeechQueue() {
     msg.lang = "es"; // Más compatible
     if (voiceInfo?.voice) msg.voice = voiceInfo.voice;
     
-    // Si no detectamos que es mujer, forzamos un pitch muy alto para "juvenilizar" la voz
+    // Sin voz femenina detectada, se sube el pitch para un tono más juvenil
     const isFemale = voiceInfo?.isFemale;
     msg.rate = next.rate ?? (isFemale ? 1.18 : 1.25); 
     msg.pitch = next.pitch ?? (isFemale ? 1.45 : 1.8); 
@@ -279,12 +279,12 @@ function queueAnnouncement(text, options = {}) {
     try {
         if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
         const now = Date.now();
-        // INTERVALOS RELAJADOS: Para que se mencione TODO lo importante
+        // Intervalos relajados para que se mencione todo lo importante
         const minIntervalMs = options.minIntervalMs ?? 600; 
         const dedupeBase = options.dedupeKey || (typeof text === "string" ? text : options.queueKey || "");
         const normalizedText = String(dedupeBase || "").trim().toLowerCase();
         
-        // Evitaremos el deduplicado agresivo para regalos
+        // Sin deduplicación agresiva para regalos
         if (!options.force && !options.isGift && normalizedText && normalizedText === lastAnnouncementText && (now - lastAnnouncementQueuedAt) < 3000) {
             return;
         }
@@ -323,7 +323,7 @@ function queueAnnouncement(text, options = {}) {
             flushSpeechQueue();
         }
     } catch (error) {
-        console.error("Speech queue error:", error);
+        console.error("Error en la cola de voz:", error);
     }
 }
 
@@ -336,7 +336,7 @@ function speakImmediate(text, options = {}) {
     try {
         window.speechSynthesis.cancel();
     } catch (error) {
-        console.error("Speech cancel error:", error);
+        console.error("Error al cancelar la voz:", error);
     }
     const msg = new window.SpeechSynthesisUtterance(text);
     msg.lang = "es";
@@ -445,7 +445,7 @@ function speakLeaderChat(name, comment) {
 
 }
 
-// --- 🎙️ DOPAMINE ANNOUNCER (Voice Lines) ---
+// --- Narrador de frases de voz ---
 window.speechSynthesis?.addEventListener?.("voiceschanged", () => {
     preferredVoices = { es: null, en: null };
     if (!introAnnouncementDone) {
@@ -525,7 +525,7 @@ function playCountdownBeep(seconds) {
             osc2.stop(now + 0.3);
         }
     } catch(e) {
-        console.error("Countdown beep error:", e);
+        console.error("Error en el beep de la cuenta regresiva:", e);
     }
 }
 
@@ -588,7 +588,7 @@ const sfx = {
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(60, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(1, audioCtx.currentTime + 0.6);
-        gain.gain.setValueAtTime(0.9, audioCtx.currentTime); // ¡DOPAMINA EXTREMA!
+            gain.gain.setValueAtTime(0.9, audioCtx.currentTime); // Ganancia alta para impacto extremo
         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
         osc.start(audioCtx.currentTime);
         osc.stop(audioCtx.currentTime + 0.6);
@@ -618,7 +618,7 @@ const sfx = {
         const gain = audioCtx.createGain();
         osc.connect(gain); gain.connect(masterAudioGain);
 
-        // Sonido tipo "Burbuja" o "Pop" limpio
+        // Sonido tipo burbuja o pop limpio
         osc.type = 'sine';
         osc.frequency.setValueAtTime(800 * pitchMod, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(100 * pitchMod, audioCtx.currentTime + 0.05);
@@ -821,15 +821,15 @@ function playSound(type, param) {
 }
 
 // ==========================================
-// MÚSICA DE FONDO (BGM 8-BIT PROCEDURAL)
+// Música de fondo (BGM 8-bit procedural)
 // ==========================================
 let nextNoteTime = 0;
 let currentNote = 0;
 let bgmTimerID;
 let isBgmPlaying = false;
 
-// Escalas estilo 8-bit Dopamina / Boss Battle - MÁS ADICTIVA Y HEROICA
-// Nueva escala Phrygian Dominant (A#, A, G, F# feel) - Tensa y Cyberpunk
+// Escalas estilo 8-bit de pelea de jefe
+// Escala frigia dominante (A#, A, G, F#) con tensión cyberpunk
 const arp1 = [466.16, 440.00, 392.00, 369.99, 392.00, 440.00]; 
 const arp2 = [349.23, 311.13, 293.66, 261.63, 293.66, 311.13]; 
 const arp3 = [233.08, 220.00, 196.00, 185.00, 196.00, 220.00]; 
@@ -846,10 +846,10 @@ function scheduleNote(step, time) {
     if (!soundEnabled) return;
     const { arp, bass } = sequence[step];
     
-    // Volumen REDUCIDO para que sea muy finitamente de fondo (suave)
+    // Volumen reducido para que quede de fondo (suave)
     let bgmEnergy, arpGain, bassGain;
     if (currentRoundSeconds <= 10) {
-        // CUENTA REGRESIVA: Un poco más alto pero sin aturdir
+        // Cuenta regresiva: un poco más alto pero sin aturdir
         bgmEnergy = 1.15;
         arpGain = 0.022; // Reducido al 50%
         bassGain = 0.04;
@@ -867,7 +867,7 @@ function scheduleNote(step, time) {
         bassGain = 0.009;
     }
 
-    // Synth Lead (Melodía Rápida Arpegiada)
+    // Melodía principal arpegiada
     const oscArp = audioCtx.createOscillator();
     const gainArp = audioCtx.createGain();
     oscArp.type = 'square';
@@ -880,7 +880,7 @@ function scheduleNote(step, time) {
     oscArp.connect(gainArp); gainArp.connect(masterAudioGain);
     oscArp.start(time); oscArp.stop(time + 0.1);
 
-    // Bajo 8-Bits (A tiempo de Octavos - Ritmo constante)
+    // Bajo de 8 bits (ritmo constante en octavos)
     if (step % 2 === 0) {
         const oscBass = audioCtx.createOscillator();
         const gainBass = audioCtx.createGain();
@@ -894,7 +894,7 @@ function scheduleNote(step, time) {
         oscBass.start(time); oscBass.stop(time + 0.2);
     }
 
-    // Snare simulado 8-bit (Ruido blanco simple c/ onda muy grave que decae veloz)
+    // Redoble simulado de 8 bits (onda grave que decae rápido)
     if (step % 8 === 4) {
         const oscSnare = audioCtx.createOscillator();
         const gainSnare = audioCtx.createGain();
@@ -938,7 +938,7 @@ function stopBgm() {
 }
 
 // ==========================================
-// ESTRUCTURAS DE DATOS EN MEMORIA
+// Estructuras de datos en memoria
 // ==========================================
 const players = {};
 let projectiles = [];
@@ -1020,7 +1020,7 @@ function pushHazard(hazard) {
 }
 
 // ==========================================
-// CONFIGURACIONES FÍSICAS (arena rectangular: burbujas más grandes para verse bien)
+// Configuraciones físicas (arena rectangular con burbujas grandes para que se vean bien)
 // ==========================================
 const MAX_HP = 1000; 
 const RESILIENCE_THRESHOLD = 1500; // Sincronizado con server
@@ -1041,7 +1041,7 @@ const PASSIVE_SAW_CONTINUOUS_SCORE = 550;
 const PASSIVE_SAW_MEDIUM_SCORE = 700;
 const PASSIVE_SAW_LARGE_SCORE = 1000;
 
-// Caché de imágenes pre-cargadas (Avatares)
+// Caché de avatares precargados
 const avatarCache = {};
 const kingZoneImageUrl = "/zona-rey.webp";
 const kingZoneImage = new Image();
@@ -1092,7 +1092,7 @@ function drawBackground() {
 function drawArenaWalls() {
     const arenaB = getArenaBounds();
     
-    // Dibujar el Rectángulo NEÓN
+    // Dibujar el rectángulo de neón
     ctx.lineWidth = 14;
     ctx.lineJoin = "round";
     ctx.strokeStyle = "rgba(102, 231, 255, 0.7)"; 
@@ -1109,7 +1109,7 @@ function drawArenaWalls() {
     ctx.closePath();
     ctx.stroke();
 
-    // Efecto de "Ruido Eléctrico"
+    // Efecto de ruido eléctrico
     for (let i = 0; i < 15; i++) {
         const side = Math.floor(Math.random() * 4);
         let sx, sy;
@@ -1124,7 +1124,7 @@ function drawArenaWalls() {
         ctx.fill();
     }
 
-    // --- NÚCLEO: ZONA REY ---
+    // --- Núcleo: zona del rey ---
     const coreRadius = 120;
     const kingZonePulse = 0.96 + ((Math.sin(Date.now() / 280) + 1) * 0.04);
     const cx = arenaB.cx, cy = arenaB.cy;
@@ -1155,7 +1155,7 @@ function drawArenaWalls() {
 }
 
 // ==========================================
-// MOUSE INTERACTION (Para lanzar bot local de prueba)
+// Interacción con el mouse (para probar con un bot local)
 // ==========================================
 canvas.addEventListener("mousedown", () => {
     // Inicializar audio al hacer click (necesario por navegadores)
@@ -1182,14 +1182,14 @@ for (let i = 0; i < 50; i++) {
 }
 
 // ==========================================
-// FUNCIONES DE GRÁFICOS Y UTILIDADES
+// Funciones de gráficos y utilidades
 // ==========================================
 
 function getAvatarImage(url) {
     if (!url) return null;
     if (avatarCache[url]) return avatarCache[url];
     const img = new Image();
-    // Forzamos bypass de caché con un timestamp solo para la primera carga
+    // Se fuerza el bypass de caché con un timestamp en la primera carga
     const sep = url.includes('?') ? '&' : '?';
     img.src = url + sep + "t=" + Date.now();
     avatarCache[url] = img;
@@ -1334,7 +1334,7 @@ function drawLightningBolt(bolt) {
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
 
-    // Outer glow
+    // Resplandor exterior
     ctx.beginPath();
     ctx.moveTo(mainPath[0].x, mainPath[0].y);
     for (let i = 1; i < mainPath.length; i++) {
@@ -1342,7 +1342,7 @@ function drawLightningBolt(bolt) {
     }
     ctx.strokeStyle = "rgba(125, 211, 252, 0.22)";
     ctx.lineWidth = Math.max(8, bolt.life * 12);
-    // Fake Glow: Múltiples trazados con opacidad parcial (Mucho más rápido que shadowBlur)
+    // Brillo falso: varios trazados con opacidad parcial (más rápido que shadowBlur)
     ctx.strokeStyle = bolt.color;
     ctx.lineWidth = Math.max(8, bolt.life * 12);
     ctx.globalAlpha = 0.3 * bolt.life;
@@ -1355,7 +1355,7 @@ function drawLightningBolt(bolt) {
     
     ctx.shadowBlur = 0; // Asegurarse de apagar sombra para resto del loop
 
-    // Small branches
+    // Ramas pequeñas
     const branchCount = 2;
     for (let branchIndex = 0; branchIndex < branchCount; branchIndex++) {
         const anchorIndex = 1 + Math.floor(Math.random() * (mainPath.length - 2));
@@ -1382,7 +1382,7 @@ function drawLightningBolt(bolt) {
         ctx.stroke();
     }
 
-    // Source marker
+    // Marcador de origen
     ctx.beginPath();
     ctx.arc(bolt.sx, bolt.sy, 8 + (bolt.life * 2), 0, Math.PI * 2);
     ctx.fillStyle = "rgba(255,255,255,0.9)";
@@ -1402,7 +1402,7 @@ function drawLightningBolt(bolt) {
 }
 
 // ==========================================
-// CLASES
+// Clases
 // ==========================================
 class Player {
     constructor(data = {}) {
@@ -1418,7 +1418,7 @@ class Player {
         this.invulnerableUntil = Number(data.inv || data.invulnerableUntil || 0);
         this.victories = Number(data.v || data.victories || 0);
 
-        // Spawn Random (Asegurando que no sea NaN)
+        // Generación aleatoria (se asegura de que no sea NaN)
         const safeWidth = canvas.width || 800;
         const safeHeight = canvas.height || 1920;
         this.x = data.x || (Math.random() * (safeWidth - 200) + 100);
@@ -2330,7 +2330,7 @@ function createEpicSpawnEffect(x, y, name) {
     announce(`¡Ha ingresado un nivel avanzado: ${name}!`);
 }
 
-// Clase para Rayos Giratorios (Laser Beam)
+// Clase para rayos giratorios (láser)
 class LaserBeam {
     constructor(x, y, attackerId, duration) {
         this.x = x; this.y = y;
@@ -2396,7 +2396,7 @@ class LaserBeam {
 }
 
 // ==========================================
-// ESTADO GLADIADOR (ROUND RULES)
+// Estado gladiador (reglas de la ronda)
 // ==========================================
 let isSuddenDeath = false;
 
@@ -2421,7 +2421,7 @@ socket.on("arena:suddenDeath", (active) => {
 });
 
 socket.on("arena:champion", (id) => {
-    console.log("🏆 El campeón reinante es:", id);
+    console.log("El campeón reinante es:", id);
 });
 
 socket.on("arena:sawHit", (data) => {
@@ -2446,7 +2446,7 @@ socket.on("arena:sawHit", (data) => {
 });
 
 // ==========================================
-// MÉTODOS DE RED (SOCKETS)
+// Métodos de red (sockets)
 // ==========================================
 function syncStateToServer(p) {
     return p;
@@ -2559,19 +2559,19 @@ socket.on("arena:sync", (serverPlayers) => {
     }
 });
 
-// INSTANT JOIN: el servidor emite el jugador nuevo sin esperar el sync masivo
+// Conexión instantánea: el servidor emite el jugador nuevo sin esperar el sync masivo
 socket.on("arena:join", (sp) => {
     syncPlayerFromServer(sp);
 });
 
-// APLAUSOS por chat: reconocimiento visual sin voz para no saturar
+// Aplausos por chat: reconocimiento visual sin voz para no saturar
 socket.on("arena:applause", (data) => {
     if (!data?.name) return;
     spawnFloatingText(`👏 ${data.name.toUpperCase()}`, canvas.width / 2, canvas.height * 0.3 + Math.random() * 40, "#fde047");
     pushShockwave({ x: canvas.width / 2, y: canvas.height * 0.3, r: 12, opacity: 0.5, color: "#fde047" });
 });
 
-// REY GLOBAL: actualizar al líder histórico con más victorias acumuladas
+// Rey global: actualizar al líder histórico con más victorias acumuladas
 socket.on("arena:globalKing", (king) => {
     if (!king?.id) return;
     currentTopArenaLeader = {
@@ -2754,9 +2754,9 @@ function renderLastRoundWinner() {
         </div>
     `;
 }
-// Escuchamos el Hall of Fame persistente del servidor (Top 10 real de 12 horas)
+// Se escucha el salón de la fama persistente del servidor (top 10 real de 12 horas)
 socket.on("arena:hallOfFameUpdate", (list) => {
-    console.log("🏆 Recibido Hall of Fame:", list);
+    console.log("Recibido salón de la fama:", list);
     if (CLEAR_CACHE) playerStreaks = {}; // Resetear rachas locales
     persistentHOF = Array.isArray(list) ? list : [];
     updateTopShowcase(); // Actualizar el podio de gala superior
@@ -2765,7 +2765,7 @@ socket.on("arena:hallOfFameUpdate", (list) => {
 updatePowersGuide();
 
 function updateTopShowcase() {
-    // Usar Hall of Fame persistente como fuente principal para el Top Arena "Histórico" (12h)
+    // El salón de la fama persistente es la fuente principal del ranking "histórico" (12 h)
     // Si no hay HOF todavía, usar los campeones de la sesión actual
     const dataSource = (persistentHOF && persistentHOF.length > 0) ? persistentHOF : sessionChampions;
     
@@ -2903,7 +2903,7 @@ socket.on("arena:roundEnd", (data) => {
     }
 
     const w = roundWinner;
-    console.log("🏆 GANADOR DE LA RONDA:", w.name);
+    console.log("Ganador de la ronda:", w.name);
     
     // Limpiar cola para anuncio inmediato de ganador
     speechQueue = [];
@@ -3009,7 +3009,7 @@ socket.on("arena:burst", (data) => {
     }
 });
 
-// EVENTO SALIDA / AFK (GC Sweep)
+// Evento de salida / AFK (limpieza de basura)
 socket.on("arena:leave", (data) => {
     if (players[data.id]) {
         // Efecto visual de salir
@@ -3035,10 +3035,10 @@ socket.on("arena:respawn", (data) => {
     playSound("heal");
 });
 
-// Variables para combo de Likes
+// Variables para el combo de likes
 const recentHeals = {};
 
-// EVENTO DE CURACIÓN / APOYO (LIKES / TAP TAP) — LOTE DEL SERVIDOR
+// Evento de curación / apoyo (likes / toques) — lote del servidor
 function handleArenaLikeBatchItem(data) {
     if (!data?.userId) return;
     let p = players[data.userId];
@@ -3224,7 +3224,7 @@ socket.on("arena:chatWake", (data) => {
     playSound("hit", 1.08);
 });
 
-// EVENTO DE PODER POR CHAT (Aura Visual Potente - Similar a Regalo Pago)
+// Evento de poder por chat (aura visual potente, similar a un regalo de pago)
 socket.on("arena:chatPower", (data) => {
     const p = syncPlayerFromServer(data.player) || players[data.userId];
     if (p) {
@@ -3329,7 +3329,7 @@ socket.on("arena:ko", (data) => {
 });
 
 // ===============================================
-// NEUROMARKETING SOCKET LISTENERS
+// Listeners de socket (neuromarketing)
 // ===============================================
 
 socket.on("arena:goldenMinute", (active) => {
@@ -3479,7 +3479,7 @@ function describeArenaGiftImpact(data, attacker, target, giftEffect) {
     return variant;
 }
 
-// Perfil de efectos por valor del regalo. Los GRATIS (tap/like/chat) usan siempre menos que el mínimo pagado.
+// Perfil de efectos por valor del regalo. Los gratuitos (tap/like/chat) siempre usan menos que el mínimo pagado.
 function getPaidGiftFxProfile(giftValue, diamondsTotal) {
     const totalValue = Math.max(giftValue || 0, diamondsTotal || 0);
     // Tier GRATIS: nunca superar este techo para tap/like/chat (retention sin eclipsar pagos)
@@ -3572,7 +3572,7 @@ function getPaidGiftFxProfile(giftValue, diamondsTotal) {
     };
 }
 
-// EVENTO DE ATAQUE (REGALOS)
+// Evento de ataque (regalos)
 socket.on("arena:gift", (data) => {
     const attackerId = data.attacker?.id;
     const attacker = syncPlayerFromServer(data.attackerState) || players[attackerId];
@@ -3888,10 +3888,10 @@ socket.on("arena:gift", (data) => {
 });
 
 // ==========================================
-// GAME LOOP Y DIBUJADO
+// Bucle del juego y dibujado
 // ==========================================
 
-// Registro persistente de los mejores jugadores de la sesión (Hall of Fame) - AHORA MANEJADO POR SERVIDOR
+// Registro persistente de los mejores jugadores de la sesión (salón de la fama) — ahora gestionado por el servidor
 let roundRanking = []; // Ranking de la ronda actual
 
 let lastUIUpdate = 0;
@@ -3907,7 +3907,7 @@ function updateRankingDOM(force = false) {
     
     if (leaderboardEl) {
         leaderboardEl.innerHTML = "";
-        // Repoblar con el Top 10 de la ronda actual
+        // Repoblar con el top 10 de la ronda actual
         const top10 = roundRanking.slice(0, 10);
         top10.forEach((p, index) => {
             const item = document.createElement("div");
@@ -4073,7 +4073,7 @@ let currentArenaKingId = null;
 /** Las burbujas ahora se dibujan directamente en el Player.draw() dentro del canvas para que escalen con la cámara. 
     Esta función era redundante y causaba los círculos blancos que tapaban el avatar. */
 function updateBubblesLayer() {
-    // Eliminado: El dibujado ahora es autoritativo en Player.draw()
+    // Eliminado: el dibujado ahora es autoritativo en Player.draw()
     const container = document.getElementById("arena-bubbles");
     if (container) container.innerHTML = ""; 
 }
@@ -4115,9 +4115,9 @@ function loop() {
         overlayFlashAlpha = 0;
     }
 
-    ctx.save(); // Save para Screen Shake
+    ctx.save(); // Guardar para la sacudida de pantalla
 
-    // Aplicar Screen Shake
+    // Aplicar sacudida de pantalla
     if (screenShake > 0) {
         const sx = (Math.random() - 0.5) * screenShake;
         const sy = (Math.random() - 0.5) * screenShake;
@@ -4144,7 +4144,7 @@ function loop() {
     ctx.save(); 
     ctx.translate(canvas.width / 2, canvas.height / 2);
     
-    // Phase 4: Distorsión Global
+    // Fase 4: distorsión global
     if (globalGlitchIntensity > 0) {
         const gx = (Math.random() - 0.5) * globalGlitchIntensity;
         ctx.translate(gx, 0);
@@ -4301,7 +4301,7 @@ function loop() {
             try {
                 p.update();
             } catch (e) {
-                console.error("Error updating player", p.id, e);
+                console.error("Error al actualizar al jugador", p.id, e);
             }
             if (p.id && (p.id === socket.id || p.id.startsWith("bot_"))) {
                 positionBatch[p.id] = { x: Math.round(p.x), y: Math.round(p.y) };
@@ -4398,7 +4398,7 @@ function loop() {
     }
     ctx.globalAlpha = 1.0;
 
-    // Phase 4: Duel Beams (Líneas de conexión de impactos)
+    // Fase 4: rayos de duelo (líneas de conexión de impactos)
     for (let i = duelBeams.length - 1; i >= 0; i--) {
         let db = duelBeams[i];
         ctx.beginPath();
@@ -4420,7 +4420,7 @@ function loop() {
         try {
             p.draw();
         } catch (e) {
-            console.error("Error drawing player", p?.id, e);
+            console.error("Error al dibujar al jugador", p?.id, e);
         }
     });
 
@@ -4434,8 +4434,8 @@ function loop() {
     ctx.restore(); // Restore Camera
     ctx.restore(); // Restore Shake
 
-    // El dibujado de burbujas en pantalla (Screen Space) ha sido eliminado para evitar "deformaciones".
-    // Ahora los avatares se dibujan en World Space (dentro del transform de cámara) en Player.draw().
+    // Se eliminó el dibujado de burbujas en espacio de pantalla para evitar deformaciones.
+    // Ahora los avatares se dibujan en espacio de mundo (dentro del transform de cámara) en Player.draw().
 
     updateBubblesLayer();
     updateRankingDOM();
@@ -4443,7 +4443,7 @@ function loop() {
     requestAnimationFrame(loop);
 }
 
-// Iniciar Motor
+// Iniciar el motor
 requestAnimationFrame(loop);
 
 // ------------------------------------------

@@ -111,7 +111,7 @@ function createVersusManager(io) {
         handleVersusLike(event) {
             const uid = event.uniqueId;
             const fighterId = userAllegiance[uid]; // Solo suma si ya eligieron bando
-            if (!fighterId) return; // Si dan tap sin poner favorito, NO cuenta
+            if (!fighterId) return; // Si dan tap sin elegir favorito, no cuenta
 
             const displayName = event.nickname || event.uniqueId || "Fan";
             const avatar = event.profilePictureUrl || event.user?.profilePictureUrl || "https://p16-amd-va.tiktokcdn.com/img/musically-maliva-obj/1594805258216453~c5_720x720.jpeg";
@@ -126,7 +126,7 @@ function createVersusManager(io) {
             const displayName = event.nickname || event.uniqueId || "Donor";
             const avatar = event.profilePictureUrl || event.user?.profilePictureUrl || "https://p16-amd-va.tiktokcdn.com/img/musically-maliva-obj/1594805258216453~c5_720x720.jpeg";
             
-            // Prioridad: 1. Comentario del regalo, 2. Lealtad previa, 3. Ignorar o Aleatorio (usamos Aleatorio para no perder plata)
+            // Prioridad: 1. comentario del regalo, 2. lealtad previa, 3. aleatorio (para no perder la donación)
             let fighterId = null;
             for (const f of state.fighters) {
                 for (const kw of f.keywords) {

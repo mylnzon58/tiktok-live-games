@@ -126,7 +126,7 @@ body {
     to { opacity: 0; transform: scale(1.3); }
 }
 
-/* --- Fase final overlay --- */
+/* --- Overlay de fase final --- */
 #final-push-overlay {
     position: fixed;
     inset: 0;
@@ -476,7 +476,7 @@ body {
 #members-red .member-avatar { border-color: #fca5a5; box-shadow: 0 0 8px rgba(239, 68, 68, 0.5); }
 #members-blue .member-avatar { border-color: #93c5fd; box-shadow: 0 0 8px rgba(59, 130, 246, 0.5); }
 
-/* --- FX canvas --- */
+/* --- Canvas de efectos --- */
 #fx-canvas {
     position: fixed;
     inset: 0;
@@ -484,7 +484,7 @@ body {
     pointer-events: none;
 }
 
-/* --- Floating UI --- */
+/* --- Interfaz flotante --- */
 #floating-ui-layer {
     position: fixed;
     inset: 0;
@@ -509,7 +509,7 @@ body {
     100% { opacity: 0; transform: translateY(-90px) scale(1); }
 }
 
-/* --- Status bar --- */
+/* --- Barra de estado --- */
 #status-bar {
     position: fixed;
     bottom: 8px;

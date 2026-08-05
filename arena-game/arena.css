@@ -42,7 +42,7 @@ html {
     display: none;
 }
 
-/* Botón flotante para cambiar entre juegos (Relocalizado al fondo) */
+/* Botón flotante para cambiar entre juegos (reubicado al fondo) */
 #switch-btn {
     position: absolute;
     bottom: 15px;
@@ -98,7 +98,7 @@ html {
 }
 
 /* =========================================
-   UI SUPERPUESTA: Guía y Ranking (ELIMINADOS - CANVAS ONLY)
+   UI superpuesta: guía y ranking (eliminados: solo canvas)
    ========================================= */
 
 /* Temporizador principal: legible sobre cualquier fondo */
@@ -125,7 +125,7 @@ html {
     display: inline-block;
 }
 
-/* Efecto de Countdown Dramático */
+/* Efecto de cuenta regresiva dramática */
 @keyframes dramaticPulse {
     0% { transform: scale(1); color: #ff3b3b; text-shadow: -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 3px 3px 0 #000, 0 0 40px rgba(255, 0, 0, 0.8); }
     50% { transform: scale(1.15); color: #ff0000; text-shadow: -4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000, 0 0 80px rgba(255, 0, 0, 1); }
@@ -136,7 +136,7 @@ html {
     animation: dramaticPulse 1s infinite alternate;
 }
 
-/* Efecto viñeta sangrienta para < 30s */
+/* Efecto de viñeta roja para los últimos 30 segundos */
 body.dramatic-vignette::before {
     content: '';
     position: fixed;
@@ -160,7 +160,7 @@ body.dramatic-vignette::before {
     width: var(--arena-area-width);
     height: 100%;
     pointer-events: none;
-    z-index: 200; /* Debe estar POR ENCIMA del canvas (z-index: 150) */
+    z-index: 200; /* Debe quedar por encima del canvas (z-index: 150) */
     overflow: hidden;
 }
 
@@ -226,7 +226,7 @@ body.dramatic-vignette::before {
 }
 
 /* =========================================
-   GUÍA DE REGALOS (INFERIOR LATENTE)
+   Guía de regalos (inferior)
    ========================================= */
 #bottom-gifts-guide {
     position: absolute;
@@ -294,7 +294,7 @@ body.dramatic-vignette::before {
 }
 
 /* =========================================
-   OVERLAY DE VICTORIA (ARENA)
+   Overlay de victoria (arena)
    ========================================= */
 .victory-overlay {
     position: fixed;
@@ -396,13 +396,13 @@ body.dramatic-vignette::before {
 }
 
 /* =========================================
-   GUÍA DE PODERES SUPERIOR (GIGANTE)
+   Guía de poderes superior
    ========================================= */
 #top-powers-guide {
     position: absolute;
     top: 10px;
     left: 10px;
-    right: 170px; /* Deja espacio para el Hall of Fame lateral */
+    right: 170px; /* Deja espacio para el salón de la fama lateral */
     height: 150px;
     background: rgba(10, 10, 25, 0.85);
     border: 2px solid rgba(255, 215, 0, 0.4);
@@ -453,7 +453,7 @@ body.dramatic-vignette::before {
 }
 
 /* =========================================
-   HALL OF FAME LATERAL (VERTICAL / CUADRADO)
+   Salón de la fama lateral (vertical)
    ========================================= */
 #top-arena-showcase {
     position: absolute;
@@ -517,7 +517,7 @@ body.dramatic-vignette::before {
 .rank-1 .top-player-avatar { 
     border-color: #ffd700; 
     box-shadow: 0 0 35px rgba(255, 50, 50, 0.8), 0 0 20px rgba(255, 255, 255, 0.5) inset;
-    animation: heartbeatLatent 5s ease-in-out infinite; /* EFECTO LATIDO LENTO Y MAJESTUOSO */
+    animation: heartbeatLatent 5s ease-in-out infinite; /* Efecto de latido lento y majestuoso */
     position: relative;
     z-index: 2;
 }
@@ -546,11 +546,11 @@ body.dramatic-vignette::before {
 }
 .rank-1 .top-player-name { font-size: 25px; color: #fef08a; } /* Gigante para el #1 */
 
-/* Etiqueta de Victorias (Capsula Amarilla Notable y GRANDE) */
+/* Etiqueta de victorias (cápsula amarilla destacada) */
 .top-player-victories-badge {
     background: #ffd700;
     color: #000;
-    font-size: 22px; /* AUMENTADO MÁS TODAVÍA */
+    font-size: 22px; /* Tamaño aumentado */
     font-weight: 900;
     padding: 6px 18px; 
     border-radius: 20px;
@@ -558,14 +558,14 @@ body.dramatic-vignette::before {
     box-shadow: 0 4px 15px rgba(255, 215, 0, 0.6);
     text-transform: uppercase;
     border: 3px solid #fff;
-    animation: victoryPulse 1.2s infinite alternate; /* LOS 3 EL NUMERO DE RONDA GANADA PARPADEANDO */
+    animation: victoryPulse 1.2s infinite alternate; /* Parpadeo con el número de ronda ganada */
 }
 .rank-1 .top-player-victories-badge { 
     font-size: 27px; 
     background: linear-gradient(to bottom, #fff, #ffd700);
 }
 
-/* Etiqueta de Puntos (Texto Amarillito Suave) */
+/* Etiqueta de puntos (amarillo suave) */
 .top-player-score {
     color: #fef08a; 
     font-size: 14px;
@@ -595,7 +595,7 @@ body.dramatic-vignette::before {
     left: 0 !important;
 }
 
-/* Temporizador relocalizado para que no choque (Definición consolidada arriba) */
+/* Temporizador reubicado para que no se superponga (definido arriba) */
 
 .top-player-victories {
     position: absolute;
@@ -656,7 +656,7 @@ body.dramatic-vignette::before {
 }
 
 /* =========================================
-   CUENTA REGRESIVA GIGANTE
+   Cuenta regresiva gigante
    ========================================= */
 .countdown-overlay {
     position: fixed;
@@ -715,10 +715,10 @@ body.dramatic-vignette::before {
 
 .countdown-overlay.normal {
     color: #ffd700;
-    /* Dorado para el inicio del countdown */
+    /* Dorado para el inicio de la cuenta regresiva */
 }
 
-/* --- PHASE 1: SUDDEN DEATH & GOLDEN MINUTE --- */
+/* --- Fase 1: muerte súbita y minuto de oro --- */
 #x2-alpha-overlay, #golden-minute-overlay {
     position: fixed;
     top: 50%;
@@ -777,7 +777,7 @@ body.dramatic-vignette::before {
 }
 
 /* =========================================
-   DEBUG PANEL (Dev Mode)
+   Panel de depuración (modo dev)
    ========================================= */
 #debug-panel {
     position: fixed;
@@ -797,7 +797,7 @@ body.dramatic-vignette::before {
 }
 
 /* =========================================
-   NEUROMARKETING: METAS COMUNITARIAS, CRITICOS, ANCLAJE
+   Metas comunitarias (barra de frenesí)
    ========================================= */
 #frenzy-bar-container {
     position: absolute;
@@ -944,7 +944,7 @@ body.dramatic-vignette::before {
     color: #fef08a;
 }
 
-/* --- PHASE 3: VISUALS --- */
+/* --- Fase 3: visuales --- */
 #announcer-container {
     position: fixed;
     top: 25%;
@@ -991,7 +991,7 @@ body.dramatic-vignette::before {
     }
 }
 
-/* --- PHASE 4: SOCIAL --- */
+/* --- Fase 4: social --- */
 .duel-line {
     filter: drop-shadow(0 0 10px #0ff);
 }

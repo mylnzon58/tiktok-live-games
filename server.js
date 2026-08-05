@@ -65,7 +65,7 @@ function normalizeChampionStandings(entries = [], options = {}) {
 }
 
 let lastWinners = normalizeChampionStandings(championsStorage.load() || []);
-arena.seedVictories(lastWinners); // <--- NUEVO: Salva el historial en la arena tras reiniciar
+arena.seedVictories(lastWinners); // Guarda el historial de campeones en la arena tras reiniciar
 
 if (lastWinners[0]?.id) {
     arena.setLastWinnerId(lastWinners[0].id);
@@ -84,7 +84,7 @@ let timerInterval = null;
 let tiktokRetryTimer = null;
 let chromeSyncTimer = null;
 let arenaBroadcastTimer = null;
-let arenaLikeBatch = {}; // Para agrupar likes por usuario y reducir emisiones socket
+let arenaLikeBatch = {}; // Agrupa likes por usuario para reducir emisiones socket
 let arenaSawTimer = null;
 let liveStatus = { connected: false, username: process.env.TIKTOK_USERNAME || DEFAULT_TIKTOK_USERNAME };
 let tiktokLive = null;
@@ -92,8 +92,8 @@ let isConnectingToTikTok = false;
 let arenaLeaderVoiceWindow = { leaderId: null, count: 0 };
 let lastCompletedRoundWinner = null;
 
-// --- CSP MIDDLEWARE ---
-// Permissive Content-Security-Policy to prevent proxies/tunnels from blocking eval
+// --- MIDDLEWARE CSP ---
+// Política de seguridad permisiva para que los proxies/túneles no bloqueen eval
 app.use((req, res, next) => {
     res.setHeader(
         "Content-Security-Policy",
@@ -110,7 +110,7 @@ app.use((req, res, next) => {
     next();
 });
 
-// --- ROUTES ---
+// --- RUTAS ---
 // Hub principal: página de inicio con acceso a todos los juegos
 function sendLanding(req, res) {
     const fs = require("fs");
@@ -139,9 +139,9 @@ function sendArenaGame(req, res) {
 app.get("/arenagame", sendArenaGame);
 
 app.use(express.static(__dirname, { etag: false, maxAge: 0, lastModified: false }));
-// Versus Politico Game
+// Versus Político
 app.use("/versus", express.static(path.join(__dirname, "versus/public")));
-// Guerra de Titanes: gift battle por equipos
+// Guerra de Titanes: batalla de regalos por equipos
 app.use("/titan", express.static(path.join(__dirname, "titan/public")));
 // La Bomba: patata caliente de regalos
 app.use("/bomba", express.static(path.join(__dirname, "bomba/public")));
@@ -151,7 +151,7 @@ app.use("/carrera", express.static(path.join(__dirname, "carrera/public")));
 app.get("/overlay", (req, res) => res.sendFile(path.join(__dirname, "overlay.html")));
 app.get("/api/gifts", (req, res) => res.json(giftCatalog.getCatalogSnapshot()));
 
-// --- ARENA STATE BROADCAST ---
+// --- EMISIÓN DEL ESTADO DE LA ARENA ---
 // Minificar un jugador para envío eficiente
 function minifyPlayer(p) {
     return {
@@ -170,7 +170,7 @@ function minifyPlayer(p) {
     };
 }
 
-// INSTANT JOIN: Emitir jugador nuevo inmediatamente (0ms latencia)
+// Emitir el jugador nuevo al instante (0 ms de latencia)
 function emitInstantJoin(player) {
     if (!player) return;
     const sanitized = arena.sanitizeForClient(player);
@@ -212,13 +212,13 @@ function broadcastHallOfFame() {
     io.emit("arena:hallOfFameUpdate", arena.getHallOfFameList(10));
 }
 
-// --- LOGGING ---
+// --- LOGS ---
 function logArenaGift(event, result) {
     const attacker = result?.attacker;
     const target = result?.target;
     if (!attacker?.id || !target?.id) return;
     console.log(
-        `[arena gift] ${attacker.name || attacker.id} -> ${target.name || target.id} | gift=${event.gift.name} x${event.gift.repeatCount} | diamonds=${event.gift.totalDiamonds} | fx=${event.gift.fx} | sfx=${event.gift.sfx} | score+${result.scoreGain} | dmg=${result.damage} | loss=${result.scoreLoss} | ko=${result.ko ? "yes" : "no"}`
+        `[regalo arena] ${attacker.name || attacker.id} -> ${target.name || target.id} | gift=${event.gift.name} x${event.gift.repeatCount} | diamonds=${event.gift.totalDiamonds} | fx=${event.gift.fx} | sfx=${event.gift.sfx} | score+${result.scoreGain} | dmg=${result.damage} | loss=${result.scoreLoss} | ko=${result.ko ? "yes" : "no"}`
     );
 }
 
@@ -226,7 +226,7 @@ function logArenaLike(event, player, support, strike) {
     if (!player?.id) return;
     const comboLikes = support?.likeCombo || event.likeCount;
     console.log(
-        `[arena like] ${player.name || player.id} | likes=${event.likeCount} | total=${event.totalLikeCount || 0} | combo=${comboLikes} | heal=${support?.heal || 0} | score+${support?.scoreGain || 0} | strike=${strike ? "yes" : "no"} | ko=${strike?.ko ? "yes" : "no"}`
+        `[like arena] ${player.name || player.id} | likes=${event.likeCount} | total=${event.totalLikeCount || 0} | combo=${comboLikes} | heal=${support?.heal || 0} | score+${support?.scoreGain || 0} | strike=${strike ? "yes" : "no"} | ko=${strike?.ko ? "yes" : "no"}`
     );
 }
 
@@ -257,7 +257,7 @@ function buildPersistedClassicWinner(entry) {
     };
 }
 
-// --- ROUND MANAGEMENT ---
+// --- GESTIÓN DE RONDAS ---
 function resetRound() {
     const arenaWinner = arena.getRoundWinner();
     let finalArenaRoundWinner = arenaWinner;
@@ -311,7 +311,7 @@ function resetRound() {
     arenaLeaderVoiceWindow = { leaderId: null, count: 0 };
     io.emit("arena:suddenDeath", false);
     
-    // Neuromarketing resets
+    // Reseteo de los estados de neuromarketing
     roundFrenzyDiamonds = 0;
     isFrenzyActive = false;
     if(frenzyTimer) clearTimeout(frenzyTimer);
@@ -322,7 +322,7 @@ function resetRound() {
     if(goldenMinuteTimeout) clearTimeout(goldenMinuteTimeout);
     io.emit("arena:goldenMinute", false);
 
-    // Randomize Golden Minute logic
+    // El Minuto Dorado se activa en un momento aleatorio de la ronda
     goldenMinuteTimer = setTimeout(() => {
         goldenMinuteActive = true;
         io.emit("arena:goldenMinute", true);
@@ -379,7 +379,7 @@ function startArenaSawLoop() {
     }, GAME_CONFIG.arena.sawTickIntervalMs);
 }
 
-// --- TIKTOK CONNECTION ---
+// --- CONEXIÓN A TIKTOK ---
 function getTikTokConfig() {
     return {
         username: process.env.TIKTOK_USERNAME || DEFAULT_TIKTOK_USERNAME,
@@ -407,37 +407,37 @@ async function connectToTikTok() {
     const retryDelay = Math.floor(Math.random() * (maxRetry - minRetry + 1)) + minRetry;
 
     try {
-        console.log("🔍 Sincronizando cookies de Chrome...");
+        console.log("Sincronizando cookies de Chrome...");
         syncTikTokEnvFromChrome({ logger: console });
 
         const config = getTikTokConfig();
-        console.log(`🤖 Iniciando conexión para el usuario: ${config.username}`);
+        console.log(`Iniciando conexión para el usuario: ${config.username}`);
 
         if (tiktokLive?.removeAllListeners) {
             tiktokLive.removeAllListeners();
         }
         if (tiktokLive?.disconnect) {
-            try { await tiktokLive.disconnect(); } catch { /* ignore */ }
+            try { await tiktokLive.disconnect(); } catch { /* ignorar */ }
         }
 
         tiktokLive = createTikTokConnection(config);
         bindTikTokListeners(tiktokLive);
 
-        console.log("📡 Verificando estado del Live...");
+        console.log("Verificando estado del Live...");
         const isLive = await tiktokLive.fetchIsLive();
         if (!isLive) {
-            console.log(`⏳ El usuario ${config.username} no está en Live. Reintentando en breve...`);
+            console.log(`El usuario ${config.username} no está en Live. Reintentando en breve...`);
             liveStatus = { connected: false, username: config.username, step: "waiting", error: "Esperando que el Live inicie..." };
             io.emit("status", liveStatus);
             tiktokRetryTimer = setTimeout(connectToTikTok, retryDelay);
             return;
         }
 
-        console.log("🔗 Conectando a la sala de TikTok...");
+        console.log("Conectando a la sala de TikTok...");
         const state = await tiktokLive.connect();
-        console.log(`✅ TikTok LIVE conectado exitosamente. Room ID: ${state.roomId}`);
+        console.log(`TikTok LIVE conectado correctamente. Room ID: ${state.roomId}`);
 
-        liveStatus = { connected: true, username: config.username, step: "connected", message: "✅ ¡CONECTADO Y LISTO!" };
+        liveStatus = { connected: true, username: config.username, step: "connected", message: "¡CONECTADO Y LISTO!" };
         io.emit("status", liveStatus);
     } catch (error) {
         const rawMessage = error?.message || String(error) || "Error desconocido";
@@ -445,9 +445,9 @@ async function connectToTikTok() {
             ? "Esperando que el Live inicie..."
             : rawMessage;
 
-        // Fallback for error 200 (expired session)
+        // Fallback para el error 200 (sesión expirada)
         if (rawMessage.includes("response: 200") && (process.env.TIKTOK_SESSION_ID || process.env.TIKTOK_TT_TARGET_IDC)) {
-            console.warn("⚠️ Detectado 'response: 200'. Intentando conexión sin credenciales...");
+            console.warn("Detectado 'response: 200'. Intentando conexión sin credenciales...");
             const originalSession = process.env.TIKTOK_SESSION_ID;
             const originalIdc = process.env.TIKTOK_TT_TARGET_IDC;
             process.env.TIKTOK_SESSION_ID = "";
@@ -468,14 +468,14 @@ async function connectToTikTok() {
             error: errorMessage
         };
         io.emit("status", liveStatus);
-        console.error(`❌ Error de conexión: ${errorMessage}`);
+        console.error(`Error de conexión: ${errorMessage}`);
         tiktokRetryTimer = setTimeout(connectToTikTok, retryDelay);
     } finally {
         isConnectingToTikTok = false;
     }
 }
 
-// --- ARENA EVENT HANDLERS ---
+// --- MANEJADORES DE EVENTOS DE LA ARENA ---
 function handleArenaGift(event) {
     const attacker = arena.ensurePlayer(event.user, "gift");
     if (!attacker) return;
@@ -498,7 +498,7 @@ function handleArenaGift(event) {
     if (!result) return;
     logArenaGift(event, result);
 
-    // Frenzy Check (Neuromarketing)
+    // Chequeo de Frenzy (neuromarketing)
     roundFrenzyDiamonds += event.gift.totalDiamonds;
     if (roundFrenzyDiamonds >= 3000 && !isFrenzyActive) {
         isFrenzyActive = true;
@@ -508,12 +508,12 @@ function handleArenaGift(event) {
             isFrenzyActive = false;
             roundFrenzyDiamonds = 0;
             io.emit("arena:frenzyUpdate", { total: 0, active: false });
-        }, 30000); // 30s frenzy
+        }, 30000); // Frenzy de 30 segundos
     } else if (!isFrenzyActive) {
         io.emit("arena:frenzyUpdate", { total: roundFrenzyDiamonds, active: false });
     }
 
-    // Throne In Danger (Loss Aversion Neuromarketing)
+    // Trono en peligro (aversión a la pérdida)
     const ranking = arena.getCurrentRanking(2);
     if (ranking.length >= 2 && ranking[0].id === result.target.id && ranking[1].id === result.attacker.id && result.damage > 0) {
         io.emit("arena:throneInDanger", {
@@ -555,7 +555,7 @@ function handleArenaGift(event) {
         });
     }
 
-    // Extreme Recognition (Ego Boost Neuromarketing)
+    // Reconocimiento extremo (refuerzo del ego)
     if (event.gift.totalDiamonds >= GAME_CONFIG.countries.bigGiftThreshold) {
         io.emit("arena:extremeRecognition", {
             playerName: result.attacker.name,
@@ -596,7 +596,7 @@ function handleArenaGift(event) {
     }
 
     broadcastHallOfFame();
-    queueArenaState(true); // FORZAR SINCRONIZACIÓN INMEDIATA POR REGALO
+    queueArenaState(true); // Sincronización inmediata forzada por regalo
 }
 
 function handleArenaLike(event) {
@@ -610,7 +610,7 @@ function handleArenaLike(event) {
     const strike = arena.applyLikeStrike(player.id, comboLikes, isSuddenDeath);
     logArenaLike(event, player, support, strike);
 
-    // AGREGAR AL LOTE (Batch) en lugar de emitir cada segundo
+    // Acumular en el lote en lugar de emitir en cada like
     if (!arenaLikeBatch[player.id]) {
         arenaLikeBatch[player.id] = {
             userId: player.id,
@@ -631,7 +631,7 @@ function handleArenaLike(event) {
     batch.scoreGain += (support?.scoreGain || 0);
     if (support?.respawned) batch.respawned = true;
     
-    // Powerup logic dentro del batch
+    // Lógica de powerup dentro del lote
     if (comboLikes >= GAME_CONFIG.arena.likeMiniPowerThreshold) {
         batch.powerup = {
             type: "buzzsaw",
@@ -657,7 +657,7 @@ function flushArenaLikeBatch() {
     // Emitir el lote completo
     io.emit("arena:likesBatch", batchArray);
 
-    // Procesar efectos visuales especiales que NO queremos que se pierdan (respawns, strikes, powerups)
+    // Procesar efectos visuales que no deben perderse (respawns, strikes, powerups)
     batchArray.forEach(b => {
         if (b.respawned) {
              io.emit("arena:respawn", { userId: b.userId, mode: "basic" });
@@ -681,12 +681,12 @@ function flushArenaLikeBatch() {
     });
 
     arenaLikeBatch = {}; // Limpiar lote
-    queueArenaState(); // CRÍTICO: Sincronizar jugadores nuevos que entraron por likes/taps
+    queueArenaState(); // Crítico: sincronizar jugadores nuevos que entraron por likes/taps
 }
 
-// Configurar el flush del lote cada 16ms (60fps) para respuesta ultrasónica
+// El lote se vacía cada 16 ms (60 fps) para respuesta casi instantánea
 setInterval(flushArenaLikeBatch, 16); 
-// Fin de lógica de likes batching
+// Fin de la lógica de batching de likes
 
 function handleArenaChat(event) {
     const text = event.comment.toUpperCase();
@@ -733,7 +733,7 @@ function handleArenaChat(event) {
                 player: activity.player
             });
         }
-        queueArenaState(true); // FORZAR SINCRONIZACIÓN INMEDIATA POR ACTIVIDAD
+        queueArenaState(true); // Sincronización inmediata forzada por actividad
     }
     if (activity?.respawned) {
         io.emit("arena:respawn", { userId: player.id, mode: "basic" });
@@ -773,14 +773,14 @@ function handleArenaChat(event) {
     queueArenaState(); // Asegurar que jugadores nuevos por chat también se sincronicen
 }
 
-// --- TIKTOK EVENT BINDING (Arena only) ---
+// --- VINCULACIÓN DE EVENTOS DE TIKTOK (solo Arena) ---
 function bindTikTokListeners(connection) {
     connection.on("gift", (rawData) => {
         try {
             const event = normalizeGiftEvent(rawData, giftCatalog);
             if (!event?.user) {
                 const rawName = rawData?.giftName || rawData?.gift?.gift_name || rawData?.gift?.name || "unknown";
-                console.warn(`[gift skipped] missing normalized event/user | gift=${rawName}`);
+                console.warn(`[regalo omitido] falta evento/usuario normalizado | gift=${rawName}`);
                 return;
             }
             handleArenaGift(event);
@@ -790,14 +790,14 @@ function bindTikTokListeners(connection) {
             bombaManager.handleBombaGift(event);
             carreraManager.handleCarreraGift(event);
         } catch (error) {
-            console.error("Gift error:", error.message);
+            console.error("Error de regalo:", error.message);
         }
     });
 
     connection.on("like", (rawData) => {
         const event = normalizeLikeEvent(rawData);
         if (!event?.user) {
-            console.warn("[like skipped] missing normalized event/user");
+            console.warn("[like omitido] falta evento/usuario normalizado");
             return;
         }
         handleArenaLike(event);
@@ -811,7 +811,7 @@ function bindTikTokListeners(connection) {
     connection.on("chat", (rawData) => {
         const event = normalizeChatEvent(rawData);
         if (!event?.user) {
-            console.warn("[chat skipped] missing normalized event/user");
+            console.warn("[chat omitido] falta evento/usuario normalizado");
             return;
         }
         handleArenaChat(event);
@@ -823,7 +823,7 @@ function bindTikTokListeners(connection) {
     });
 }
 
-// --- CHROME COOKIE SYNC ---
+// --- SINCRONIZACIÓN DE COOKIES DE CHROME ---
 function startChromeCookieSync() {
     clearInterval(chromeSyncTimer);
     chromeSyncTimer = setInterval(() => {
@@ -835,7 +835,7 @@ function startChromeCookieSync() {
     }, CHROME_SYNC_INTERVAL_MS);
 }
 
-// --- SOCKET.IO CONNECTION ---
+// --- CONEXIÓN SOCKET.IO ---
 io.on("connection", (socket) => {
     socket.emit("timerUpdate", timeRemaining);
     versusManager.syncClient(socket);
@@ -854,7 +854,7 @@ io.on("connection", (socket) => {
         // Multiplicador real de puntos a través de applyBucketBonus
         const result = arena.applyBucketBonus(targetId, mult);
         if (result && result.scoreGain > 0) {
-            // Se puede emitir algo si es necesario, pero el cliente ya dibuja floats
+            // Se podría emitir algo si hiciera falta, pero el cliente ya dibuja los floats
             queueArenaState(true);
         }
     });
@@ -878,7 +878,7 @@ io.on("connection", (socket) => {
         }
     });
     
-    // Sincronización inicial MINIFICADA
+    // Sincronización inicial minificada
     const players = arena.getPlayers();
     const minified = {};
     for (const [id, p] of Object.entries(players)) {
@@ -959,7 +959,7 @@ io.on("connection", (socket) => {
     });
 });
 
-// --- CLEANUP INTERVAL (Arena only) ---
+// --- INTERVALO DE LIMPIEZA (solo Arena) ---
 setInterval(() => {
     const now = Date.now();
     const arenaCleanup = arena.cleanup(now);
@@ -974,11 +974,11 @@ setInterval(() => {
 
 // --- SERVER START ---
 const initialDelay = Math.floor(Math.random() * 5000) + 2000;
-console.log(`🕒 Programando primer intento de conexión en ${(initialDelay / 1000).toFixed(1)} segundos...`);
+console.log(`Programando el primer intento de conexión en ${(initialDelay / 1000).toFixed(1)} segundos...`);
 setTimeout(connectToTikTok, initialDelay);
 
 server.listen(PORT, () => {
-    console.log(`🚀 Server on http://localhost:${PORT}`);
+    console.log(`Servidor escuchando en http://localhost:${PORT}`);
     startTimer();
     startChromeCookieSync();
     startArenaSawLoop();

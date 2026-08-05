@@ -1,6 +1,6 @@
 const socket = io();
 
-// Mensajes de atracción rotativos (neuromarketing: 1 mensaje claro a la vez)
+// Mensajes de atracción rotativos (un mensaje claro a la vez)
 const ATTRACT_MESSAGES = [
     { text: "¡TU CARA CAE EN LA PANTALLA!",   sub: "Manda una Rosa para empezar",       color: "#ff4757" },
     { text: "¡DA TAP TAP!",                     sub: "Cada 3 taps = una bolita tuya",      color: "#ffa502" },
@@ -12,7 +12,7 @@ let attractIdx = 0;
 setInterval(() => { attractIdx = (attractIdx + 1) % ATTRACT_MESSAGES.length; }, 3000);
 
 // ==========================================
-// DOM & CANVAS SETUP
+// Configuración de DOM y canvas
 // ==========================================
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
@@ -32,14 +32,14 @@ window.addEventListener("resize", () => {
 });
 
 // ==========================================
-// ESTADO GLOBAL
+// Estado global
 // ==========================================
 let players = {};
 let roundRanking = [];
 let persistentHOF = [];
 
 // ==========================================
-// AUDIO (Web Audio API)
+// Audio (Web Audio API)
 // ==========================================
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 let audioUnlocked = false;
@@ -73,7 +73,7 @@ function sfxBucket(m)  { playSynth(220*m,'sine',0.4,0.25); }
 function sfxRoundEnd() { [300,200,100].forEach((f,i)=>setTimeout(()=>playSynth(f,'sawtooth',0.3,0.3),i*180)); }
 
 // ==========================================
-// BGM DINÁMICO
+// BGM dinámico
 // ==========================================
 const BGM_NOTES = [196.00, 220.00, 261.63, 293.66, 349.23, 392.00];
 const BGM_SEQ   = [0, 2, 4, 2, 5, 4, 2, 0, 1, 3, 1, 0];
@@ -105,7 +105,7 @@ function startBGM() {
 }
 
 // ==========================================
-// VOZ (TTS)
+// Voz (TTS)
 // ==========================================
 let voiceQueue = [];
 let isSpeaking = false;
@@ -135,9 +135,9 @@ if (window.speechSynthesis) {
 function rnd(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
 // ==========================================
-// PLINKO ENGINE
+// Motor de plinko
 // ==========================================
-const GRAVITY       = 0.13;   // Lento = más drama
+const GRAVITY       = 0.13;   // Baja gravedad: caída más lenta y dramática
 let BALL_R          = 20;     // Ahora es dinámico
 let PEG_R           = 7;      // Ahora es dinámico
 const BOUNCE        = 0.62;   // Más elástico = más caos
@@ -159,7 +159,7 @@ function getColor(id) {
     return playerColors[id];
 }
 
-// Avatar cache
+// Caché de avatares
 const avatarCache = {};
 function getAvatar(url) {
     if (!url) return null;
@@ -171,22 +171,22 @@ function getAvatar(url) {
     return img;
 }
 
-// Asegurar/crear jugador on-the-fly
+// Asegura o crea un jugador sobre la marcha
 function ensurePlayer(id, name, avatar) {
     if (!players[id]) players[id] = { id, name: name || id, avatar: avatar || "", score: 0 };
     return players[id];
 }
 
 // ==========================================
-// BOARD INIT
+// Inicialización del tablero
 // ==========================================
 function initBoard() {
     pegs.length = 0;
     buckets.length = 0;
 
     const startY     = canvas.height * 0.08;
-    const limitY     = canvas.height * 0.70; // 70% lleno de pegs
-    const bY         = canvas.height * 0.85; // 85% inicio buckets
+    const limitY     = canvas.height * 0.70; // 70% del alto lleno de pegs
+    const bY         = canvas.height * 0.85; // 85% del alto: inicio de los buckets
     const bucketH    = canvas.height * 0.11;
 
     // maxCols=7 → gapX ~33% más grande → bolas ~30% más grandes con avatares visibles
@@ -222,7 +222,7 @@ function initBoard() {
         for (let c = 0; c < cols; c++) {
             let bombValue = 0;
             if (r > 1) {
-                // Reducido drásticamente la probabilidad de bombas para que sea más fácil (5% al 20% max)
+                // Probabilidad de bombas reducida (5% a 20% máximo) para que sea más fácil
                 const bombChance = 0.05 + (r / totalExpectedRows) * 0.15; 
                 if (Math.random() < bombChance) {
                     const rand = Math.random();
@@ -238,7 +238,7 @@ function initBoard() {
         r++;
     }
 
-    // Buckets con texto y anchos más equilibrados para evitar overlap
+    // Buckets con texto y anchos equilibrados para evitar superposiciones
     const mults   = [1, 3, 5, 10, 5, 3, 1];
     const bColors = ["#1e90ff", "#2ed573", "#a55eea", "#ff4757", "#a55eea", "#2ed573", "#1e90ff"];
     // Anchos equilibrados: x10 no puede ser tan fino porque el texto no cabe
@@ -254,7 +254,7 @@ function initBoard() {
 initBoard();
 
 // ==========================================
-// SPAWN BALLS
+// Generación de bolas
 // ==========================================
 function spawnBall(player, sizeScale = 1, count = 1, delay = 180) {
     for (let i = 0; i < count; i++) {
@@ -281,7 +281,7 @@ function spawnBall(player, sizeScale = 1, count = 1, delay = 180) {
     }
 }
 
-// Demo balls (idle screen – caen automaticamente con colores vibrantes, sin iconos)
+// Bolas de demostración (pantalla en espera): caen solas con colores vibrantes, sin avatares
 function spawnDemoBall() {
     const id = "demo_" + Math.floor(Math.random()*10000);
     const color = COLORS[Math.floor(Math.random()*COLORS.length)];
@@ -311,7 +311,7 @@ setInterval(() => {
 }, 1400);
 
 // ==========================================
-// FLOATING TEXT
+// Texto flotante
 // ==========================================
 function floatText(text, x, y, color) {
     const d = document.createElement("div");
@@ -327,14 +327,14 @@ function floatText(text, x, y, color) {
 }
 
 // ==========================================
-// TOAST ANUNCIOS
+// Toasts de anuncios
 // ==========================================
 function toast(text, color = "#fff", duration = 2500) {
     toasts.push({ text, color, birth: Date.now(), duration });
 }
 
 // ==========================================
-// PARTICLES
+// Partículas
 // ==========================================
 function explode(x, y, color, n = 14) {
     for (let i = 0; i < n; i++) {
@@ -350,7 +350,7 @@ function explode(x, y, color, n = 14) {
 }
 
 // ==========================================
-// LEADERBOARD DOM
+// Ranking (DOM)
 // ==========================================
 function updateLeaderboard() {
     if (!leaderboardEl) return;
@@ -363,7 +363,7 @@ function updateLeaderboard() {
 }
 
 // ==========================================
-// NARRACIÓN (neuromarketing: urgencia, FOMO, tribu)
+// Narrador (frases de voz)
 // ==========================================
 const NEURO_IDLE = [
     () => `¡Lanza una Rosa y tu cara aparece en pantalla!`,
@@ -392,10 +392,10 @@ function maybeNarrate() {
 }
 
 // ==========================================
-// SOCKET EVENTS
+// Eventos de socket
 // ==========================================
 // ==========================================
-// TIMER
+// Temporizador
 // ==========================================
 let currentTimerSeconds = 0;
 let timerFlash = false;
@@ -488,7 +488,7 @@ socket.on("arena:roundEnd", () => {
 });
 
 // ==========================================
-// RENDER LOOP
+// Bucle de renderizado
 // ==========================================
 function drawBackground() {
     // Fondo negro con gradiente radial para profundidad
@@ -508,7 +508,7 @@ function drawBackground() {
     }
 }
 
-    // Dibujar canastas con label explicativo
+    // Dibujar canastas con su etiqueta explicativa
 function drawBuckets() {
     for (const b of buckets) {
         ctx.fillStyle = b.color;
@@ -533,7 +533,7 @@ function drawBuckets() {
         ctx.textBaseline = "middle";
         ctx.fillText(`x${b.mult}`, b.x + b.w / 2, b.y + b.h * 0.38);
 
-        // Etiqueta pequena — limitada por el ancho del bucket
+        // Etiqueta pequeña — limitada por el ancho del bucket
         const labelSize = Math.max(Math.min(Math.round(b.h * 0.18), Math.round(b.w * 0.22)), 8);
         ctx.font = `bold ${labelSize}px Rajdhani, sans-serif`;
         ctx.fillStyle = "rgba(255,255,255,0.7)";
@@ -569,7 +569,7 @@ function drawPegs() {
             ctx.shadowBlur = 18;
             ctx.fill();
 
-            // Número negativo DENTRO del crculo
+            // Número negativo dentro del círculo
             ctx.shadowBlur = 0;
             ctx.fillStyle = "#ffffff";
             const fontSize = Math.max(Math.floor(r * 0.85), 7);
@@ -611,7 +611,7 @@ function drawBall(b) {
         ctx.drawImage(img, b.x - b.r, b.y - b.r, b.r * 2, b.r * 2);
         ctx.restore();
     } else if (b.isDemo) {
-        // Demo: círculo con brillo interior, sin emojis de casino
+        // Demo: círculo con brillo interior, sin iconos de casino
         ctx.beginPath();
         ctx.arc(b.x, b.y, b.r * 0.5, 0, Math.PI * 2);
         ctx.fillStyle = "rgba(255,255,255,0.25)";
@@ -629,7 +629,7 @@ function drawBall(b) {
 
     ctx.restore();
 
-    // Nombre del jugador SOLO si tiene avatar real y bola normal
+    // Nombre del jugador solo si tiene avatar real y bola normal
     if (!b.isDemo && b.r >= BALL_R * 0.8 && b.player.name) {
         ctx.fillStyle = "rgba(0,0,0,0.6)";
         const nameW = Math.min(b.player.name.length * 7, 80);
@@ -683,7 +683,7 @@ function physicsStep(b) {
             }
             peg.lit = 1;
             
-            // Si es bomba, castigo!
+            // Si es bomba, castigo
             if (peg.isBomb && !b.isDemo) {
                 // Explosión más grande proporcional al daño
                 explode(b.x, b.y, "#ff0000", peg.bombValue >= 500 ? 30 : 18);
@@ -692,7 +692,7 @@ function physicsStep(b) {
                     socket.emit("arena:bombHit", { targetId: b.player.id, loss: peg.bombValue });
                 }
                 sfxRoundEnd();
-                return false; // DESTRUYE LA BOLA
+                return false; // Destruye la bola
             }
             
             // Sin sonido en rebotes normales para no saturar el audio del live
@@ -725,12 +725,12 @@ function physicsStep(b) {
                 const pName = b.player.name || "";
                 const m = bucket.mult;
 
-                // Explosion proporcional al multiplicador
+                // Explosión proporcional al multiplicador
                 explode(b.x, b.y, b.color, m === 10 ? 40 : m === 5 ? 22 : 10);
 
                 if (!b.isDemo) {
                     if (m === 10) {
-                        // JACKPOT — pantalla entera
+                        // Jackpot: pantalla completa
                         flashAlpha = 0.45; flashColor = "255,215,0";
                         screenShake = 18;
                         toast(`${pName} ¡JACKPOT x10! +PUNTOS MAXIMOS`, "#ffd700", 4000);
@@ -765,27 +765,27 @@ function physicsStep(b) {
 }
 
 // ==========================================
-// REY GLOBAL (TOP DE VICTORIAS)
+// Rey global (más victorias)
 // ==========================================
 let globalKingData = null;
 socket.on("arena:globalKing", (king) => {
     globalKingData = king;
 });
 
-// SCOREBOARD EN CANVAS (top 5 durante juego)
+// Marcador en canvas (top 5 durante el juego)
 // ==========================================
 function drawScoreboard() {
-    const startY = 40; // Debajo de los textos de atraccion
+    const startY = 40; // Debajo de los textos de atracción
 
     // =============================================
-    // DERECHA: REY GLOBAL (ganador de más rondas)
+    // Derecha: rey global (ganador de más rondas)
     // =============================================
     if (globalKingData) {
         const boardW = Math.min(canvas.width * 0.45, 230);
         const boardX = canvas.width - boardW - 10;
         const rowH = 50;
 
-        // Fondo dorado con glow
+        // Fondo dorado con brillo
         ctx.shadowBlur = 8;
         ctx.shadowColor = "#ffd700";
         ctx.fillStyle = "rgba(255,215,0,0.25)";
@@ -831,7 +831,7 @@ function drawScoreboard() {
     }
 
     // =============================================
-    // IZQUIERDA: TOP 5 DE LA RONDA
+    // Izquierda: top 5 de la ronda
     // =============================================
     if (roundRanking.length === 0) return;
     
@@ -842,7 +842,7 @@ function drawScoreboard() {
     const medals = ["1", "2", "3", "4", "5"];
     const medalColors = ["#ffd700", "#c0c0c0", "#cd7f32", "#87ceeb", "#87ceeb"];
 
-    // Fondo con borde verde elegante
+    // Fondo con borde verde
     ctx.fillStyle = "rgba(0,0,0,0.7)";
     ctx.strokeStyle = "rgba(46, 213, 115, 0.6)";
     ctx.lineWidth = 1.5;
@@ -944,19 +944,19 @@ function drawIdleScreen() {
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    // MENSAJE PRINCIPAL — grande, claro, UN texto
+    // Mensaje principal: grande, claro, un solo texto
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.font = `bold ${Math.min(28, canvas.width * 0.058)}px Rajdhani, sans-serif`;
     ctx.fillStyle = msg.color;
     ctx.fillText(msg.text, canvas.width / 2, panelY + 38);
 
-    // SUB-MENSAJE — acción concreta
+    // Submensaje: acción concreta
     ctx.font = `${Math.min(17, canvas.width * 0.036)}px Rajdhani, sans-serif`;
     ctx.fillStyle = "rgba(255,255,255,0.8)";
     ctx.fillText(msg.sub, canvas.width / 2, panelY + 76);
 
-    // Flecha animada abajo del panel (CTA)
+    // Flecha animada debajo del panel (CTA)
     const arrowY = Math.sin(t * 4) * 6;
     ctx.font = `bold 20px Rajdhani, sans-serif`;
     ctx.fillStyle = "rgba(255,255,255,0.5)";
@@ -1004,7 +1004,7 @@ function drawParticles() {
 }
 
 function loop() {
-    // Screen shake
+    // Sacudida de pantalla
     ctx.save();
     if (screenShake > 0) {
         ctx.translate((Math.random()-0.5)*screenShake, (Math.random()-0.5)*screenShake);
@@ -1039,7 +1039,7 @@ function loop() {
     const hasRealPlayers = Object.keys(players).filter(k => !k.startsWith("demo_") && !k.startsWith("local_")).length > 0;
     if (hasRealPlayers) drawScoreboard();
 
-    // Flash overlay
+    // Destello de overlay
     if (flashAlpha > 0.01) {
         ctx.fillStyle = `rgba(${flashColor},${flashAlpha})`;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1053,7 +1053,7 @@ function loop() {
 }
 
 // ==========================================
-// INTERACCIÓN LOCAL
+// Interacción local
 // ==========================================
 let tapDebounce = 0;
 function onTap(e) {
@@ -1073,7 +1073,7 @@ canvas.addEventListener("mousedown",  onTap);
 canvas.addEventListener("touchstart", (e) => { e.preventDefault(); onTap(e); }, { passive: false });
 
 // ==========================================
-// DEBUG PANEL
+// Panel de depuración
 // ==========================================
 if (DEBUG_MODE) {
     document.getElementById("debug-panel").style.display = "block";
@@ -1103,6 +1103,6 @@ if (DEBUG_MODE) {
 }
 
 // ==========================================
-// ARRANQUE
+// Arranque
 // ==========================================
 requestAnimationFrame(loop);

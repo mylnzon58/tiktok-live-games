@@ -16,7 +16,7 @@ body {
     color: #fff;
 }
 
-/* ---- Timer ---- */
+/* ---- Temporizador ---- */
 #main-timer {
     position: fixed;
     top: 14px;
@@ -38,7 +38,7 @@ body {
     z-index: 20;
 }
 
-/* ---- How to play ---- */
+/* ---- Cómo jugar ---- */
 #how-to-play {
     position: fixed;
     top: 14px;
@@ -72,7 +72,7 @@ body {
     color: #ffd166;
 }
 
-/* ---- Announcer ---- */
+/* ---- Anunciador ---- */
 #announcer-container {
     position: fixed;
     top: 120px;
@@ -107,7 +107,7 @@ body {
     100% { transform: scale(1) translateY(0); opacity: 1; }
 }
 
-/* ---- Bomb scene ---- */
+/* ---- Escena de la bomba ---- */
 #bomb-scene {
     position: absolute;
     inset: 0;
@@ -195,7 +195,7 @@ body {
     color: rgba(255, 255, 255, .6);
 }
 
-/* ---- Panels ---- */
+/* ---- Paneles ---- */
 #ranking-panel,
 #hof-panel {
     position: fixed;
@@ -237,7 +237,7 @@ body {
 .rank-row.me { background: rgba(255, 209, 102, .15); border: 1px solid rgba(255, 209, 102, .4); }
 .rank-row.holding { background: rgba(255, 107, 107, .2); border: 1px solid rgba(255, 107, 107, .55); }
 
-/* ---- Status ---- */
+/* ---- Estado ---- */
 #status-bar {
     position: fixed;
     bottom: 10px;
@@ -261,7 +261,7 @@ body {
 .dot.connecting { background: #ffd166; box-shadow: 0 0 8px #ffd166; }
 .dot.offline { background: #ff6b6b; box-shadow: 0 0 8px #ff6b6b; }
 
-/* ---- FX layers ---- */
+/* ---- Capas de efectos ---- */
 #floating-ui-layer {
     position: fixed;
     inset: 0;
@@ -302,7 +302,7 @@ body {
     z-index: 35;
 }
 
-/* ---- Overlay ronda ---- */
+/* ---- Overlay de ronda ---- */
 #round-overlay {
     position: fixed;
     inset: 0;
@@ -353,7 +353,7 @@ body {
     50% { opacity: 1; }
 }
 
-/* ---- Sound button ---- */
+/* ---- Botón de sonido ---- */
 #sound-btn {
     position: fixed;
     bottom: 10px;
