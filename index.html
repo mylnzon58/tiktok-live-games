@@ -4,8 +4,13 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>JUEGOS TIKTOK LIVE — Hub</title>
-    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Rajdhani:wght@600;700&display=swap"
+    <title>TikTok LIVE Games — Juegos interactivos gratis para streamers</title>
+    <meta name="description"
+        content="Siete juegos gratuitos para tu directo de TikTok: reaccionan a regalos, likes y chat. Descargá el código, configuralo en 5 minutos y transmití con TikTok Studio. Open source." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,900&family=Space+Grotesk:wght@400;500;600;700&display=swap"
         rel="stylesheet" />
     <style>
         * {
@@ -14,310 +19,1076 @@
             box-sizing: border-box;
         }
 
-        body {
-            min-height: 100vh;
-            font-family: "Rajdhani", sans-serif;
-            background: radial-gradient(ellipse at top, #1a1040 0%, #0d0620 55%, #05020f 100%);
-            color: #f8fafc;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 32px 20px 60px;
-            overflow-x: hidden;
+        :root {
+            --bg: #0b0e13;
+            --bg-soft: #10151d;
+            --card: #131a24;
+            --line: rgba(255, 255, 255, 0.08);
+            --line-strong: rgba(255, 255, 255, 0.14);
+            --text: #eae8e2;
+            --muted: #98a1b0;
+            --gold: #e3b04b;
+            --gold-soft: rgba(227, 176, 75, 0.12);
+            --green: #4ade80;
+            --red: #f87171;
+            --radius: 18px;
         }
 
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background:
+                radial-gradient(1200px 600px at 80% -10%, rgba(227, 176, 75, 0.07), transparent 60%),
+                radial-gradient(900px 500px at -10% 20%, rgba(74, 128, 222, 0.05), transparent 60%),
+                var(--bg);
+            color: var(--text);
+            font-family: "Space Grotesk", sans-serif;
+            line-height: 1.55;
+            min-height: 100vh;
+        }
+
+        .wrap {
+            max-width: 1080px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* ---------- NAV ---------- */
+        nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 22px 0;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+            text-decoration: none;
+            color: var(--text);
+        }
+
+        .brand-mark {
+            width: 30px;
+            height: 30px;
+            border-radius: 9px;
+            background: linear-gradient(135deg, var(--gold), #f3d489);
+            display: grid;
+            place-items: center;
+            font-size: 14px;
+            color: #14100a;
+            font-weight: 900;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 26px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .nav-links a {
+            color: var(--muted);
+            text-decoration: none;
+            transition: color 0.15s;
+        }
+
+        .nav-links a:hover {
+            color: var(--text);
+        }
+
+        @media (max-width: 720px) {
+            .nav-links {
+                display: none;
+            }
+        }
+
+        /* ---------- HERO ---------- */
         .hero {
             text-align: center;
-            margin-bottom: 36px;
+            padding: 84px 0 60px;
+        }
+
+        .kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: var(--gold);
+            border: 1px solid rgba(227, 176, 75, 0.35);
+            background: var(--gold-soft);
+            padding: 7px 16px;
+            border-radius: 999px;
+            margin-bottom: 26px;
         }
 
         .hero h1 {
-            font-family: "Bungee", cursive;
-            font-size: clamp(28px, 5vw, 52px);
-            letter-spacing: 2px;
-            background: linear-gradient(90deg, #fbbf24, #ff6b6b, #7dd3fc, #fbbf24);
-            background-size: 300% 100%;
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            animation: shine 6s linear infinite;
-            text-shadow: 0 0 40px rgba(251, 191, 36, 0.25);
+            font-family: "Fraunces", serif;
+            font-size: clamp(40px, 6.5vw, 76px);
+            font-weight: 900;
+            line-height: 1.04;
+            letter-spacing: -0.02em;
+            max-width: 860px;
+            margin: 0 auto;
         }
 
-        @keyframes shine {
-            0% { background-position: 0% 0; }
-            100% { background-position: 300% 0; }
+        .hero h1 em {
+            font-style: italic;
+            color: var(--gold);
         }
 
-        .hero p {
-            margin-top: 10px;
-            font-size: clamp(15px, 2.4vw, 20px);
-            color: #a5b4fc;
-            font-weight: 600;
+        .hero .sub {
+            max-width: 620px;
+            margin: 22px auto 0;
+            color: var(--muted);
+            font-size: 17px;
         }
 
-        .status-bar {
-            margin: 20px auto 0;
+        .cta-row {
+            display: flex;
+            gap: 14px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 34px;
+        }
+
+        .btn {
             display: inline-flex;
             align-items: center;
             gap: 10px;
-            padding: 8px 18px;
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            font-size: 20px;
+            font-family: "Space Grotesk", sans-serif;
+            font-size: 15px;
             font-weight: 700;
+            padding: 14px 26px;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            text-decoration: none;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
         }
 
-        .dot {
-            width: 10px;
-            height: 10px;
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background: var(--gold);
+            color: #14100a;
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 10px 34px rgba(227, 176, 75, 0.35);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text);
+            border-color: var(--line-strong);
+        }
+
+        .btn-ghost:hover {
+            border-color: var(--gold);
+            color: var(--gold);
+        }
+
+        .btn-wa {
+            background: #1faa56;
+            color: #fff;
+        }
+
+        .btn-wa:hover {
+            box-shadow: 0 10px 34px rgba(31, 170, 86, 0.35);
+        }
+
+        /* ---------- LIVE PILL ---------- */
+        #live-pill {
+            margin: 30px auto 0;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--muted);
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.03);
+            padding: 9px 18px;
+            border-radius: 999px;
+            width: fit-content;
+        }
+
+        #live-pill .dot {
+            width: 9px;
+            height: 9px;
             border-radius: 50%;
             background: #64748b;
-            animation: pulse 1.6s ease-in-out infinite;
+            flex: none;
         }
 
-        .dot.online {
-            background: #22c55e;
-            box-shadow: 0 0 12px #22c55e;
+        #live-pill .dot.online {
+            background: var(--green);
+            box-shadow: 0 0 10px var(--green);
         }
 
-        .dot.connecting {
-            background: #f59e0b;
+        #live-pill .dot.waiting {
+            background: var(--gold);
         }
 
-        .dot.offline {
-            background: #ef4444;
+        /* ---------- SECTIONS ---------- */
+        section {
+            padding: 72px 0 8px;
         }
 
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.35); opacity: 0.7; }
+        .sec-head {
+            margin-bottom: 34px;
         }
 
-        .timer-chip {
-            color: #fbbf24;
-            font-family: "Bungee", cursive;
-            font-size: 20px;
-            background: rgba(251, 191, 36, 0.12);
-            padding: 3px 10px;
-            border-radius: 999px;
-            border: 1px solid rgba(251, 191, 36, 0.35);
+        .sec-head .label {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 10px;
         }
 
+        .sec-head h2 {
+            font-family: "Fraunces", serif;
+            font-size: clamp(28px, 4vw, 44px);
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            line-height: 1.1;
+        }
+
+        .sec-head p {
+            color: var(--muted);
+            margin-top: 10px;
+            max-width: 640px;
+        }
+
+        /* ---------- GAMES GRID ---------- */
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 22px;
-            width: 100%;
-            max-width: 980px;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
         }
 
         .card {
-            position: relative;
             display: flex;
             flex-direction: column;
             gap: 12px;
-            padding: 26px 22px 22px;
-            border-radius: 20px;
+            padding: 26px 24px 22px;
+            border-radius: var(--radius);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.015));
+            border: 1px solid var(--line);
             text-decoration: none;
-            color: #f8fafc;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            overflow: hidden;
-            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+            color: var(--text);
+            cursor: pointer;
+            position: relative;
+            transition: border-color 0.15s ease, transform 0.15s ease;
         }
 
         .card:hover {
-            transform: translateY(-6px) scale(1.02);
-            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
-            border-color: rgba(251, 191, 36, 0.6);
+            border-color: rgba(227, 176, 75, 0.5);
+            transform: translateY(-3px);
         }
 
-        .card .glow {
+        .card .num {
             position: absolute;
-            inset: 0;
-            pointer-events: none;
-            opacity: 0.22;
-            transition: opacity 0.18s ease;
-        }
-
-        .card:hover .glow {
-            opacity: 0.45;
-        }
-
-        .card .icon {
-            font-size: 56px;
-            line-height: 1;
-            filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.35));
-        }
-
-        .card h2 {
-            font-family: "Bungee", cursive;
-            font-size: 26px;
+            top: 18px;
+            right: 20px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #4b5563;
             letter-spacing: 1px;
         }
 
-        .card p {
+        .card .icon {
+            font-size: 34px;
+            line-height: 1;
+        }
+
+        .card h3 {
             font-size: 20px;
-            color: #c7d2fe;
-            font-weight: 600;
-            line-height: 1.45;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+        }
+
+        .card p {
+            font-size: 14.5px;
+            color: var(--muted);
             flex: 1;
         }
 
         .card .tag {
-            display: inline-block;
             align-self: flex-start;
-            font-size: 18px;
+            font-size: 11px;
             font-weight: 700;
-            letter-spacing: 1.5px;
-            padding: 4px 10px;
-            border-radius: 999px;
+            letter-spacing: 1.6px;
             text-transform: uppercase;
+            padding: 5px 11px;
+            border-radius: 999px;
+            border: 1px solid var(--line-strong);
+            color: var(--muted);
         }
 
         .card .tag.hot {
-            background: rgba(251, 191, 36, 0.18);
-            color: #fbbf24;
-            border: 1px solid rgba(251, 191, 36, 0.4);
+            color: var(--gold);
+            border-color: rgba(227, 176, 75, 0.4);
+            background: var(--gold-soft);
         }
 
-        .card .tag.new {
-            background: rgba(125, 211, 252, 0.15);
-            color: #7dd3fc;
-            border: 1px solid rgba(125, 211, 252, 0.4);
+        /* ---------- STEPS ---------- */
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
         }
 
-        .card .tag.gift {
-            background: rgba(251, 107, 107, 0.15);
-            color: #ff8f8f;
-            border: 1px solid rgba(251, 107, 107, 0.4);
+        .step {
+            padding: 26px 24px;
+            border-radius: var(--radius);
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.02);
         }
 
-        .footer-note {
-            margin-top: 40px;
+        .step .n {
+            font-family: "Fraunces", serif;
+            font-size: 40px;
+            font-weight: 900;
+            color: var(--gold);
+            line-height: 1;
+            margin-bottom: 14px;
+        }
+
+        .step h3 {
+            font-size: 17px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .step p {
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        /* ---------- DOWNLOAD ---------- */
+        .panel {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 16px;
+        }
+
+        @media (max-width: 860px) {
+            .panel {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel-box {
+            padding: 32px 30px;
+            border-radius: var(--radius);
+            border: 1px solid var(--line);
+            background: linear-gradient(180deg, rgba(227, 176, 75, 0.06), rgba(255, 255, 255, 0.015));
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .panel-box h3 {
+            font-family: "Fraunces", serif;
+            font-size: 26px;
+            font-weight: 700;
+        }
+
+        .panel-box p {
+            color: var(--muted);
+            font-size: 15px;
+            flex: 1;
+        }
+
+        .panel-box .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .repo-link {
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .repo-link a {
+            color: var(--gold);
+            text-decoration: none;
+            border-bottom: 1px solid rgba(227, 176, 75, 0.4);
+        }
+
+        /* ---------- SETUP $29 ---------- */
+        .setup {
+            border: 1px solid rgba(227, 176, 75, 0.35);
+            background:
+                radial-gradient(600px 240px at 90% 0%, rgba(227, 176, 75, 0.1), transparent 60%),
+                rgba(255, 255, 255, 0.02);
+        }
+
+        .setup .price {
+            font-family: "Fraunces", serif;
+            font-size: 40px;
+            font-weight: 900;
+            color: var(--gold);
+            line-height: 1;
+        }
+
+        .setup .price small {
+            font-family: "Space Grotesk", sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--muted);
+        }
+
+        /* ---------- DONATE ---------- */
+        .donate {
+            background:
+                radial-gradient(600px 240px at 0% 100%, rgba(227, 176, 75, 0.08), transparent 60%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+        }
+
+        .donate .quote {
+            font-family: "Fraunces", serif;
+            font-size: clamp(22px, 3vw, 32px);
+            font-weight: 700;
+            line-height: 1.3;
+            letter-spacing: -0.01em;
             max-width: 760px;
-            text-align: center;
-            font-size: 20px;
-            color: #6b7280;
-            font-weight: 600;
-            line-height: 1.6;
         }
 
-        .footer-note b {
-            color: #9ca3af;
+        .donate .quote em {
+            color: var(--gold);
+            font-style: italic;
+        }
+
+        .donate p.story {
+            color: var(--muted);
+            max-width: 680px;
+            margin-top: 18px;
+            font-size: 15.5px;
+        }
+
+        .alias-box {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 22px;
+            padding: 14px 20px;
+            border-radius: 14px;
+            border: 1px dashed rgba(227, 176, 75, 0.45);
+            background: var(--gold-soft);
+            font-size: 17px;
+            font-weight: 700;
+            letter-spacing: 0.6px;
+            color: var(--gold);
+        }
+
+        .alias-box button {
+            font-family: "Space Grotesk", sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            background: rgba(227, 176, 75, 0.15);
+            border: 1px solid rgba(227, 176, 75, 0.4);
+            color: var(--gold);
+            padding: 7px 14px;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .alias-box button:hover {
+            background: rgba(227, 176, 75, 0.3);
+        }
+
+        .donate-foot {
+            margin-top: 16px;
+            font-size: 13px;
+            color: #5b6472;
+        }
+
+        /* ---------- FOOTER ---------- */
+        footer {
+            margin-top: 80px;
+            border-top: 1px solid var(--line);
+            padding: 30px 0 46px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 14px;
+            font-size: 13.5px;
+            color: var(--muted);
+        }
+
+        footer a {
+            color: var(--muted);
+            text-decoration: none;
+            border-bottom: 1px solid var(--line-strong);
+        }
+
+        footer a:hover {
+            color: var(--gold);
+            border-color: var(--gold);
+        }
+
+        /* ---------- MODAL ---------- */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(6, 8, 12, 0.82);
+            backdrop-filter: blur(6px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 50;
+        }
+
+        .overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            width: 100%;
+            max-width: 430px;
+            background: var(--bg-soft);
+            border: 1px solid var(--line-strong);
+            border-radius: 22px;
+            padding: 34px 30px;
+            text-align: center;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+            animation: rise 0.25s ease;
+        }
+
+        @keyframes rise {
+            from {
+                transform: translateY(14px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal h3 {
+            font-family: "Fraunces", serif;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .modal .muted {
+            color: var(--muted);
+            font-size: 14.5px;
+        }
+
+        .modal .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 24px;
+        }
+
+        /* loader */
+        .loader-step {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            padding: 10px 0;
+            color: var(--muted);
+            opacity: 0.4;
+            transition: opacity 0.2s;
+            text-align: left;
+        }
+
+        .loader-step.on {
+            color: var(--text);
+            opacity: 1;
+        }
+
+        .loader-step .ck {
+            width: 22px;
+            height: 22px;
+            flex: none;
+            border-radius: 50%;
+            border: 2px solid var(--line-strong);
+            display: grid;
+            place-items: center;
+            font-size: 11px;
+        }
+
+        .loader-step.done .ck {
+            background: var(--green);
+            border-color: var(--green);
+            color: #08110b;
+        }
+
+        .bar {
+            height: 4px;
+            border-radius: 999px;
+            background: var(--line);
+            overflow: hidden;
+            margin-top: 16px;
+        }
+
+        .bar i {
+            display: block;
+            height: 100%;
+            width: 0%;
+            background: var(--gold);
+            transition: width 0.4s ease;
+        }
+
+        .wa-note {
+            margin-top: 14px;
+            font-size: 13px;
+            color: #5b6472;
+        }
+
+        .confirm-strong {
+            color: var(--gold);
+            font-weight: 700;
         }
     </style>
 </head>
 
 <body>
-    <div class="hero">
-        <h1>JUEGOS TIKTOK LIVE</h1>
-        <p>Elige un juego. Tus regalos, likes y chat lo controlan todo.</p>
-        <div class="status-bar">
-            <span class="dot" id="live-dot"></span>
-            <span id="live-text">Conectando...</span>
-            <span class="timer-chip" id="timer-chip" style="display:none">00:00</span>
+    <div class="wrap">
+        <!-- NAV -->
+        <nav>
+            <a class="brand" href="#top">
+                <span class="brand-mark">T</span>
+                <span>TikTok LIVE Games</span>
+            </a>
+            <div class="nav-links">
+                <a href="#juegos">Juegos</a>
+                <a href="#como">Cómo funciona</a>
+                <a href="#descarga">Descargar</a>
+                <a href="#donar">Donar</a>
+                <a href="#configurar">Configuración</a>
+            </div>
+        </nav>
+
+        <!-- HERO -->
+        <header class="hero" id="top">
+            <span class="kicker">Gratis · Open Source · Hecho para streamers</span>
+            <h1>Juegos en vivo que convierten <em>espectadores en regalos</em>.</h1>
+            <p class="sub">Siete juegos interactivos que reaccionan a los regalos, los likes y el chat de tu directo.
+                Descargalos, configuralos en 5 minutos y transmití desde TikTok Studio.</p>
+            <div class="cta-row">
+                <a class="btn btn-primary" href="#descarga">Descargar gratis ↓</a>
+                <a class="btn btn-ghost" href="#juegos">Ver los juegos</a>
+            </div>
+            <div id="live-pill"><span class="dot"></span><span id="live-text">Verificando servidor…</span></div>
+        </header>
+
+        <!-- JUEGOS -->
+        <section id="juegos">
+            <div class="sec-head">
+                <div class="label">Los juegos</div>
+                <h2>Siete formas de encender el directo.</h2>
+                <p>Cada juego reacciona en vivo a lo que pasa en tu LIVE. Elegí uno, pegá la URL en tu transmisión y
+                    dejá que la audiencia juegue con regalos, likes y palabras del chat.</p>
+            </div>
+            <div class="grid">
+                <a class="card" data-demo="/titan">
+                    <span class="num">01</span>
+                    <span class="icon">⚔️</span>
+                    <h3>Guerra de Titanes</h3>
+                    <p>Gift battle por equipos: el chat elige ROJO o AZUL y empuja la cuerda con regalos. El formato
+                        batalla que más regalos genera.</p>
+                    <span class="tag hot">Gift battle</span>
+                </a>
+                <a class="card" data-demo="/arenagame">
+                    <span class="num">02</span>
+                    <span class="icon">🥊</span>
+                    <h3>Tap Tap Arena</h3>
+                    <p>Combate PvP: avatares con HP, sierras, KO y muerte súbita. Los regalos atacan, los likes curan.
+                    </p>
+                    <span class="tag hot">Batalla PvP</span>
+                </a>
+                <a class="card" data-demo="/arena">
+                    <span class="num">03</span>
+                    <span class="icon">🌀</span>
+                    <h3>Plinko de Avatares</h3>
+                    <p>Tu avatar cae por la pirámide hasta el multiplicador x10. Regalos grandes = más bolas y
+                        potenciadores.</p>
+                    <span class="tag">Física</span>
+                </a>
+                <a class="card" data-demo="/overlay">
+                    <span class="num">04</span>
+                    <span class="icon">🌍</span>
+                    <h3>Batalla de Países</h3>
+                    <p>Ranking por países y equipos con banderas. Tus regalos empujan a tu país a la cima.</p>
+                    <span class="tag">Equipos</span>
+                </a>
+                <a class="card" data-demo="/versus">
+                    <span class="num">05</span>
+                    <span class="icon">🗳️</span>
+                    <h3>Versus Político</h3>
+                    <p>El chat vota con keywords y los regalos definen al ganador en cada ronda.</p>
+                    <span class="tag">Votación</span>
+                </a>
+                <a class="card" data-demo="/bomba">
+                    <span class="num">06</span>
+                    <span class="icon">💣</span>
+                    <h3>La Bomba</h3>
+                    <p>Patata caliente en vivo: quien tenga la bomba cuando explote pierde puntos. Pasala con regalos,
+                        taps o escribiendo PASA.</p>
+                    <span class="tag hot">Patata caliente</span>
+                </a>
+                <a class="card" data-demo="/carrera">
+                    <span class="num">07</span>
+                    <span class="icon">🏁</span>
+                    <h3>Carrera de Avatares</h3>
+                    <p>Tu avatar corre contra el chat: los regalos lo impulsan, los likes le dan turbo y el primero en
+                        meta gana.</p>
+                    <span class="tag">Speed</span>
+                </a>
+            </div>
+        </section>
+
+        <!-- COMO FUNCIONA -->
+        <section id="como">
+            <div class="sec-head">
+                <div class="label">Así de simple</div>
+                <h2>De cero a directo en tres pasos.</h2>
+            </div>
+            <div class="steps">
+                <div class="step">
+                    <div class="n">1</div>
+                    <h3>Descargá el programa</h3>
+                    <p>Cloná el repositorio o descargá el ZIP. Es código abierto y gratuito para siempre.</p>
+                </div>
+                <div class="step">
+                    <div class="n">2</div>
+                    <h3>Escribí tu usuario</h3>
+                    <p>Un solo dato: tu @ de TikTok. El servidor escucha los regalos, likes y chat de tu directo.</p>
+                </div>
+                <div class="step">
+                    <div class="n">3</div>
+                    <h3>Transmití</h3>
+                    <p>Pegá el juego como Browser Source en TikTok LIVE Studio u OBS, o compartí la pantalla. Listo:
+                        tu directo es un juego.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- DESCARGA -->
+        <section id="descarga">
+            <div class="sec-head">
+                <div class="label">Descarga</div>
+                <h2>Gratis. Sin letra chica. Para siempre.</h2>
+                <p>Todo el código es tuyo: instalalo en tu propia computadora, cambialo, mejoralo. Solo te pedimos que
+                    no lo borres de tu memoria cuando te llueva de regalos.</p>
+            </div>
+            <div class="panel">
+                <div class="panel-box">
+                    <h3>Descargar el código fuente</h3>
+                    <p>Incluye los siete juegos, el servidor, la documentación y una guía paso a paso para Windows,
+                        Mac y Linux. Sin registro, sin costo, sin correos raros.</p>
+                    <div class="actions">
+                        <a class="btn btn-primary" id="btn-zip"
+                            href="https://github.com/mylnzon58/tiktok-live-games/archive/refs/heads/main.zip">Descargar
+                            ZIP</a>
+                        <a class="btn btn-ghost" href="https://github.com/mylnzon58/tiktok-live-games"
+                            target="_blank" rel="noopener">Ver en GitHub</a>
+                    </div>
+                    <div class="repo-link">¿Tenés experiencia? <a
+                            href="https://github.com/mylnzon58/tiktok-live-games" target="_blank"
+                            rel="noopener">github.com/mylnzon58/tiktok-live-games</a></div>
+                </div>
+                <div class="panel-box">
+                    <h3>¿Tu primera vez?</h3>
+                    <p>La guía te lleva de la mano: instalar Node, configurar tu usuario y levantar el servidor en
+                        menos de 10 minutos, en cualquier sistema operativo.</p>
+                    <div class="actions">
+                        <a class="btn btn-ghost" href="https://github.com/mylnzon58/tiktok-live-games/blob/main/README.md"
+                            target="_blank" rel="noopener">Leer la guía paso a paso</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CONFIGURACION PAGA -->
+        <section id="configurar">
+            <div class="sec-head">
+                <div class="label">¿Sin tiempo?</div>
+                <h2>Configuramos todo por vos.</h2>
+            </div>
+            <div class="panel">
+                <div class="panel-box setup">
+                    <div class="price">US$29 <small>única vez</small></div>
+                    <h3>Servicio de configuración completa</h3>
+                    <p>Levantamos el servidor, conectamos tu cuenta de TikTok y dejamos los juegos transmitiendo en tu
+                        directo. Ideal si no querés tocar una línea de código.</p>
+                    <p>Cuesta menos que los regalos que te dan en un solo directo. Atención 100% personalizada.</p>
+                    <div class="actions">
+                        <button class="btn btn-primary" id="btn-setup">Quiero que me lo configuren</button>
+                    </div>
+                </div>
+                <div class="panel-box">
+                    <h3>Qué incluye</h3>
+                    <p style="margin-top:6px; font-size:14.5px; line-height:1.9;">
+                        ✓ Instalación completa del servidor y los siete juegos<br />
+                        ✓ Conexión con tu cuenta de TikTok<br />
+                        ✓ Prueba en vivo con tu directo<br />
+                        ✓ Guía de transmisión en TikTok Studio<br />
+                        ✓ Soporte por WhatsApp hasta dejarlo andando
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- DONACIONES -->
+        <section id="donar">
+            <div class="panel donate">
+                <div class="panel-box" style="background:none; border:none; padding:0;">
+                    <div class="label" style="color:var(--gold); font-size:12px; font-weight:700; letter-spacing:2.5px; text-transform:uppercase;">Una historia honesta</div>
+                    <p class="quote">Estos juegos nacieron de noches enteras, cientos de horas y un streamer que quería
+                        su directo <em>imposible de ignorar</em>.</p>
+                    <p class="story">Los usé en mis propios directos antes de regalarlos. Vi cómo la gente volvía por
+                        la Bomba, gritaba por la Carrera y se quedaba hasta el final por la Guerra de Titanes. Cada
+                        regalo que entra en tu live con estos juegos, yo lo vi entrar por primera vez en el mío — y esa
+                        emoción no tiene precio.</p>
+                    <p class="story">Por eso son y serán gratis: porque el mejor marketing es ver cómo tu directo se
+                        enciende. Si un juego te dio una noche memorable o te llenó el bolsillo de regalos, devolvé el
+                        gesto con un cafecito. Si no, usalos feliz — ya ganamos nosotros con verte jugar.</p>
+                    <div class="alias-box">
+                        <span>Alias: <b>juanmonzon</b></span>
+                        <button id="btn-copy-alias">Copiar alias</button>
+                    </div>
+                    <div class="actions" style="margin-top:14px;">
+                        <a class="btn btn-ghost" href="https://www.buymeacoffee.com/digitaldevel" target="_blank"
+                            rel="noopener">Invitar un cafecito ☕</a>
+                    </div>
+                    <p class="donate-foot">Argentina: alias Brubank <b>juanmonzon</b> · Internacional: Buy Me a Coffee.
+                        La donación es opcional y de corazón — sin compromiso, sin presión.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- FOOTER -->
+        <footer>
+            <span>Creado con mucho café por <a href="https://www.tiktok.com/@juanjoclassic" target="_blank"
+                    rel="noopener">@juanjoclassic</a> · Licencia MIT</span>
+            <span><a href="https://github.com/mylnzon58/tiktok-live-games" target="_blank" rel="noopener">Repositorio</a>
+                · <a href="#top">Volver arriba ↑</a></span>
+        </footer>
+    </div>
+
+    <!-- MODAL -->
+    <div class="overlay" id="overlay">
+        <div class="modal" id="modal-loader">
+            <h3>Preparando todo</h3>
+            <div class="loader-step" data-step="0"><span class="ck"></span><span>Verificando tu configuración…</span>
+            </div>
+            <div class="loader-step" data-step="1"><span class="ck"></span><span>Preparando el entorno…</span></div>
+            <div class="loader-step" data-step="2"><span class="ck"></span><span>Asignando especialista…</span></div>
+            <div class="loader-step" data-step="3"><span class="ck"></span><span>¡Casi listo!</span></div>
+            <div class="bar"><i id="bar"></i></div>
+        </div>
+
+        <div class="modal" id="modal-confirm-1" style="display:none;">
+            <h3>Servicio de configuración — US$29</h3>
+            <p class="muted">Levantamos el servidor, conectamos tu TikTok y dejamos los juegos transmitiendo en tu
+                directo. Atención personalizada hasta que quede funcionando.</p>
+            <div class="actions">
+                <button class="btn btn-primary" id="btn-confirm-1">Sí, quiero configurarlo</button>
+                <button class="btn btn-ghost" id="btn-cancel-1">Ahora no</button>
+            </div>
+        </div>
+
+        <div class="modal" id="modal-confirm-2" style="display:none;">
+            <h3>Última confirmación</h3>
+            <p class="muted">Un especialista te escribirá por <span class="confirm-strong">WhatsApp</span> para
+                coordinar el pago (transferencia o USDT) y dejar todo transmitiendo. ¿Procedemos?</p>
+            <div class="actions">
+                <button class="btn btn-primary" id="btn-confirm-2">Sí, dame el contacto</button>
+                <button class="btn btn-ghost" id="btn-cancel-2">Cancelar</button>
+            </div>
+        </div>
+
+        <div class="modal" id="modal-wa" style="display:none;">
+            <h3>¡Listo!</h3>
+            <p class="muted">Escribile al especialista para coordinar el pago y la activación. Respondemos en menos de
+                24 horas.</p>
+            <div class="actions">
+                <a class="btn btn-wa" id="btn-wa" href="#" target="_blank" rel="noopener">Abrir WhatsApp</a>
+                <button class="btn btn-ghost" id="btn-cancel-3">Cerrar</button>
+            </div>
+            <p class="wa-note">Pago por transferencia bancaria (Argentina) o USDT. Código y juegos siempre tuyos.</p>
         </div>
     </div>
 
-    <div class="grid">
-        <a class="card" href="/titan">
-            <div class="glow" style="background: radial-gradient(circle at 50% 30%, rgba(251,191,36,0.6), transparent 65%);"></div>
-            <span class="icon">⚔️🔥</span>
-            <h2>GUERRA DE TITANES</h2>
-            <p>Gift battle por equipos: elige ROJO o AZUL, empuja la cuerda con regalos y libera caos con fuego. El formato batalla que más regalos genera.</p>
-            <span class="tag hot">🔥 GIFT BATTLE</span>
-        </a>
-
-        <a class="card" href="/arenagame">
-            <div class="glow" style="background: radial-gradient(circle at 30% 20%, rgba(255,107,107,0.5), transparent 60%);"></div>
-            <span class="icon">⚔️</span>
-            <h2>TAP TAP ARENA</h2>
-            <p>Combate PvP: avatares con HP, sierras, KO, muerte súbita y zona rey. Los regalos atacan, los likes curan. El formato batalla que más regalos genera.</p>
-            <span class="tag hot">🔥 BATALLA PVP</span>
-        </a>
-
-        <a class="card" href="/arena">
-            <div class="glow" style="background: radial-gradient(circle at 70% 20%, rgba(125,211,252,0.5), transparent 60%);"></div>
-            <span class="icon">🎰</span>
-            <h2>PLINKO DE AVATARES</h2>
-            <p>Tu avatar cae como una bola por la pirámide hasta el multiplicador x10. Regalos grandes = más bolas, bombas y potenciadores.</p>
-            <span class="tag new">🆕 FÍSICA</span>
-        </a>
-
-        <a class="card" href="/overlay">
-            <div class="glow" style="background: radial-gradient(circle at 30% 70%, rgba(52,211,153,0.5), transparent 60%);"></div>
-            <span class="icon">🌍</span>
-            <h2>BATALLA DE PAÍSES</h2>
-            <p>Ranking por países y equipos con banderas. Tus regalos empujan a tu país a la cima.</p>
-            <span class="tag gift">🎁 EQUIPOS</span>
-        </a>
-
-        <a class="card" href="/versus">
-            <div class="glow" style="background: radial-gradient(circle at 70% 70%, rgba(251,191,36,0.5), transparent 60%);"></div>
-            <span class="icon">🗳️</span>
-            <h2>VERSUS POLÍTICO</h2>
-            <p>Milei vs Cristina: el chat vota con keywords y los regalos definen al ganador en cada ronda.</p>
-            <span class="tag gift">🎁 VOTACIÓN</span>
-        </a>
-
-        <a class="card" href="/bomba">
-            <div class="glow" style="background: radial-gradient(circle at 50% 50%, rgba(255,107,107,0.6), transparent 65%);"></div>
-            <span class="icon">💣</span>
-            <h2>LA BOMBA</h2>
-            <p>Patata caliente en vivo: quien tenga la bomba cuando explote pierde 300 puntos. Pásala con regalos, taps o escribiendo PASA. Adicción pura.</p>
-            <span class="tag hot">🔥 PATATA CALIENTE</span>
-        </a>
-
-        <a class="card" href="/carrera">
-            <div class="glow" style="background: radial-gradient(circle at 30% 30%, rgba(126,224,129,0.55), transparent 60%);"></div>
-            <span class="icon">🏁</span>
-            <h2>CARRERA DE AVATARES</h2>
-            <p>Tu avatar corre contra el chat: los regalos lo impulsan, los likes le dan mini-turbo y el primero en meta gana. Velocidad pura.</p>
-            <span class="tag new">🆕 SPEED</span>
-        </a>
-    </div>
-
-    <div class="footer-note">
-        <b>Cómo jugar:</b> envíale regalos a tu LIVE desde TikTok y mira cómo reaccionan los juegos al instante.
-        Los likes (tap tap) también puntúan, y palabras en el chat como <b>PODER</b>, <b>YO</b> o
-        <b>ATAQUE @usuario</b> activan poderes dentro del arena.
-    </div>
-
-    <script src="/socket.io/socket.io.js"></script>
     <script>
-        const dot = document.getElementById("live-dot");
-        const liveText = document.getElementById("live-text");
-        const timerChip = document.getElementById("timer-chip");
+        // ---------- Estado LIVE (opcional: solo si hay servidor) ----------
+        var livePill = document.getElementById("live-pill");
+        var liveText = document.getElementById("live-text");
 
-        function formatTime(s) {
-            s = Math.max(0, Number(s) || 0);
-            const m = String(Math.floor(s / 60)).padStart(2, "0");
-            const sec = String(s % 60).padStart(2, "0");
-            return m + ":" + sec;
+        function probeServer(cb) {
+            try {
+                fetch("/socket.io/?EIO=4&transport=polling", { method: "GET", timeout: 4000, cache: "no-store" })
+                    .then(function (r) { cb(r.ok); })
+                    .catch(function () { cb(false); });
+            } catch (e) { cb(false); }
         }
 
-        const socket = io();
-        socket.on("connect", () => {
-            dot.className = "dot connecting";
-            liveText.textContent = "Servidor conectado";
+        probeServer(function (hasServer) {
+            var cards = document.querySelectorAll(".card[data-demo]");
+            cards.forEach(function (card) {
+                if (hasServer) {
+                    card.setAttribute("href", card.getAttribute("data-demo"));
+                    card.setAttribute("target", "_blank");
+                } else {
+                    card.setAttribute("href", "#descarga");
+                }
+            });
+            if (!hasServer) return;
+
+            var s = document.createElement("script");
+            s.src = "/socket.io/socket.io.js";
+            s.onload = function () {
+                var socket = io();
+                livePill.style.display = "inline-flex";
+                liveText.textContent = "Servidor local detectado — conectando…";
+                socket.on("connect", function () {
+                    liveText.textContent = "Servidor local conectado";
+                });
+                socket.on("status", function (status) {
+                    var dot = livePill.querySelector(".dot");
+                    if (status && status.connected) {
+                        dot.className = "dot online";
+                        liveText.textContent = "LIVE: @" + (status.username || "conectado");
+                    } else {
+                        dot.className = "dot waiting";
+                        liveText.textContent = status && status.error ? "Esperando LIVE…" : "Conectado, esperando directo…";
+                    }
+                });
+            };
+            document.head.appendChild(s);
         });
 
-        socket.on("status", (status) => {
-            if (status?.connected) {
-                dot.className = "dot online";
-                liveText.textContent = "LIVE: @" + (status.username || "desconocido");
+        // ---------- Alias donación ----------
+        document.getElementById("btn-copy-alias").addEventListener("click", function () {
+            var btn = this;
+            function done() {
+                btn.textContent = "¡Copiado!";
+                setTimeout(function () { btn.textContent = "Copiar alias"; }, 2000);
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText("juanmonzon").then(done).catch(done);
             } else {
-                dot.className = "dot connecting";
-                liveText.textContent = status?.error || status?.message || "Esperando el LIVE...";
+                var ta = document.createElement("textarea");
+                ta.value = "juanmonzon";
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand("copy"); } catch (e) {}
+                document.body.removeChild(ta);
+                done();
             }
         });
 
-        socket.on("timerUpdate", (seconds) => {
-            timerChip.style.display = "inline-block";
-            timerChip.textContent = "⏱ " + formatTime(seconds);
+        // ---------- Flujo de configuración US$29 ----------
+        // Número protegido: nunca aparece en el HTML ni como secuencia legible.
+        // Se guarda ofuscado (dígitos desplazados y en orden inverso, partido en
+        // fragmentos) y se decodifica en memoria recién tras la doble confirmación.
+        var WA_DIGITS = ["58", "425", "122", "1061", "2"]; // ofuscado: 5842512210612
+        function decodeWaNumber() {
+            var enc = WA_DIGITS.join("");
+            var out = "";
+            for (var i = enc.length - 1; i >= 0; i--) {
+                out += (parseInt(enc.charAt(i), 10) + 3) % 10;
+            }
+            return out;
+        }
+
+        var overlay = document.getElementById("overlay");
+        var loader = document.getElementById("modal-loader");
+        var confirm1 = document.getElementById("modal-confirm-1");
+        var confirm2 = document.getElementById("modal-confirm-2");
+        var modalWa = document.getElementById("modal-wa");
+        var bar = document.getElementById("bar");
+
+        function showModal(m) {
+            [loader, confirm1, confirm2, modalWa].forEach(function (el) { el.style.display = "none"; });
+            m.style.display = "block";
+            overlay.classList.add("show");
+        }
+
+        function closeModal() {
+            overlay.classList.remove("show");
+        }
+
+        function runLoader(done) {
+            showModal(loader);
+            var steps = document.querySelectorAll(".loader-step");
+            var i = 0;
+            bar.style.width = "0%";
+            steps.forEach(function (s) { s.className = "loader-step"; });
+            steps[0].classList.add("on");
+            var t = setInterval(function () {
+                i++;
+                if (i < steps.length) {
+                    steps[i - 1].classList.remove("on");
+                    steps[i - 1].classList.add("done");
+                    steps[i].classList.add("on");
+                    bar.style.width = Math.round((i / steps.length) * 100) + "%";
+                } else {
+                    clearInterval(t);
+                    steps[steps.length - 1].classList.remove("on");
+                    steps[steps.length - 1].classList.add("done");
+                    bar.style.width = "100%";
+                    setTimeout(done, 350);
+                }
+            }, 950);
+        }
+
+        document.getElementById("btn-setup").addEventListener("click", function () {
+            runLoader(function () { showModal(confirm1); });
+        });
+
+        document.getElementById("btn-cancel-1").addEventListener("click", closeModal);
+        document.getElementById("btn-cancel-2").addEventListener("click", closeModal);
+        document.getElementById("btn-cancel-3").addEventListener("click", closeModal);
+
+        document.getElementById("btn-confirm-1").addEventListener("click", function () {
+            showModal(confirm2);
+        });
+
+        document.getElementById("btn-confirm-2").addEventListener("click", function () {
+            var number = decodeWaNumber();
+            var msg = "Hola! Quiero el servicio de configuración del juego por US$29";
+            var wa = document.getElementById("btn-wa");
+            wa.setAttribute("href", "https://wa.me/" + number + "?text=" + encodeURIComponent(msg));
+            showModal(modalWa);
+        });
+
+        // Cerrar modal con Escape o clic fuera
+        document.addEventListener("keydown", function (e) {
+            if (e.key === "Escape") closeModal();
+        });
+        overlay.addEventListener("click", function (e) {
+            if (e.target === overlay) closeModal();
         });
     </script>
 </body>
