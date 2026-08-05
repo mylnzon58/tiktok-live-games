@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="light">
 
 <head>
     <meta charset="UTF-8" />
@@ -20,6 +20,25 @@
         }
 
         :root {
+            --bg: #f6f3ec;
+            --bg-soft: #ffffff;
+            --card: #ffffff;
+            --line: rgba(28, 26, 23, 0.09);
+            --line-strong: rgba(28, 26, 23, 0.18);
+            --text: #1e1c18;
+            --muted: #5f5a50;
+            --dim: #8a8375;
+            --gold: #9a7428;
+            --gold-bright: #b3883a;
+            --gold-soft: rgba(154, 116, 40, 0.1);
+            --green: #22863a;
+            --radius: 12px;
+            --font-display: "Instrument Serif", Georgia, serif;
+            --font-body: "Archivo", system-ui, sans-serif;
+            --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+        }
+
+        [data-theme="dark"] {
             --bg: #0c0e12;
             --bg-soft: #12151b;
             --card: #141820;
@@ -32,10 +51,6 @@
             --gold-bright: #e3bf6a;
             --gold-soft: rgba(201, 163, 76, 0.12);
             --green: #4ade80;
-            --radius: 12px;
-            --font-display: "Instrument Serif", Georgia, serif;
-            --font-body: "Archivo", system-ui, sans-serif;
-            --font-mono: "IBM Plex Mono", ui-monospace, monospace;
         }
 
         html {
@@ -44,15 +59,16 @@
 
         body {
             background:
-                radial-gradient(1100px 480px at 85% -12%, rgba(201, 163, 76, 0.06), transparent 60%),
-                radial-gradient(800px 420px at -8% 22%, rgba(90, 110, 160, 0.05), transparent 60%),
+                radial-gradient(1100px 480px at 85% -12%, rgba(154, 116, 40, 0.07), transparent 60%),
+                radial-gradient(800px 420px at -8% 22%, rgba(90, 110, 160, 0.04), transparent 60%),
                 var(--bg);
             color: var(--text);
             font-family: var(--font-body);
             font-size: 16px;
-            line-height: 1.55;
+            line-height: 1.5;
             min-height: 100vh;
             -webkit-font-smoothing: antialiased;
+            transition: background 0.25s ease, color 0.25s ease;
         }
 
         .wrap {
@@ -66,10 +82,6 @@
             font-size: 11px;
             letter-spacing: 0.14em;
             text-transform: uppercase;
-        }
-
-        .serif {
-            font-family: var(--font-display);
         }
 
         /* ---------- NAV ---------- */
@@ -94,8 +106,8 @@
             width: 34px;
             height: 34px;
             border-radius: 9px;
-            border: 1px solid rgba(201, 163, 76, 0.55);
-            background: linear-gradient(135deg, rgba(201, 163, 76, 0.22), rgba(201, 163, 76, 0.05));
+            border: 1px solid rgba(154, 116, 40, 0.55);
+            background: var(--gold-soft);
             display: grid;
             place-items: center;
             font-family: var(--font-display);
@@ -107,7 +119,6 @@
         .brand-name {
             font-weight: 600;
             font-size: 15.5px;
-            letter-spacing: 0.01em;
         }
 
         .brand-name small {
@@ -139,22 +150,56 @@
             color: var(--text);
         }
 
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .theme-btn {
+            width: 34px;
+            height: 34px;
+            display: grid;
+            place-items: center;
+            border-radius: 8px;
+            border: 1px solid var(--line-strong);
+            background: transparent;
+            color: var(--muted);
+            cursor: pointer;
+            transition: color 0.15s ease, border-color 0.15s ease;
+        }
+
+        .theme-btn:hover {
+            color: var(--gold);
+            border-color: var(--gold);
+        }
+
+        .theme-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
         .nav-cta {
             font-family: var(--font-mono);
             font-size: 11px;
             letter-spacing: 0.12em;
             text-transform: uppercase;
-            color: #14100a;
-            background: var(--gold);
+            color: #f6f3ec;
+            background: #1e1c18;
             padding: 10px 16px;
             border-radius: 8px;
             text-decoration: none;
             font-weight: 500;
-            transition: background 0.15s;
+            transition: opacity 0.15s;
+        }
+
+        [data-theme="dark"] .nav-cta {
+            color: #14100a;
+            background: var(--gold);
         }
 
         .nav-cta:hover {
-            background: var(--gold-bright);
+            opacity: 0.85;
         }
 
         @media (max-width: 760px) {
@@ -165,7 +210,7 @@
 
         /* ---------- HERO ---------- */
         .hero {
-            padding: 92px 0 56px;
+            padding: 88px 0 48px;
             max-width: 880px;
         }
 
@@ -174,14 +219,15 @@
             align-items: center;
             gap: 14px;
             color: var(--gold);
-            margin-bottom: 26px;
+            margin-bottom: 24px;
         }
 
         .hero .meta::after {
             content: "";
             flex: 1;
             height: 1px;
-            background: linear-gradient(90deg, rgba(201, 163, 76, 0.4), transparent);
+            background: linear-gradient(90deg, var(--gold), transparent);
+            opacity: 0.5;
         }
 
         .hero h1 {
@@ -198,18 +244,17 @@
         }
 
         .hero .sub {
-            margin-top: 26px;
-            max-width: 590px;
+            margin-top: 24px;
+            max-width: 560px;
             color: var(--muted);
-            font-size: 17.5px;
-            line-height: 1.6;
+            font-size: 17px;
         }
 
         .cta-row {
             display: flex;
             gap: 12px;
             flex-wrap: wrap;
-            margin-top: 34px;
+            margin-top: 30px;
         }
 
         .btn {
@@ -232,12 +277,17 @@
         }
 
         .btn-primary {
+            background: #1e1c18;
+            color: #f6f3ec;
+        }
+
+        [data-theme="dark"] .btn-primary {
             background: var(--gold);
             color: #14100a;
         }
 
         .btn-primary:hover {
-            box-shadow: 0 10px 30px rgba(201, 163, 76, 0.3);
+            box-shadow: 0 10px 30px rgba(28, 26, 23, 0.18);
         }
 
         .btn-ghost {
@@ -248,7 +298,7 @@
 
         .btn-ghost:hover {
             border-color: var(--gold);
-            color: var(--gold-bright);
+            color: var(--gold);
         }
 
         .btn-wa {
@@ -268,7 +318,7 @@
 
         /* ---------- LIVE PILL ---------- */
         #live-pill {
-            margin-top: 36px;
+            margin-top: 32px;
             display: none;
             align-items: center;
             gap: 10px;
@@ -277,7 +327,7 @@
             letter-spacing: 0.06em;
             color: var(--muted);
             border: 1px solid var(--line);
-            background: rgba(255, 255, 255, 0.02);
+            background: var(--bg-soft);
             padding: 9px 16px;
             border-radius: 999px;
             width: fit-content;
@@ -302,15 +352,15 @@
 
         /* ---------- SECTIONS ---------- */
         section {
-            padding: 84px 0 10px;
+            padding: 76px 0 8px;
         }
 
         .sec-head {
             display: flex;
             align-items: baseline;
             gap: 18px;
-            padding-bottom: 20px;
-            margin-bottom: 34px;
+            padding-bottom: 18px;
+            margin-bottom: 30px;
             border-bottom: 1px solid var(--line);
         }
 
@@ -326,16 +376,15 @@
         .sec-head h2 {
             font-family: var(--font-display);
             font-weight: 400;
-            font-size: clamp(30px, 3.6vw, 44px);
+            font-size: clamp(30px, 3.6vw, 42px);
             line-height: 1.05;
-            letter-spacing: -0.005em;
         }
 
         .sec-head p {
             color: var(--muted);
-            margin-top: 14px;
-            max-width: 660px;
-            font-size: 15.5px;
+            margin-top: 12px;
+            max-width: 640px;
+            font-size: 15px;
         }
 
         /* ---------- GAMES GRID ---------- */
@@ -348,16 +397,21 @@
         .card {
             border: 1px solid var(--line);
             border-radius: var(--radius);
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0.01));
+            background: var(--card);
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            transition: border-color 0.18s ease, transform 0.18s ease;
+            transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
         }
 
         .card:hover {
-            border-color: rgba(201, 163, 76, 0.45);
+            border-color: rgba(154, 116, 40, 0.45);
             transform: translateY(-3px);
+            box-shadow: 0 14px 34px rgba(28, 26, 23, 0.08);
+        }
+
+        [data-theme="dark"] .card:hover {
+            box-shadow: 0 14px 34px rgba(0, 0, 0, 0.4);
         }
 
         .card-main {
@@ -379,7 +433,7 @@
             width: 100%;
             aspect-ratio: 16 / 10;
             object-fit: cover;
-            opacity: 0.92;
+            opacity: 0.94;
             transition: opacity 0.25s ease, transform 0.35s ease;
         }
 
@@ -392,7 +446,7 @@
             content: "";
             position: absolute;
             inset: 0;
-            background: linear-gradient(180deg, transparent 55%, rgba(12, 14, 18, 0.55));
+            background: linear-gradient(180deg, transparent 55%, rgba(12, 14, 18, 0.5));
         }
 
         .shot-num {
@@ -420,7 +474,7 @@
             font-size: 10.5px;
             letter-spacing: 0.14em;
             text-transform: uppercase;
-            color: var(--gold-bright);
+            color: #e3bf6a;
             background: rgba(12, 14, 18, 0.78);
             border: 1px solid rgba(201, 163, 76, 0.4);
             padding: 6px 11px;
@@ -438,7 +492,7 @@
         .card-body {
             display: flex;
             flex-direction: column;
-            gap: 9px;
+            gap: 8px;
             padding: 20px 20px 18px;
         }
 
@@ -461,12 +515,10 @@
         }
 
         .card-body p {
-            font-size: 14.5px;
+            font-size: 14px;
             color: var(--muted);
-            line-height: 1.55;
         }
 
-        /* card ancha (la 07) */
         .card--wide {
             grid-column: 1 / -1;
         }
@@ -526,20 +578,20 @@
 
         .share-btn:hover {
             color: var(--gold-bright);
-            border-color: rgba(201, 163, 76, 0.45);
+            border-color: rgba(154, 116, 40, 0.45);
             background: var(--gold-soft);
         }
 
         .share-btn[data-net="wa"]:hover {
-            color: #2ad167;
-            border-color: rgba(42, 209, 103, 0.45);
-            background: rgba(42, 209, 103, 0.08);
+            color: #1faa56;
+            border-color: rgba(31, 170, 86, 0.45);
+            background: rgba(31, 170, 86, 0.08);
         }
 
         .share-btn[data-net="x"]:hover {
-            color: #fff;
-            border-color: rgba(255, 255, 255, 0.4);
-            background: rgba(255, 255, 255, 0.06);
+            color: var(--text);
+            border-color: var(--line-strong);
+            background: rgba(28, 26, 23, 0.05);
         }
 
         .share-btn[data-net="tg"]:hover {
@@ -565,24 +617,23 @@
             padding: 26px 24px;
             border-radius: var(--radius);
             border: 1px solid var(--line);
-            background: rgba(255, 255, 255, 0.018);
-            position: relative;
+            background: var(--card);
         }
 
         .step .n {
             font-family: var(--font-display);
             font-style: italic;
-            font-size: 40px;
+            font-size: 38px;
             color: var(--gold);
             line-height: 1;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
         }
 
         .step h3 {
             font-family: var(--font-display);
             font-weight: 400;
             font-size: 21px;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .step p {
@@ -604,25 +655,25 @@
         }
 
         .panel-box {
-            padding: 32px 30px;
+            padding: 30px 28px;
             border-radius: var(--radius);
             border: 1px solid var(--line);
-            background: linear-gradient(180deg, rgba(201, 163, 76, 0.05), rgba(255, 255, 255, 0.012));
+            background: var(--card);
             display: flex;
             flex-direction: column;
-            gap: 14px;
+            gap: 12px;
         }
 
         .panel-box h3 {
             font-family: var(--font-display);
             font-weight: 400;
-            font-size: 27px;
+            font-size: 26px;
             line-height: 1.15;
         }
 
         .panel-box p {
             color: var(--muted);
-            font-size: 15px;
+            font-size: 14.5px;
             flex: 1;
         }
 
@@ -638,22 +689,19 @@
         }
 
         .repo-link a {
-            color: var(--gold-bright);
+            color: var(--gold);
             text-decoration: none;
-            border-bottom: 1px solid rgba(201, 163, 76, 0.4);
+            border-bottom: 1px solid rgba(154, 116, 40, 0.4);
         }
 
         /* ---------- SETUP $29 ---------- */
         .setup {
-            border: 1px solid rgba(201, 163, 76, 0.4);
-            background:
-                radial-gradient(600px 240px at 90% 0%, rgba(201, 163, 76, 0.1), transparent 60%),
-                rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(154, 116, 40, 0.4);
         }
 
         .setup .price {
             font-family: var(--font-display);
-            font-size: 44px;
+            font-size: 42px;
             color: var(--gold-bright);
             line-height: 1;
         }
@@ -669,9 +717,7 @@
 
         /* ---------- DONATE ---------- */
         .donate {
-            background:
-                radial-gradient(600px 240px at 0% 100%, rgba(201, 163, 76, 0.07), transparent 60%),
-                linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+            background: var(--card);
         }
 
         .donate .label {
@@ -680,7 +726,7 @@
             letter-spacing: 0.16em;
             text-transform: uppercase;
             color: var(--gold);
-            margin-bottom: 18px;
+            margin-bottom: 16px;
         }
 
         .donate .quote {
@@ -688,8 +734,7 @@
             font-size: clamp(24px, 3.2vw, 34px);
             font-weight: 400;
             line-height: 1.25;
-            letter-spacing: -0.005em;
-            max-width: 780px;
+            max-width: 760px;
         }
 
         .donate .quote em {
@@ -699,24 +744,24 @@
 
         .donate p.story {
             color: var(--muted);
-            max-width: 700px;
-            margin-top: 18px;
-            font-size: 15.5px;
+            max-width: 680px;
+            margin-top: 16px;
+            font-size: 15px;
         }
 
         .alias-box {
             display: inline-flex;
             align-items: center;
             gap: 12px;
-            margin-top: 22px;
-            padding: 13px 18px;
+            margin-top: 20px;
+            padding: 12px 18px;
             border-radius: 10px;
-            border: 1px dashed rgba(201, 163, 76, 0.45);
+            border: 1px dashed rgba(154, 116, 40, 0.45);
             background: var(--gold-soft);
             font-family: var(--font-mono);
             font-size: 14px;
             letter-spacing: 0.04em;
-            color: var(--gold-bright);
+            color: var(--gold);
         }
 
         .alias-box button {
@@ -724,9 +769,9 @@
             font-size: 10.5px;
             letter-spacing: 0.12em;
             text-transform: uppercase;
-            background: rgba(201, 163, 76, 0.15);
-            border: 1px solid rgba(201, 163, 76, 0.4);
-            color: var(--gold-bright);
+            background: var(--gold-soft);
+            border: 1px solid rgba(154, 116, 40, 0.4);
+            color: var(--gold);
             padding: 7px 13px;
             border-radius: 7px;
             cursor: pointer;
@@ -734,19 +779,19 @@
         }
 
         .alias-box button:hover {
-            background: rgba(201, 163, 76, 0.3);
+            background: rgba(154, 116, 40, 0.2);
         }
 
         .donate-foot {
-            margin-top: 16px;
+            margin-top: 14px;
             font-size: 13px;
             color: var(--dim);
         }
 
         .setup-list {
             margin-top: 6px;
-            font-size: 14.5px;
-            line-height: 2.1;
+            font-size: 14px;
+            line-height: 2.05;
         }
 
         .chk {
@@ -763,16 +808,33 @@
             height: 17px;
         }
 
+        /* ---------- DISCLAIMER ---------- */
+        .notice {
+            margin-top: 18px;
+            padding: 16px 20px;
+            border-radius: var(--radius);
+            border: 1px solid var(--line);
+            background: var(--card);
+            font-size: 13.5px;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        .notice b {
+            color: var(--text);
+            font-weight: 600;
+        }
+
         /* ---------- FOOTER ---------- */
         footer {
-            margin-top: 84px;
+            margin-top: 76px;
             border-top: 1px solid var(--line);
-            padding: 30px 0 48px;
+            padding: 28px 0 44px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 18px;
+            gap: 16px;
             font-size: 13.5px;
             color: var(--muted);
         }
@@ -784,7 +846,7 @@
         }
 
         footer a:hover {
-            color: var(--gold-bright);
+            color: var(--gold);
             border-color: var(--gold);
         }
 
@@ -810,7 +872,7 @@
         .overlay {
             position: fixed;
             inset: 0;
-            background: rgba(6, 8, 12, 0.82);
+            background: rgba(10, 12, 16, 0.6);
             backdrop-filter: blur(6px);
             display: none;
             align-items: center;
@@ -831,7 +893,7 @@
             border-radius: 16px;
             padding: 34px 30px;
             text-align: center;
-            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.25);
             animation: rise 0.25s ease;
         }
 
@@ -924,20 +986,12 @@
         }
 
         .confirm-strong {
-            color: var(--gold-bright);
+            color: var(--gold);
             font-weight: 700;
         }
 
-        /* ---------- REVEAL ---------- */
-        .reveal {
-            opacity: 0;
-            transform: translateY(18px);
-            transition: opacity 0.55s ease, transform 0.55s ease;
-        }
-
-        .reveal.in {
-            opacity: 1;
-            transform: none;
+        .theme-hide {
+            display: none;
         }
     </style>
 </head>
@@ -948,24 +1002,36 @@
         <nav>
             <a class="brand" href="#top">
                 <span class="brand-mark">T</span>
-                <span class="brand-name">TikTok LIVE Games<small>Open source · v1.0</small></span>
+                <span class="brand-name">TikTok LIVE Games<small>Open source</small></span>
             </a>
             <div class="nav-links">
                 <a href="#juegos">Juegos</a>
                 <a href="#como">Cómo funciona</a>
                 <a href="#descarga">Descargar</a>
-                <a href="#donar">Donar</a>
                 <a href="#configurar">Configuración</a>
+                <a href="#donar">Donar</a>
             </div>
-            <a class="nav-cta" href="#descarga">Descargar</a>
+            <div class="nav-right">
+                <button class="theme-btn" id="theme-toggle" aria-label="Cambiar tema">
+                    <svg id="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="4.2" />
+                        <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5 5l1.6 1.6M17.4 17.4 19 19M19 5l-1.6 1.6M6.6 17.4 5 19" />
+                    </svg>
+                    <svg id="ico-moon" class="theme-hide" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11Z" />
+                    </svg>
+                </button>
+                <a class="nav-cta" href="#descarga">Descargar</a>
+            </div>
         </nav>
 
         <!-- HERO -->
         <header class="hero" id="top">
             <div class="meta mono">Gratis · Open source · Hecho para streamers</div>
             <h1>Juegos en vivo que convierten <em>espectadores en regalos</em>.</h1>
-            <p class="sub">Siete juegos interactivos que reaccionan a los regalos, los likes y el chat de tu directo.
-                Descargalos, configuralos en 5 minutos y transmití desde TikTok Studio.</p>
+            <p class="sub">Siete juegos que reaccionan a los regalos, likes y chat de tu directo. Descargalos, configuralos en 5 minutos y transmití.</p>
             <div class="cta-row">
                 <a class="btn btn-primary" href="#descarga">Descargar gratis</a>
                 <a class="btn btn-ghost" href="#juegos">Ver los juegos</a>
@@ -976,12 +1042,8 @@
         <!-- JUEGOS -->
         <section id="juegos">
             <div class="sec-head">
-                <div class="label">Los juegos</div>
+                <div class="label">Juegos</div>
                 <h2>Siete formas de encender el directo.</h2>
-            </div>
-            <div class="sec-head p" style="border:none; padding:0; margin:-18px 0 34px;">
-                <p>Cada juego reacciona en vivo a lo que pasa en tu LIVE. Elegí uno, pegá la URL en tu transmisión y
-                    dejá que la audiencia juegue con regalos, likes y palabras del chat.</p>
             </div>
             <div class="grid">
 
@@ -996,8 +1058,7 @@
                             <span class="card-meta"><span class="mono tag-gold">Gift battle</span><span
                                     class="mono">/titan</span></span>
                             <h3>Guerra de Titanes</h3>
-                            <p>Gift battle por equipos: el chat elige ROJO o AZUL y empuja la cuerda con regalos. El
-                                formato batalla que más regalos genera.</p>
+                            <p>El chat elige ROJO o AZUL y empuja la cuerda con regalos.</p>
                         </span>
                     </a>
                     <div class="share-row">
@@ -1036,8 +1097,7 @@
                             <span class="card-meta"><span class="mono tag-gold">Batalla PvP</span><span
                                     class="mono">/arenagame</span></span>
                             <h3>Tap Tap Arena</h3>
-                            <p>Combate PvP: avatares con HP, sierras, KO y muerte súbita. Los regalos atacan, los
-                                likes curan.</p>
+                            <p>Combate PvP: los regalos atacan, los likes curan. KO y muerte súbita.</p>
                         </span>
                     </a>
                     <div class="share-row">
@@ -1076,8 +1136,7 @@
                             <span class="card-meta"><span class="mono tag-gold">Física</span><span
                                     class="mono">/arena</span></span>
                             <h3>Plinko de Avatares</h3>
-                            <p>Tu avatar cae por la pirámide hasta el multiplicador x10. Regalos grandes = más bolas y
-                                potenciadores.</p>
+                            <p>Tu avatar cae por la pirámide hasta el multiplicador x10.</p>
                         </span>
                     </a>
                     <div class="share-row">
@@ -1116,7 +1175,7 @@
                             <span class="card-meta"><span class="mono tag-gold">Equipos</span><span
                                     class="mono">/overlay</span></span>
                             <h3>Batalla de Países</h3>
-                            <p>Ranking por países y equipos con banderas. Tus regalos empujan a tu país a la cima.</p>
+                            <p>Ranking por países: tus regalos empujan a tu bandera a la cima.</p>
                         </span>
                     </a>
                     <div class="share-row">
@@ -1155,7 +1214,7 @@
                             <span class="card-meta"><span class="mono tag-gold">Votación</span><span
                                     class="mono">/versus</span></span>
                             <h3>Versus Político</h3>
-                            <p>El chat vota con keywords y los regalos definen al ganador en cada ronda.</p>
+                            <p>El chat vota, los regalos definen al ganador.</p>
                         </span>
                     </a>
                     <div class="share-row">
@@ -1194,8 +1253,7 @@
                             <span class="card-meta"><span class="mono tag-gold">Patata caliente</span><span
                                     class="mono">/bomba</span></span>
                             <h3>La Bomba</h3>
-                            <p>Patata caliente en vivo: quien tenga la bomba cuando explote pierde puntos. Pasala con
-                                regalos, taps o escribiendo PASA.</p>
+                            <p>Patata caliente: pasala con regalos o escribiendo PASA.</p>
                         </span>
                     </a>
                     <div class="share-row">
@@ -1235,8 +1293,7 @@
                             <span class="card-meta"><span class="mono tag-gold">Speed</span><span
                                     class="mono">/carrera</span></span>
                             <h3>Carrera de Avatares</h3>
-                            <p>Tu avatar corre contra el chat: los regalos lo impulsan, los likes le dan turbo y el
-                                primero en meta gana.</p>
+                            <p>Los regalos impulsan tu avatar; el primero en meta gana.</p>
                         </span>
                     </a>
                     <div class="share-row">
@@ -1276,19 +1333,18 @@
             <div class="steps">
                 <div class="step">
                     <div class="n">1</div>
-                    <h3>Descargá el programa</h3>
-                    <p>Cloná el repositorio o descargá el ZIP. Es código abierto y gratuito para siempre.</p>
+                    <h3>Descargá</h3>
+                    <p>El ZIP o el repo. Gratis y tuyo para siempre.</p>
                 </div>
                 <div class="step">
                     <div class="n">2</div>
-                    <h3>Escribí tu usuario</h3>
-                    <p>Un solo dato: tu @ de TikTok. El servidor escucha los regalos, likes y chat de tu directo.</p>
+                    <h3>Configurá</h3>
+                    <p>Tu @ de TikTok en el .env y npm start.</p>
                 </div>
                 <div class="step">
                     <div class="n">3</div>
                     <h3>Transmití</h3>
-                    <p>Pegá el juego como Browser Source en TikTok LIVE Studio u OBS, o compartí la pantalla. Listo:
-                        tu directo es un juego.</p>
+                    <p>Pegá la URL como Browser Source en TikTok LIVE Studio.</p>
                 </div>
             </div>
         </section>
@@ -1297,17 +1353,12 @@
         <section id="descarga">
             <div class="sec-head">
                 <div class="label">Descarga</div>
-                <h2>Gratis. Sin letra chica. Para siempre.</h2>
-            </div>
-            <div class="sec-head p" style="border:none; padding:0; margin:-18px 0 34px;">
-                <p>Todo el código es tuyo: instalalo en tu propia computadora, cambialo, mejoralo. Solo te pedimos que
-                    no lo borres de tu memoria cuando te llueva de regalos.</p>
+                <h2>Gratis. Sin letra chica.</h2>
             </div>
             <div class="panel">
                 <div class="panel-box">
-                    <h3>Descargar el código fuente</h3>
-                    <p>Incluye los siete juegos, el servidor, la documentación y una guía paso a paso para Windows,
-                        Mac y Linux. Sin registro, sin costo, sin correos raros.</p>
+                    <h3>Código fuente completo</h3>
+                    <p>Los 7 juegos, el servidor y la guía paso a paso para Windows, Mac y Linux. Sin registro.</p>
                     <div class="actions">
                         <a class="btn btn-primary" id="btn-zip"
                             href="https://github.com/mylnzon58/tiktok-live-games/archive/refs/heads/main.zip">Descargar
@@ -1320,14 +1371,19 @@
                             rel="noopener">github.com/mylnzon58/tiktok-live-games</a></div>
                 </div>
                 <div class="panel-box">
-                    <h3>¿Tu primera vez?</h3>
-                    <p>La guía te lleva de la mano: instalar Node, configurar tu usuario y levantar el servidor en
-                        menos de 10 minutos, en cualquier sistema operativo.</p>
+                    <h3>¿Primera vez?</h3>
+                    <p>La guía te deja andando en menos de 10 minutos, en cualquier sistema operativo.</p>
                     <div class="actions">
                         <a class="btn btn-ghost" href="https://github.com/mylnzon58/tiktok-live-games/blob/main/README.md"
-                            target="_blank" rel="noopener">Leer la guía paso a paso</a>
+                            target="_blank" rel="noopener">Leer la guía</a>
                     </div>
                 </div>
+            </div>
+            <div class="notice">
+                <b>Aviso importante:</b> estos juegos conectan tu cuenta a los eventos del directo, pero la
+                motivación la pone el streamer. Animate el chat, hablá del juego y no lo dejes en piloto automático.
+                Cada streamer es responsable de cumplir las políticas de su plataforma: no me hago responsable por
+                bloqueos derivados del uso automatizado o por contenido ajeno a estos juegos.
             </div>
         </section>
 
@@ -1335,15 +1391,14 @@
         <section id="configurar">
             <div class="sec-head">
                 <div class="label">¿Sin tiempo?</div>
-                <h2>Configuramos todo por vos.</h2>
+                <h2>Lo configuramos por vos.</h2>
             </div>
             <div class="panel">
                 <div class="panel-box setup">
                     <div class="price">US$29 <small>única vez</small></div>
                     <h3>Servicio de configuración completa</h3>
-                    <p>Levantamos el servidor, conectamos tu cuenta de TikTok y dejamos los juegos transmitiendo en tu
-                        directo. Ideal si no querés tocar una línea de código.</p>
-                    <p>Cuesta menos que los regalos que te dan en un solo directo. Atención 100% personalizada.</p>
+                    <p>Levantamos el servidor, conectamos tu TikTok y dejamos los juegos transmitiendo en tu directo.
+                    </p>
                     <div class="actions">
                         <button class="btn btn-primary" id="btn-setup">Quiero que me lo configuren</button>
                     </div>
@@ -1353,22 +1408,19 @@
                     <p class="setup-list">
                         <span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
                                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <path d="M4.5 12.5 10 18 19.5 6.5" /></svg></span>Instalación completa del servidor y los
-                        siete juegos<br />
+                                <path d="M4.5 12.5 10 18 19.5 6.5" /></svg></span>Instalación completa (7 juegos)<br />
                         <span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
                                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 <path d="M4.5 12.5 10 18 19.5 6.5" /></svg></span>Conexión con tu cuenta de TikTok<br />
                         <span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
                                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <path d="M4.5 12.5 10 18 19.5 6.5" /></svg></span>Prueba en vivo con tu directo<br />
+                                <path d="M4.5 12.5 10 18 19.5 6.5" /></svg></span>Prueba en vivo<br />
                         <span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
                                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <path d="M4.5 12.5 10 18 19.5 6.5" /></svg></span>Guía de transmisión en TikTok
-                        Studio<br />
+                                <path d="M4.5 12.5 10 18 19.5 6.5" /></svg></span>Guía de transmisión<br />
                         <span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
                                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <path d="M4.5 12.5 10 18 19.5 6.5" /></svg></span>Soporte por WhatsApp hasta dejarlo
-                        andando
+                                <path d="M4.5 12.5 10 18 19.5 6.5" /></svg></span>Soporte por WhatsApp hasta que ande
                     </p>
                 </div>
             </div>
@@ -1379,15 +1431,13 @@
             <div class="panel donate">
                 <div class="panel-box" style="background:none; border:none; padding:0;">
                     <div class="label">Una historia honesta</div>
-                    <p class="quote">Estos juegos nacieron de noches enteras, cientos de horas y un streamer que quería
-                        su directo <em>imposible de ignorar</em>.</p>
-                    <p class="story">Los usé en mis propios directos antes de regalarlos. Vi cómo la gente volvía por
-                        la Bomba, gritaba por la Carrera y se quedaba hasta el final por la Guerra de Titanes. Cada
-                        regalo que entra en tu live con estos juegos, yo lo vi entrar por primera vez en el mío — y esa
-                        emoción no tiene precio.</p>
-                    <p class="story">Por eso son y serán gratis: porque el mejor marketing es ver cómo tu directo se
-                        enciende. Si un juego te dio una noche memorable o te llenó el bolsillo de regalos, devolvé el
-                        gesto con un cafecito. Si no, usalos feliz — ya ganamos nosotros con verte jugar.</p>
+                    <p class="quote">Los probé en mis propios directos: <em>generaron regalos, no miles</em>.</p>
+                    <p class="story">Hice estos juegos de noches enteras de trabajo y los usé en vivo. Me dieron
+                        algunos dólares, no fortunas — pero sé por otros streamers que en el momento justo explotan:
+                        batallas que se encienden y gente que vuelve cada noche.</p>
+                    <p class="story">No te prometo cifras mágicas. Te prometo un directo que juega con la gente. Si
+                        una noche memorable te llenó el bolsillo, devolvé el gesto con un cafecito; si no, usalos
+                        feliz.</p>
                     <div class="alias-box">
                         <span>Alias: <b>juanmonzon</b></span>
                         <button id="btn-copy-alias">Copiar alias</button>
@@ -1403,7 +1453,7 @@
                             </svg> Invitar un cafecito</a>
                     </div>
                     <p class="donate-foot">Argentina: alias Brubank <b>juanmonzon</b> · Internacional: Buy Me a Coffee.
-                        La donación es opcional y de corazón — sin compromiso, sin presión.</p>
+                        Opcional, de corazón.</p>
                 </div>
             </div>
         </section>
@@ -1456,7 +1506,7 @@
         <div class="modal" id="modal-confirm-1" style="display:none;">
             <h3>Servicio de configuración — US$29</h3>
             <p class="muted">Levantamos el servidor, conectamos tu TikTok y dejamos los juegos transmitiendo en tu
-                directo. Atención personalizada hasta que quede funcionando.</p>
+                directo.</p>
             <div class="actions">
                 <button class="btn btn-primary" id="btn-confirm-1">Sí, quiero configurarlo</button>
                 <button class="btn btn-ghost" id="btn-cancel-1">Ahora no</button>
@@ -1486,6 +1536,26 @@
     </div>
 
     <script>
+        // ---------- Tema claro/oscuro ----------
+        var sun = document.getElementById("ico-sun");
+        var moon = document.getElementById("ico-moon");
+
+        function applyTheme(t) {
+            document.documentElement.setAttribute("data-theme", t);
+            sun.classList.toggle("theme-hide", t === "dark");
+            moon.classList.toggle("theme-hide", t !== "dark");
+        }
+
+        var savedTheme = null;
+        try { savedTheme = localStorage.getItem("theme"); } catch (e) {}
+        applyTheme(savedTheme === "dark" ? "dark" : "light");
+
+        document.getElementById("theme-toggle").addEventListener("click", function () {
+            var next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+            applyTheme(next);
+            try { localStorage.setItem("theme", next); } catch (e) {}
+        });
+
         // ---------- Estado LIVE (opcional: solo si hay servidor) ----------
         var livePill = document.getElementById("live-pill");
         var liveText = document.getElementById("live-text");
@@ -1659,19 +1729,6 @@
             wa.setAttribute("href", "https://wa.me/" + number + "?text=" + encodeURIComponent(msg));
             showModal(modalWa);
         });
-
-        // ---------- Reveal on scroll ----------
-        var reveals = document.querySelectorAll(".reveal");
-        if ("IntersectionObserver" in window) {
-            var io = new IntersectionObserver(function (entries) {
-                entries.forEach(function (en) {
-                    if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); }
-                });
-            }, { threshold: 0.12 });
-            reveals.forEach(function (r) { io.observe(r); });
-        } else {
-            reveals.forEach(function (r) { r.classList.add("in"); });
-        }
 
         // Cerrar modal con Escape o clic fuera
         document.addEventListener("keydown", function (e) {
