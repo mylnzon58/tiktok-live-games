@@ -8,6 +8,7 @@ const { loadEnvFile } = require("./lib/env");
 const { syncTikTokEnvFromChrome } = require("./lib/chrome-cookie-sync");
 const { createStorage } = require("./lib/storage");
 const { createArenaManager } = require("./lib/arena-manager");
+const createCountriesManager = require("./lib/countries-manager");
 const { createGiftCatalog } = require("./lib/gift-catalog");
 const { normalizeGiftEvent, normalizeLikeEvent, normalizeChatEvent } = require("./lib/live-event-adapter");
 const { GAME_CONFIG } = require("./lib/game-config");
@@ -23,7 +24,9 @@ const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
 const arena = createArenaManager();
+const countriesManager = createCountriesManager(io);
 const versusManager = require("./versus/versus-manager")(io);
+const titanManager = require("./titan/titan-manager")(io);
 const giftCatalog = createGiftCatalog();
 
 const championsStorage = createStorage("arena_champions.json", []);
@@ -106,18 +109,38 @@ app.use((req, res, next) => {
 });
 
 // --- ROUTES ---
-// Juego principal: Arena en raíz y en /arena
-app.use(express.static(__dirname, { etag: false, maxAge: 0, lastModified: false }));
+// Hub principal: página de inicio con acceso a todos los juegos
+function sendLanding(req, res) {
+    const fs = require("fs");
+    let html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+    html = html.replace(/\?v=\d+/g, `?v=${Date.now()}`);
+    res.send(html);
+}
+app.get("/", sendLanding);
+
+// Plinko de Avatares (juego principal actual)
 function sendArena(req, res) {
     const fs = require("fs");
     let html = fs.readFileSync(path.join(__dirname, "arena.html"), "utf8");
     html = html.replace(/\?v=\d+/g, `?v=${Date.now()}`);
     res.send(html);
 }
-app.get("/", sendArena);
 app.get("/arena", sendArena);
+
+// Tap Tap Arena: combate PvP clásico (HP, sierras, KO, zona rey)
+function sendArenaGame(req, res) {
+    const fs = require("fs");
+    let html = fs.readFileSync(path.join(__dirname, "arena-game", "arena.html"), "utf8");
+    html = html.replace(/\?v=\d+/g, `?v=${Date.now()}`);
+    res.send(html);
+}
+app.get("/arenagame", sendArenaGame);
+
+app.use(express.static(__dirname, { etag: false, maxAge: 0, lastModified: false }));
 // Versus Politico Game
 app.use("/versus", express.static(path.join(__dirname, "versus/public")));
+// Guerra de Titanes: gift battle por equipos
+app.use("/titan", express.static(path.join(__dirname, "titan/public")));
 // Overlay de países (secundario)
 app.get("/overlay", (req, res) => res.sendFile(path.join(__dirname, "overlay.html")));
 app.get("/api/gifts", (req, res) => res.json(giftCatalog.getCatalogSnapshot()));
@@ -181,14 +204,6 @@ function broadcastChampions() {
 
 function broadcastHallOfFame() {
     io.emit("arena:hallOfFameUpdate", arena.getHallOfFameList(10));
-}
-
-function emitArenaTelemetry(eventName, payload) {
-    io.emit("arena:telemetry", {
-        event: eventName,
-        serverTs: Date.now(),
-        ...payload
-    });
 }
 
 // --- LOGGING ---
@@ -276,7 +291,7 @@ function resetRound() {
     let globalKing = null;
     let maxWins = 0;
     const currentPlayers = arena.getPlayers();
-    for (const [id, p] of Object.entries(currentPlayers)) {
+    for (const [, p] of Object.entries(currentPlayers)) {
         if (p.victories && p.victories > maxWins) {
             maxWins = p.victories;
             globalKing = { id: p.id, name: p.name, avatar: p.avatar, victories: p.victories };
@@ -525,26 +540,6 @@ function handleArenaGift(event) {
         scoreLoss: result.scoreLoss,
         knockback: event.gift.knockback || 0
     });
-    emitArenaTelemetry("gift", {
-        userId: result.attacker.id,
-        userName: result.attacker.name,
-        targetId: result.target.id,
-        targetName: result.target.name,
-        giftName: event.gift.name,
-        diamondCount: event.gift.diamondCount,
-        repeatCount: event.gift.repeatCount,
-        totalDiamonds: event.gift.totalDiamonds,
-        effectKey: event.gift.fx,
-        category: event.gift.category,
-        sfx: event.gift.sfx,
-        multiplier: result.comboMultiplier,
-        damage: result.damage,
-        scoreGain: result.scoreGain,
-        scoreLoss: result.scoreLoss,
-        burstTriggered: event.gift.totalDiamonds >= GAME_CONFIG.countries.bigGiftThreshold,
-        powerupTriggered: event.gift.category === "mega" || event.gift.totalDiamonds >= 500,
-        ko: Boolean(result.ko)
-    });
 
     if (result.comboMultiplier > 1) {
         io.emit("arena:combo", {
@@ -643,22 +638,6 @@ function handleArenaLike(event) {
     if (strike) {
         batch.strike = strike;
     }
-
-    // Telemetría
-    emitArenaTelemetry("like", {
-        userId: player.id,
-        userName: player.name,
-        likeCount: event.likeCount,
-        totalLikeCount: event.totalLikeCount || 0,
-        comboLikes,
-        heal: support?.heal || 0,
-        scoreGain: support?.scoreGain || 0,
-        respawned: Boolean(support?.respawned),
-        burstTriggered: Boolean(support?.player && comboLikes >= GAME_CONFIG.arena.likeBurstThreshold),
-        powerupTriggered: Boolean(comboLikes >= GAME_CONFIG.arena.likeMiniPowerThreshold),
-        strikeTriggered: Boolean(strike),
-        ko: Boolean(strike?.ko)
-    });
 }
 
 /** 
@@ -800,6 +779,8 @@ function bindTikTokListeners(connection) {
             }
             handleArenaGift(event);
             versusManager.handleVersusGift(event);
+            titanManager.handleTitanGift(event);
+            countriesManager.handleCountriesGift(event);
         } catch (error) {
             console.error("Gift error:", error.message);
         }
@@ -813,6 +794,8 @@ function bindTikTokListeners(connection) {
         }
         handleArenaLike(event);
         versusManager.handleVersusLike(event);
+        titanManager.handleTitanLike(event);
+        countriesManager.handleCountriesLike(event);
     });
 
     connection.on("chat", (rawData) => {
@@ -823,6 +806,8 @@ function bindTikTokListeners(connection) {
         }
         handleArenaChat(event);
         versusManager.handleVersusChat(event);
+        titanManager.handleTitanChat(event);
+        countriesManager.handleCountriesChat(event);
     });
 }
 
@@ -842,6 +827,8 @@ function startChromeCookieSync() {
 io.on("connection", (socket) => {
     socket.emit("timerUpdate", timeRemaining);
     versusManager.syncClient(socket);
+    titanManager.syncClient(socket);
+    countriesManager.syncClient(socket);
 
     socket.on("arena:tapAttack", (data) => {
         const targetId = data.targetId;
@@ -945,6 +932,17 @@ io.on("connection", (socket) => {
             comment: data.comment || ""
         });
     });
+
+    socket.on("titan:debug:push", (data) => {
+        if (!titanManager || !data?.teamId) return;
+        titanManager.handleTitanGift({
+            user: { id: "debug_titan_" + Date.now(), nickname: "DEBUG", profilePictureUrl: "" },
+            gift: {
+                name: "Rose",
+                totalDiamonds: Math.max(1, Math.round((data.power || 300) / 2))
+            }
+        });
+    });
 });
 
 // --- CLEANUP INTERVAL (Arena only) ---
@@ -970,4 +968,6 @@ server.listen(PORT, () => {
     startTimer();
     startChromeCookieSync();
     startArenaSawLoop();
+    titanManager.start();
+    countriesManager.start();
 });

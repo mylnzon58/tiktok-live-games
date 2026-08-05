@@ -4,7 +4,9 @@
   "description": "TikTok LIVE Countries Ranking Game Overlay",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "lint": "eslint server.js lib titan arena-game versus",
+    "check": "node --check server.js && node --check lib/countries-manager.js && node --check lib/arena-manager.js && node --check titan/titan-manager.js && node --check versus/versus-manager.js"
   },
   "dependencies": {
     "axios": "^1.13.6",
