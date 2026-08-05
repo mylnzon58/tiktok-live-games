@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-        href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,900&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
         rel="stylesheet" />
     <style>
         * {
@@ -20,18 +20,22 @@
         }
 
         :root {
-            --bg: #0b0e13;
-            --bg-soft: #10151d;
-            --card: #131a24;
-            --line: rgba(255, 255, 255, 0.08);
-            --line-strong: rgba(255, 255, 255, 0.14);
-            --text: #eae8e2;
-            --muted: #98a1b0;
-            --gold: #e3b04b;
-            --gold-soft: rgba(227, 176, 75, 0.12);
+            --bg: #0c0e12;
+            --bg-soft: #12151b;
+            --card: #141820;
+            --line: rgba(255, 255, 255, 0.07);
+            --line-strong: rgba(255, 255, 255, 0.15);
+            --text: #ece9e1;
+            --muted: #9aa3b2;
+            --dim: #5f6875;
+            --gold: #c9a34c;
+            --gold-bright: #e3bf6a;
+            --gold-soft: rgba(201, 163, 76, 0.12);
             --green: #4ade80;
-            --red: #f87171;
-            --radius: 18px;
+            --radius: 12px;
+            --font-display: "Instrument Serif", Georgia, serif;
+            --font-body: "Archivo", system-ui, sans-serif;
+            --font-mono: "IBM Plex Mono", ui-monospace, monospace;
         }
 
         html {
@@ -40,19 +44,32 @@
 
         body {
             background:
-                radial-gradient(1200px 600px at 80% -10%, rgba(227, 176, 75, 0.07), transparent 60%),
-                radial-gradient(900px 500px at -10% 20%, rgba(74, 128, 222, 0.05), transparent 60%),
+                radial-gradient(1100px 480px at 85% -12%, rgba(201, 163, 76, 0.06), transparent 60%),
+                radial-gradient(800px 420px at -8% 22%, rgba(90, 110, 160, 0.05), transparent 60%),
                 var(--bg);
             color: var(--text);
-            font-family: "Space Grotesk", sans-serif;
+            font-family: var(--font-body);
+            font-size: 16px;
             line-height: 1.55;
             min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
         }
 
         .wrap {
-            max-width: 1080px;
+            max-width: 1120px;
             margin: 0 auto;
-            padding: 0 24px;
+            padding: 0 26px;
+        }
+
+        .mono {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+        }
+
+        .serif {
+            font-family: var(--font-display);
         }
 
         /* ---------- NAV ---------- */
@@ -60,41 +77,61 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 22px 0;
+            gap: 20px;
+            padding: 24px 0 22px;
+            border-bottom: 1px solid var(--line);
         }
 
         .brand {
             display: flex;
             align-items: center;
-            gap: 10px;
-            font-weight: 700;
-            letter-spacing: 0.4px;
+            gap: 12px;
             text-decoration: none;
             color: var(--text);
         }
 
         .brand-mark {
-            width: 30px;
-            height: 30px;
+            width: 34px;
+            height: 34px;
             border-radius: 9px;
-            background: linear-gradient(135deg, var(--gold), #f3d489);
+            border: 1px solid rgba(201, 163, 76, 0.55);
+            background: linear-gradient(135deg, rgba(201, 163, 76, 0.22), rgba(201, 163, 76, 0.05));
             display: grid;
             place-items: center;
-            font-size: 14px;
-            color: #14100a;
-            font-weight: 900;
+            font-family: var(--font-display);
+            font-style: italic;
+            font-size: 19px;
+            color: var(--gold-bright);
+        }
+
+        .brand-name {
+            font-weight: 600;
+            font-size: 15.5px;
+            letter-spacing: 0.01em;
+        }
+
+        .brand-name small {
+            display: block;
+            font-family: var(--font-mono);
+            font-size: 10px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--dim);
+            font-weight: 400;
+            margin-top: 1px;
         }
 
         .nav-links {
             display: flex;
+            align-items: center;
             gap: 26px;
-            font-size: 14px;
-            font-weight: 500;
         }
 
         .nav-links a {
             color: var(--muted);
             text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
             transition: color 0.15s;
         }
 
@@ -102,7 +139,25 @@
             color: var(--text);
         }
 
-        @media (max-width: 720px) {
+        .nav-cta {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #14100a;
+            background: var(--gold);
+            padding: 10px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: background 0.15s;
+        }
+
+        .nav-cta:hover {
+            background: var(--gold-bright);
+        }
+
+        @media (max-width: 760px) {
             .nav-links {
                 display: none;
             }
@@ -110,52 +165,49 @@
 
         /* ---------- HERO ---------- */
         .hero {
-            text-align: center;
-            padding: 84px 0 60px;
+            padding: 92px 0 56px;
+            max-width: 880px;
         }
 
-        .kicker {
-            display: inline-flex;
+        .hero .meta {
+            display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 12px;
-            font-weight: 700;
-            letter-spacing: 2.5px;
-            text-transform: uppercase;
+            gap: 14px;
             color: var(--gold);
-            border: 1px solid rgba(227, 176, 75, 0.35);
-            background: var(--gold-soft);
-            padding: 7px 16px;
-            border-radius: 999px;
             margin-bottom: 26px;
         }
 
+        .hero .meta::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(201, 163, 76, 0.4), transparent);
+        }
+
         .hero h1 {
-            font-family: "Fraunces", serif;
-            font-size: clamp(40px, 6.5vw, 76px);
-            font-weight: 900;
-            line-height: 1.04;
-            letter-spacing: -0.02em;
-            max-width: 860px;
-            margin: 0 auto;
+            font-family: var(--font-display);
+            font-weight: 400;
+            font-size: clamp(44px, 6.4vw, 78px);
+            line-height: 1.02;
+            letter-spacing: -0.01em;
         }
 
         .hero h1 em {
             font-style: italic;
-            color: var(--gold);
+            color: var(--gold-bright);
         }
 
         .hero .sub {
-            max-width: 620px;
-            margin: 22px auto 0;
+            margin-top: 26px;
+            max-width: 590px;
             color: var(--muted);
-            font-size: 17px;
+            font-size: 17.5px;
+            line-height: 1.6;
         }
 
         .cta-row {
             display: flex;
-            gap: 14px;
-            justify-content: center;
+            gap: 12px;
             flex-wrap: wrap;
             margin-top: 34px;
         }
@@ -163,20 +215,20 @@
         .btn {
             display: inline-flex;
             align-items: center;
-            gap: 10px;
-            font-family: "Space Grotesk", sans-serif;
-            font-size: 15px;
-            font-weight: 700;
-            padding: 14px 26px;
-            border-radius: 999px;
+            gap: 9px;
+            font-family: var(--font-body);
+            font-size: 14.5px;
+            font-weight: 600;
+            padding: 13px 22px;
+            border-radius: 10px;
             border: 1px solid transparent;
             cursor: pointer;
             text-decoration: none;
-            transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease;
         }
 
         .btn:hover {
-            transform: translateY(-2px);
+            transform: translateY(-1px);
         }
 
         .btn-primary {
@@ -185,7 +237,7 @@
         }
 
         .btn-primary:hover {
-            box-shadow: 0 10px 34px rgba(227, 176, 75, 0.35);
+            box-shadow: 0 10px 30px rgba(201, 163, 76, 0.3);
         }
 
         .btn-ghost {
@@ -196,7 +248,7 @@
 
         .btn-ghost:hover {
             border-color: var(--gold);
-            color: var(--gold);
+            color: var(--gold-bright);
         }
 
         .btn-wa {
@@ -205,28 +257,35 @@
         }
 
         .btn-wa:hover {
-            box-shadow: 0 10px 34px rgba(31, 170, 86, 0.35);
+            box-shadow: 0 10px 30px rgba(31, 170, 86, 0.32);
+        }
+
+        .btn-ico {
+            width: 15px;
+            height: 15px;
+            flex: none;
         }
 
         /* ---------- LIVE PILL ---------- */
         #live-pill {
-            margin: 30px auto 0;
+            margin-top: 36px;
             display: none;
             align-items: center;
             gap: 10px;
-            font-size: 14px;
-            font-weight: 600;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            letter-spacing: 0.06em;
             color: var(--muted);
             border: 1px solid var(--line);
-            background: rgba(255, 255, 255, 0.03);
-            padding: 9px 18px;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 9px 16px;
             border-radius: 999px;
             width: fit-content;
         }
 
         #live-pill .dot {
-            width: 9px;
-            height: 9px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             background: #64748b;
             flex: none;
@@ -243,151 +302,286 @@
 
         /* ---------- SECTIONS ---------- */
         section {
-            padding: 72px 0 8px;
+            padding: 84px 0 10px;
         }
 
         .sec-head {
+            display: flex;
+            align-items: baseline;
+            gap: 18px;
+            padding-bottom: 20px;
             margin-bottom: 34px;
+            border-bottom: 1px solid var(--line);
         }
 
         .sec-head .label {
-            font-size: 12px;
-            font-weight: 700;
-            letter-spacing: 2.5px;
+            font-family: var(--font-mono);
+            font-size: 11.5px;
+            letter-spacing: 0.16em;
             text-transform: uppercase;
             color: var(--gold);
-            margin-bottom: 10px;
+            white-space: nowrap;
         }
 
         .sec-head h2 {
-            font-family: "Fraunces", serif;
-            font-size: clamp(28px, 4vw, 44px);
-            font-weight: 700;
-            letter-spacing: -0.01em;
-            line-height: 1.1;
+            font-family: var(--font-display);
+            font-weight: 400;
+            font-size: clamp(30px, 3.6vw, 44px);
+            line-height: 1.05;
+            letter-spacing: -0.005em;
         }
 
         .sec-head p {
             color: var(--muted);
-            margin-top: 10px;
-            max-width: 640px;
+            margin-top: 14px;
+            max-width: 660px;
+            font-size: 15.5px;
         }
 
         /* ---------- GAMES GRID ---------- */
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 16px;
+            grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+            gap: 22px;
         }
 
         .card {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0.01));
+            overflow: hidden;
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            padding: 26px 24px 22px;
-            border-radius: var(--radius);
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.015));
-            border: 1px solid var(--line);
-            text-decoration: none;
-            color: var(--text);
-            cursor: pointer;
-            position: relative;
-            transition: border-color 0.15s ease, transform 0.15s ease;
+            transition: border-color 0.18s ease, transform 0.18s ease;
         }
 
         .card:hover {
-            border-color: rgba(227, 176, 75, 0.5);
+            border-color: rgba(201, 163, 76, 0.45);
             transform: translateY(-3px);
         }
 
-        .card .num {
+        .card-main {
+            display: flex;
+            flex-direction: column;
+            text-decoration: none;
+            color: var(--text);
+        }
+
+        .shot {
+            position: relative;
+            display: block;
+            overflow: hidden;
+            background: #0a0c0f;
+        }
+
+        .shot img {
+            display: block;
+            width: 100%;
+            aspect-ratio: 16 / 10;
+            object-fit: cover;
+            opacity: 0.92;
+            transition: opacity 0.25s ease, transform 0.35s ease;
+        }
+
+        .card:hover .shot img {
+            opacity: 1;
+            transform: scale(1.015);
+        }
+
+        .shot::after {
+            content: "";
             position: absolute;
-            top: 18px;
-            right: 20px;
-            font-size: 13px;
-            font-weight: 700;
-            color: #4b5563;
-            letter-spacing: 1px;
+            inset: 0;
+            background: linear-gradient(180deg, transparent 55%, rgba(12, 14, 18, 0.55));
         }
 
-        .card .icon {
-            display: grid;
-            place-items: center;
-            width: 46px;
-            height: 46px;
-            border-radius: 13px;
-            border: 1px solid rgba(227, 176, 75, 0.28);
-            background: var(--gold-soft);
+        .shot-num {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            z-index: 2;
+            font-family: var(--font-mono);
+            font-size: 10.5px;
+            letter-spacing: 0.14em;
+            color: #d8d2c4;
+            background: rgba(12, 14, 18, 0.72);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            padding: 5px 9px;
+            border-radius: 6px;
+            backdrop-filter: blur(4px);
+        }
+
+        .shot-go {
+            position: absolute;
+            right: 12px;
+            bottom: 12px;
+            z-index: 2;
+            font-family: var(--font-mono);
+            font-size: 10.5px;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--gold-bright);
+            background: rgba(12, 14, 18, 0.78);
+            border: 1px solid rgba(201, 163, 76, 0.4);
+            padding: 6px 11px;
+            border-radius: 6px;
+            opacity: 0;
+            transform: translateY(4px);
+            transition: opacity 0.18s ease, transform 0.18s ease;
+        }
+
+        .card:hover .shot-go {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .card-body {
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+            padding: 20px 20px 18px;
+        }
+
+        .card-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            color: var(--dim);
+        }
+
+        .card-meta .mono.tag-gold {
             color: var(--gold);
-            flex: none;
         }
 
-        .card .icon svg {
-            width: 25px;
-            height: 25px;
+        .card-body h3 {
+            font-family: var(--font-display);
+            font-weight: 400;
+            font-size: 24px;
+            line-height: 1.1;
         }
 
-        .card:hover .icon {
-            border-color: rgba(227, 176, 75, 0.55);
-            box-shadow: 0 6px 22px rgba(227, 176, 75, 0.18);
-        }
-
-        .card h3 {
-            font-size: 20px;
-            font-weight: 700;
-            letter-spacing: 0.2px;
-        }
-
-        .card p {
+        .card-body p {
             font-size: 14.5px;
             color: var(--muted);
-            flex: 1;
+            line-height: 1.55;
         }
 
-        .card .tag {
-            align-self: flex-start;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 1.6px;
-            text-transform: uppercase;
-            padding: 5px 11px;
-            border-radius: 999px;
-            border: 1px solid var(--line-strong);
+        /* card ancha (la 07) */
+        .card--wide {
+            grid-column: 1 / -1;
+        }
+
+        .card--wide .card-main {
+            display: grid;
+            grid-template-columns: 1.05fr 1fr;
+        }
+
+        .card--wide .shot img {
+            height: 100%;
+            aspect-ratio: auto;
+        }
+
+        @media (max-width: 700px) {
+            .card--wide .card-main {
+                grid-template-columns: 1fr;
+            }
+
+            .card--wide .shot img {
+                aspect-ratio: 16 / 10;
+            }
+        }
+
+        /* ---------- SHARE ROW ---------- */
+        .share-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px 16px;
+            border-top: 1px solid var(--line);
+            margin-top: auto;
+        }
+
+        .share-label {
+            color: var(--dim);
+            margin-right: 4px;
+            font-size: 10px;
+        }
+
+        .share-btn {
+            width: 30px;
+            height: 30px;
+            display: grid;
+            place-items: center;
+            border-radius: 7px;
+            border: 1px solid var(--line);
             color: var(--muted);
+            text-decoration: none;
+            transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
         }
 
-        .card .tag.hot {
-            color: var(--gold);
-            border-color: rgba(227, 176, 75, 0.4);
+        .share-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .share-btn:hover {
+            color: var(--gold-bright);
+            border-color: rgba(201, 163, 76, 0.45);
             background: var(--gold-soft);
+        }
+
+        .share-btn[data-net="wa"]:hover {
+            color: #2ad167;
+            border-color: rgba(42, 209, 103, 0.45);
+            background: rgba(42, 209, 103, 0.08);
+        }
+
+        .share-btn[data-net="x"]:hover {
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .share-btn[data-net="tg"]:hover {
+            color: #3aa8e0;
+            border-color: rgba(58, 168, 224, 0.45);
+            background: rgba(58, 168, 224, 0.08);
+        }
+
+        .share-btn[data-net="fb"]:hover {
+            color: #4d7dff;
+            border-color: rgba(77, 125, 255, 0.45);
+            background: rgba(77, 125, 255, 0.08);
         }
 
         /* ---------- STEPS ---------- */
         .steps {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 16px;
+            gap: 18px;
         }
 
         .step {
             padding: 26px 24px;
             border-radius: var(--radius);
             border: 1px solid var(--line);
-            background: rgba(255, 255, 255, 0.02);
+            background: rgba(255, 255, 255, 0.018);
+            position: relative;
         }
 
         .step .n {
-            font-family: "Fraunces", serif;
+            font-family: var(--font-display);
+            font-style: italic;
             font-size: 40px;
-            font-weight: 900;
             color: var(--gold);
             line-height: 1;
-            margin-bottom: 14px;
+            margin-bottom: 16px;
         }
 
         .step h3 {
-            font-size: 17px;
-            font-weight: 700;
+            font-family: var(--font-display);
+            font-weight: 400;
+            font-size: 21px;
             margin-bottom: 8px;
         }
 
@@ -396,11 +590,11 @@
             color: var(--muted);
         }
 
-        /* ---------- DOWNLOAD ---------- */
+        /* ---------- PANELS ---------- */
         .panel {
             display: grid;
             grid-template-columns: 1.1fr 0.9fr;
-            gap: 16px;
+            gap: 18px;
         }
 
         @media (max-width: 860px) {
@@ -413,16 +607,17 @@
             padding: 32px 30px;
             border-radius: var(--radius);
             border: 1px solid var(--line);
-            background: linear-gradient(180deg, rgba(227, 176, 75, 0.06), rgba(255, 255, 255, 0.015));
+            background: linear-gradient(180deg, rgba(201, 163, 76, 0.05), rgba(255, 255, 255, 0.012));
             display: flex;
             flex-direction: column;
             gap: 14px;
         }
 
         .panel-box h3 {
-            font-family: "Fraunces", serif;
-            font-size: 26px;
-            font-weight: 700;
+            font-family: var(--font-display);
+            font-weight: 400;
+            font-size: 27px;
+            line-height: 1.15;
         }
 
         .panel-box p {
@@ -443,58 +638,68 @@
         }
 
         .repo-link a {
-            color: var(--gold);
+            color: var(--gold-bright);
             text-decoration: none;
-            border-bottom: 1px solid rgba(227, 176, 75, 0.4);
+            border-bottom: 1px solid rgba(201, 163, 76, 0.4);
         }
 
         /* ---------- SETUP $29 ---------- */
         .setup {
-            border: 1px solid rgba(227, 176, 75, 0.35);
+            border: 1px solid rgba(201, 163, 76, 0.4);
             background:
-                radial-gradient(600px 240px at 90% 0%, rgba(227, 176, 75, 0.1), transparent 60%),
+                radial-gradient(600px 240px at 90% 0%, rgba(201, 163, 76, 0.1), transparent 60%),
                 rgba(255, 255, 255, 0.02);
         }
 
         .setup .price {
-            font-family: "Fraunces", serif;
-            font-size: 40px;
-            font-weight: 900;
-            color: var(--gold);
+            font-family: var(--font-display);
+            font-size: 44px;
+            color: var(--gold-bright);
             line-height: 1;
         }
 
         .setup .price small {
-            font-family: "Space Grotesk", sans-serif;
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--muted);
+            font-family: var(--font-mono);
+            font-size: 12px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--dim);
+            margin-left: 8px;
         }
 
         /* ---------- DONATE ---------- */
         .donate {
             background:
-                radial-gradient(600px 240px at 0% 100%, rgba(227, 176, 75, 0.08), transparent 60%),
+                radial-gradient(600px 240px at 0% 100%, rgba(201, 163, 76, 0.07), transparent 60%),
                 linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
         }
 
+        .donate .label {
+            font-family: var(--font-mono);
+            font-size: 11.5px;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 18px;
+        }
+
         .donate .quote {
-            font-family: "Fraunces", serif;
-            font-size: clamp(22px, 3vw, 32px);
-            font-weight: 700;
-            line-height: 1.3;
-            letter-spacing: -0.01em;
-            max-width: 760px;
+            font-family: var(--font-display);
+            font-size: clamp(24px, 3.2vw, 34px);
+            font-weight: 400;
+            line-height: 1.25;
+            letter-spacing: -0.005em;
+            max-width: 780px;
         }
 
         .donate .quote em {
-            color: var(--gold);
+            color: var(--gold-bright);
             font-style: italic;
         }
 
         .donate p.story {
             color: var(--muted);
-            max-width: 680px;
+            max-width: 700px;
             margin-top: 18px;
             font-size: 15.5px;
         }
@@ -504,45 +709,44 @@
             align-items: center;
             gap: 12px;
             margin-top: 22px;
-            padding: 14px 20px;
-            border-radius: 14px;
-            border: 1px dashed rgba(227, 176, 75, 0.45);
+            padding: 13px 18px;
+            border-radius: 10px;
+            border: 1px dashed rgba(201, 163, 76, 0.45);
             background: var(--gold-soft);
-            font-size: 17px;
-            font-weight: 700;
-            letter-spacing: 0.6px;
-            color: var(--gold);
+            font-family: var(--font-mono);
+            font-size: 14px;
+            letter-spacing: 0.04em;
+            color: var(--gold-bright);
         }
 
         .alias-box button {
-            font-family: "Space Grotesk", sans-serif;
-            font-size: 12px;
-            font-weight: 700;
-            letter-spacing: 1px;
+            font-family: var(--font-mono);
+            font-size: 10.5px;
+            letter-spacing: 0.12em;
             text-transform: uppercase;
-            background: rgba(227, 176, 75, 0.15);
-            border: 1px solid rgba(227, 176, 75, 0.4);
-            color: var(--gold);
-            padding: 7px 14px;
-            border-radius: 999px;
+            background: rgba(201, 163, 76, 0.15);
+            border: 1px solid rgba(201, 163, 76, 0.4);
+            color: var(--gold-bright);
+            padding: 7px 13px;
+            border-radius: 7px;
             cursor: pointer;
             transition: background 0.15s;
         }
 
         .alias-box button:hover {
-            background: rgba(227, 176, 75, 0.3);
+            background: rgba(201, 163, 76, 0.3);
         }
 
         .donate-foot {
             margin-top: 16px;
             font-size: 13px;
-            color: #5b6472;
+            color: var(--dim);
         }
 
         .setup-list {
             margin-top: 6px;
             font-size: 14.5px;
-            line-height: 2.15;
+            line-height: 2.1;
         }
 
         .chk {
@@ -559,22 +763,16 @@
             height: 17px;
         }
 
-        .btn-ico {
-            width: 16px;
-            height: 16px;
-            flex: none;
-        }
-
         /* ---------- FOOTER ---------- */
         footer {
-            margin-top: 80px;
+            margin-top: 84px;
             border-top: 1px solid var(--line);
-            padding: 30px 0 46px;
+            padding: 30px 0 48px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 14px;
+            gap: 18px;
             font-size: 13.5px;
             color: var(--muted);
         }
@@ -586,8 +784,26 @@
         }
 
         footer a:hover {
-            color: var(--gold);
+            color: var(--gold-bright);
             border-color: var(--gold);
+        }
+
+        .foot-share {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .foot-share .share-btn {
+            width: 32px;
+            height: 32px;
+        }
+
+        .foot-sig {
+            font-family: var(--font-display);
+            font-style: italic;
+            font-size: 15px;
+            color: var(--dim);
         }
 
         /* ---------- MODAL ---------- */
@@ -612,7 +828,7 @@
             max-width: 430px;
             background: var(--bg-soft);
             border: 1px solid var(--line-strong);
-            border-radius: 22px;
+            border-radius: 16px;
             padding: 34px 30px;
             text-align: center;
             box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
@@ -631,9 +847,9 @@
         }
 
         .modal h3 {
-            font-family: "Fraunces", serif;
-            font-size: 24px;
-            font-weight: 700;
+            font-family: var(--font-display);
+            font-weight: 400;
+            font-size: 26px;
             margin-bottom: 10px;
         }
 
@@ -655,7 +871,7 @@
             align-items: center;
             gap: 12px;
             font-size: 15px;
-            font-weight: 600;
+            font-weight: 500;
             padding: 10px 0;
             color: var(--muted);
             opacity: 0.4;
@@ -704,12 +920,24 @@
         .wa-note {
             margin-top: 14px;
             font-size: 13px;
-            color: #5b6472;
+            color: var(--dim);
         }
 
         .confirm-strong {
-            color: var(--gold);
+            color: var(--gold-bright);
             font-weight: 700;
+        }
+
+        /* ---------- REVEAL ---------- */
+        .reveal {
+            opacity: 0;
+            transform: translateY(18px);
+            transition: opacity 0.55s ease, transform 0.55s ease;
+        }
+
+        .reveal.in {
+            opacity: 1;
+            transform: none;
         }
     </style>
 </head>
@@ -720,7 +948,7 @@
         <nav>
             <a class="brand" href="#top">
                 <span class="brand-mark">T</span>
-                <span>TikTok LIVE Games</span>
+                <span class="brand-name">TikTok LIVE Games<small>Open source · v1.0</small></span>
             </a>
             <div class="nav-links">
                 <a href="#juegos">Juegos</a>
@@ -729,16 +957,17 @@
                 <a href="#donar">Donar</a>
                 <a href="#configurar">Configuración</a>
             </div>
+            <a class="nav-cta" href="#descarga">Descargar</a>
         </nav>
 
         <!-- HERO -->
         <header class="hero" id="top">
-            <span class="kicker">Gratis · Open Source · Hecho para streamers</span>
+            <div class="meta mono">Gratis · Open source · Hecho para streamers</div>
             <h1>Juegos en vivo que convierten <em>espectadores en regalos</em>.</h1>
             <p class="sub">Siete juegos interactivos que reaccionan a los regalos, los likes y el chat de tu directo.
                 Descargalos, configuralos en 5 minutos y transmití desde TikTok Studio.</p>
             <div class="cta-row">
-                <a class="btn btn-primary" href="#descarga">Descargar gratis ↓</a>
+                <a class="btn btn-primary" href="#descarga">Descargar gratis</a>
                 <a class="btn btn-ghost" href="#juegos">Ver los juegos</a>
             </div>
             <div id="live-pill"><span class="dot"></span><span id="live-text">Verificando servidor…</span></div>
@@ -749,101 +978,292 @@
             <div class="sec-head">
                 <div class="label">Los juegos</div>
                 <h2>Siete formas de encender el directo.</h2>
+            </div>
+            <div class="sec-head p" style="border:none; padding:0; margin:-18px 0 34px;">
                 <p>Cada juego reacciona en vivo a lo que pasa en tu LIVE. Elegí uno, pegá la URL en tu transmisión y
                     dejá que la audiencia juegue con regalos, likes y palabras del chat.</p>
             </div>
             <div class="grid">
-                <a class="card" data-demo="/titan">
-                    <span class="num">01</span>
-                    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
-                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M7.5 20.5 18.5 9.5" />
-                            <path d="M7.2 15.8l5 5" />
-                            <path d="M16.5 3.5 5.5 14.5" />
-                            <path d="M12.5 3.9l3.6 3.6" />
-                        </svg></span>
-                    <h3>Guerra de Titanes</h3>
-                    <p>Gift battle por equipos: el chat elige ROJO o AZUL y empuja la cuerda con regalos. El formato
-                        batalla que más regalos genera.</p>
-                    <span class="tag hot">Gift battle</span>
-                </a>
-                <a class="card" data-demo="/arenagame">
-                    <span class="num">02</span>
-                    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
-                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M12 3.2 19.5 6v5.8c0 4.8-3.3 8-7.5 9-4.2-1-7.5-4.2-7.5-9V6L12 3.2Z" />
-                            <path d="M9.2 12.2l2.1 2.1 3.6-4" />
-                        </svg></span>
-                    <h3>Tap Tap Arena</h3>
-                    <p>Combate PvP: avatares con HP, sierras, KO y muerte súbita. Los regalos atacan, los likes curan.
-                    </p>
-                    <span class="tag hot">Batalla PvP</span>
-                </a>
-                <a class="card" data-demo="/arena">
-                    <span class="num">03</span>
-                    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
-                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <circle cx="12" cy="17.2" r="2.3" />
-                            <path d="M7.5 4.5h.01M12 3.2h.01M16.5 4.5h.01" />
-                            <path d="M9.6 9h.01M14.4 9h.01" />
-                            <path d="M6.8 13.8h.01M17.2 13.8h.01" />
-                        </svg></span>
-                    <h3>Plinko de Avatares</h3>
-                    <p>Tu avatar cae por la pirámide hasta el multiplicador x10. Regalos grandes = más bolas y
-                        potenciadores.</p>
-                    <span class="tag">Física</span>
-                </a>
-                <a class="card" data-demo="/overlay">
-                    <span class="num">04</span>
-                    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
-                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <circle cx="12" cy="12" r="8.3" />
-                            <path d="M3.7 12h16.6" />
-                            <path d="M12 3.7c2.6 2.5 3.9 5.2 3.9 8.3s-1.3 5.8-3.9 8.3c-2.6-2.5-3.9-5.2-3.9-8.3S9.4 6.2 12 3.7Z" />
-                        </svg></span>
-                    <h3>Batalla de Países</h3>
-                    <p>Ranking por países y equipos con banderas. Tus regalos empujan a tu país a la cima.</p>
-                    <span class="tag">Equipos</span>
-                </a>
-                <a class="card" data-demo="/versus">
-                    <span class="num">05</span>
-                    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
-                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <rect x="4.6" y="9" width="14.8" height="11" rx="1.8" />
-                            <path d="M3.2 6.4h17.6" />
-                            <path d="M9.4 14.2l1.9 1.9 3.4-3.9" />
-                        </svg></span>
-                    <h3>Versus Político</h3>
-                    <p>El chat vota con keywords y los regalos definen al ganador en cada ronda.</p>
-                    <span class="tag">Votación</span>
-                </a>
-                <a class="card" data-demo="/bomba">
-                    <span class="num">06</span>
-                    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
-                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <circle cx="13" cy="15" r="6.2" />
-                            <path d="M13.3 8.8c1 0 1.8-.5 2.5-3.4" />
-                            <path d="M15.8 4.4l.7 1.5 1.5.7-1.5.7-.7 1.5-.7-1.5-1.5-.7 1.5-.7Z" />
-                        </svg></span>
-                    <h3>La Bomba</h3>
-                    <p>Patata caliente en vivo: quien tenga la bomba cuando explote pierde puntos. Pasala con regalos,
-                        taps o escribiendo PASA.</p>
-                    <span class="tag hot">Patata caliente</span>
-                </a>
-                <a class="card" data-demo="/carrera">
-                    <span class="num">07</span>
-                    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
-                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M5.5 22V3.8" />
-                            <path d="M5.5 4.6h10.8l-2.1 2.6 2.1 2.6H5.5Z" />
-                            <path d="M14 13.2h5.5" />
-                            <path d="M12.5 16.2h7" />
-                        </svg></span>
-                    <h3>Carrera de Avatares</h3>
-                    <p>Tu avatar corre contra el chat: los regalos lo impulsan, los likes le dan turbo y el primero en
-                        meta gana.</p>
-                    <span class="tag">Speed</span>
-                </a>
+
+                <article class="card">
+                    <a class="card-main" data-demo="/titan" href="#descarga">
+                        <span class="shot">
+                            <img src="img/preview-titan.png" alt="Vista previa: Guerra de Titanes" loading="lazy" />
+                            <span class="shot-num">01 / 07</span>
+                            <span class="shot-go">Ver juego →</span>
+                        </span>
+                        <span class="card-body">
+                            <span class="card-meta"><span class="mono tag-gold">Gift battle</span><span
+                                    class="mono">/titan</span></span>
+                            <h3>Guerra de Titanes</h3>
+                            <p>Gift battle por equipos: el chat elige ROJO o AZUL y empuja la cuerda con regalos. El
+                                formato batalla que más regalos genera.</p>
+                        </span>
+                    </a>
+                    <div class="share-row">
+                        <span class="share-label mono">Compartir</span>
+                        <a class="share-btn" data-net="wa" href="#" aria-label="Compartir por WhatsApp"><svg
+                                viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path
+                                    d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z" />
+                            </svg></a>
+                        <a class="share-btn" data-net="tg" href="#" aria-label="Compartir por Telegram"><svg
+                                viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path
+                                    d="M23.91 3.79 20.3 20.84c-.25 1.21-.98 1.5-2 .94l-5.5-4.07-2.66 2.57c-.3.3-.55.56-1.1.56-.72 0-.6-.27-.84-.95L6.3 13.7l-5.45-1.7c-1.18-.35-1.19-1.16.26-1.75l21.26-8.2c.97-.43 1.9.24 1.53 1.73Z" />
+                            </svg></a>
+                        <a class="share-btn" data-net="x" href="#" aria-label="Compartir en X"><svg viewBox="0 0 24 24"
+                                fill="currentColor" aria-hidden="true">
+                                <path
+                                    d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.451-6.231Zm-1.161 17.52h1.833L7.084 4.126H5.117l11.966 15.644Z" />
+                            </svg></a>
+                        <a class="share-btn" data-net="fb" href="#" aria-label="Compartir en Facebook"><svg
+                                viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path
+                                    d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073Z" />
+                            </svg></a>
+                    </div>
+                </article>
+
+                <article class="card">
+                    <a class="card-main" data-demo="/arenagame" href="#descarga">
+                        <span class="shot">
+                            <img src="img/preview-plinko.png" alt="Vista previa: Plinko de Avatares" loading="lazy" />
+                            <span class="shot-num">02 / 07</span>
+                            <span class="shot-go">Ver juego →</span>
+                        </span>
+                        <span class="card-body">
+                            <span class="card-meta"><span class="mono tag-gold">Física</span><span
+                                    class="mono">/arenagame</span></span>
+                            <h3>Plinko de Avatares</h3>
+                            <p>Tu avatar cae por la pirámide hasta el multiplicador x10. Regalos grandes = más bolas y
+                                potenciadores.</p>
+                        </span>
+                    </a>
+                    <div class="share-row">
+                        <span class="share-label mono">Compartir</span>
+                        <a class="share-btn" data-net="wa" href="#" aria-label="Compartir por WhatsApp"><svg
+                                viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path
+                                    d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z" />
+                            </svg></a>
+                        <a class="share-btn" data-net="tg" href="#" aria-label="Compartir por Telegram"><svg
+                                viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path
+                                    d="M23.91 3.79 20.3 20.84c-.25 1.21-.98 1.5-2 .94l-5.5-4.07-2.66 2.57c-.3.3-.55.56-1.1.56-.72 0-.6-.27-.84-.95L6.3 13.7l-5.45-1.7c-1.18-.35-1.19-1.16.26-1.75l21.26-8.2c.97-.43 1.9.24 1.53 1.73Z" />
+                            </svg></a>
+                        <a class="share-btn" data-net="x" href="#" aria-label="Compartir en X"><svg viewBox="0 0 24 24"
+                                fill="currentColor" aria-hidden="true">
+                                <path
+                                    d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.451-6.231Zm-1.161 17.52h1.833L7.084 4.126H5.117l11.966 15.644Z" />
+                            </svg></a>
+                        <a class="share-btn" data-net="fb" href="#" aria-label="Compartir en Facebook"><svg
+                                viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path
+                                    d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073Z" />
+                            </svg></a>
+                    </div>
+                </article>
+
+                <article class="card">
+                    <a class="card-main" data-demo="/arena" href="#descarga">
+                        <span class="shot">
+                            <img src="img/preview-arena.png" alt="Vista previa: Tap Tap Arena" loading="lazy" />
+                            <span class="shot-num">03 / 07</span>
+                            <span class="shot-go">Ver juego →</span>
+                        </span>
+                        <span class="card-body">
+                            <span class="card-meta"><span class="mono tag-gold">Batalla PvP</span><span
+                                    class="mono">/arena</span></span>
+                            <h3>Tap Tap Arena</h3>
+                            <p>Combate PvP: avatares con HP, sierras, KO y muerte súbita. Los regalos atacan, los
+                                likes curan.</p>
+                        </span>
+                    </a>
+                    <div class="share-row">
+                        <span class="share-label mono">Compartir</span>
+                        <a class="share-btn" data-net="wa" href="#" aria-label="Compartir por WhatsApp"><svg
+                                viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path
+                                    d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z" />
+                            </svg></a>
+                        <a class="share-btn" data-net="tg" href="#" aria-label="Compartir por Telegram"><svg
+                                viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path
+                                    d="M23.91 3.79 20.3 20.84c-.25 1.21-.98 1.5-2 .94l-5.5-4.07-2.66 2.57c-.3.3-.55.56-1.1.56-.72 0-.6-.27-.84-.95L6.3 13.7l-5.45-1.7c-1.18-.35-1.19-1.16.26-1.75l21.26-8.2c.97-.43 1.9.24 1.53 1.73Z" />
+                            </svg></a>
+                        <a class="share-btn" data-net="x" href="#" aria-label="Compartir en X"><svg viewBox="0 0 24 24"
+                                fill="currentColor" aria-hidden="true">
+                                <path
+                                    d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.451-6.231Zm-1.161 17.52h1.833L7.084 4.126H5.117l11.966 15.644Z" />
+                            </svg></a>
+                        <a class="share-btn" data-net="fb" href="#" aria-label="Compartir en Facebook"><svg
+                                viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path
+                                    d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073Z" />
+                            </svg></a>
+                    </div>
+                </article>
+
+                <article class="card">
+                    <a class="card-main" data-demo="/overlay" href="#descarga">
+                        <span class="shot">
+                            <img src="img/preview-paises.png" alt="Vista previa: Batalla de Países" loading="lazy" />
+                            <span class="shot-num">04 / 07</span>
+                            <span class="shot-go">Ver juego →</span>
+                        </span>
+                        <span class="card-body">
+                            <span class="card-meta"><span class="mono tag-gold">Equipos</span><span
+                                    class="mono">/overlay</span></span>
+                            <h3>Batalla de Países</h3>
+                            <p>Ranking por países y equipos con banderas. Tus regalos empujan a tu país a la cima.</p>
+                        </span>
+                    </a>
+                    <div class="share-row">
+                        <span class="share-label mono">Compartir</span>
+                        <a class="share-btn" data-net="wa" href="#" aria-label="Compartir por WhatsApp"><svg
+                                viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path
+                                    d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z" />
+                            </svg></a>
+                        <a class="share-btn" data-net="tg" href="#" aria-label="Compartir por Telegram"><svg
+                                viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path
+                                    d="M23.91 3.79 20.3 20.84c-.25 1.21-.98 1.5-2 .94l-5.5-4.07-2.66 2.57c-.3.3-.55.56-1.1.56-.72 0-.6-.27-.84-.95L6.3 13.7l-5.45-1.7c-1.18-.35-1.19-1.16.26-1.75l21.26-8.2c.97-.43 1.9.24 1.53 1.73Z" />
+                            </svg></a>
+                        <a class="share-btn" data-net="x" href="#" aria-label="Compartir en X"><svg viewBox="0 0 24 24"
+                                fill="currentColor" aria-hidden="true">
+                                <path
+                                    d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.451-6.231Zm-1.161 17.52h1.833L7.084 4.126H5.117l11.966 15.644Z" />
+                            </svg></a>
+                        <a class="share-btn" data-net="fb" href="#" aria-label="Compartir en Facebook"><svg
+                                viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path
+                                    d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073Z" />
+                            </svg></a>
+                    </div>
+                </article>
+
+                <article class="card">
+                    <a class="card-main" data-demo="/versus" href="#descarga">
+                        <span class="shot">
+                            <img src="img/preview-versus.png" alt="Vista previa: Versus Político" loading="lazy" />
+                            <span class="shot-num">05 / 07</span>
+                            <span class="shot-go">Ver juego →</span>
+                        </span>
+                        <span class="card-body">
+                            <span class="card-meta"><span class="mono tag-gold">Votación</span><span
+                                    class="mono">/versus</span></span>
+                            <h3>Versus Político</h3>
+                            <p>El chat vota con keywords y los regalos definen al ganador en cada ronda.</p>
+                        </span>
+                    </a>
+                    <div class="share-row">
+                        <span class="share-label mono">Compartir</span>
+                        <a class="share-btn" data-net="wa" href="#" aria-label="Compartir por WhatsApp"><svg
+                                viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path
+                                    d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z" />
+                            </svg></a>
+                        <a class="share-btn" data-net="tg" href="#" aria-label="Compartir por Telegram"><svg
+                                viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path
+                                    d="M23.91 3.79 20.3 20.84c-.25 1.21-.98 1.5-2 .94l-5.5-4.07-2.66 2.57c-.3.3-.55.56-1.1.56-.72 0-.6-.27-.84-.95L6.3 13.7l-5.45-1.7c-1.18-.35-1.19-1.16.26-1.75l21.26-8.2c.97-.43 1.9.24 1.53 1.73Z" />
+                            </svg></a>
+                        <a class="share-btn" data-net="x" href="#" aria-label="Compartir en X"><svg viewBox="0 0 24 24"
+                                fill="currentColor" aria-hidden="true">
+                                <path
+                                    d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.451-6.231Zm-1.161 17.52h1.833L7.084 4.126H5.117l11.966 15.644Z" />
+                            </svg></a>
+                        <a class="share-btn" data-net="fb" href="#" aria-label="Compartir en Facebook"><svg
+                                viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path
+                                    d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073Z" />
+                            </svg></a>
+                    </div>
+                </article>
+
+                <article class="card">
+                    <a class="card-main" data-demo="/bomba" href="#descarga">
+                        <span class="shot">
+                            <img src="img/preview-bomba.png" alt="Vista previa: La Bomba" loading="lazy" />
+                            <span class="shot-num">06 / 07</span>
+                            <span class="shot-go">Ver juego →</span>
+                        </span>
+                        <span class="card-body">
+                            <span class="card-meta"><span class="mono tag-gold">Patata caliente</span><span
+                                    class="mono">/bomba</span></span>
+                            <h3>La Bomba</h3>
+                            <p>Patata caliente en vivo: quien tenga la bomba cuando explote pierde puntos. Pasala con
+                                regalos, taps o escribiendo PASA.</p>
+                        </span>
+                    </a>
+                    <div class="share-row">
+                        <span class="share-label mono">Compartir</span>
+                        <a class="share-btn" data-net="wa" href="#" aria-label="Compartir por WhatsApp"><svg
+                                viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path
+                                    d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z" />
+                            </svg></a>
+                        <a class="share-btn" data-net="tg" href="#" aria-label="Compartir por Telegram"><svg
+                                viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path
+                                    d="M23.91 3.79 20.3 20.84c-.25 1.21-.98 1.5-2 .94l-5.5-4.07-2.66 2.57c-.3.3-.55.56-1.1.56-.72 0-.6-.27-.84-.95L6.3 13.7l-5.45-1.7c-1.18-.35-1.19-1.16.26-1.75l21.26-8.2c.97-.43 1.9.24 1.53 1.73Z" />
+                            </svg></a>
+                        <a class="share-btn" data-net="x" href="#" aria-label="Compartir en X"><svg viewBox="0 0 24 24"
+                                fill="currentColor" aria-hidden="true">
+                                <path
+                                    d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.451-6.231Zm-1.161 17.52h1.833L7.084 4.126H5.117l11.966 15.644Z" />
+                            </svg></a>
+                        <a class="share-btn" data-net="fb" href="#" aria-label="Compartir en Facebook"><svg
+                                viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path
+                                    d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073Z" />
+                            </svg></a>
+                    </div>
+                </article>
+
+                <article class="card card--wide">
+                    <a class="card-main" data-demo="/carrera" href="#descarga">
+                        <span class="shot">
+                            <img src="img/preview-carrera.png" alt="Vista previa: Carrera de Avatares"
+                                loading="lazy" />
+                            <span class="shot-num">07 / 07</span>
+                            <span class="shot-go">Ver juego →</span>
+                        </span>
+                        <span class="card-body">
+                            <span class="card-meta"><span class="mono tag-gold">Speed</span><span
+                                    class="mono">/carrera</span></span>
+                            <h3>Carrera de Avatares</h3>
+                            <p>Tu avatar corre contra el chat: los regalos lo impulsan, los likes le dan turbo y el
+                                primero en meta gana.</p>
+                        </span>
+                    </a>
+                    <div class="share-row">
+                        <span class="share-label mono">Compartir</span>
+                        <a class="share-btn" data-net="wa" href="#" aria-label="Compartir por WhatsApp"><svg
+                                viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path
+                                    d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z" />
+                            </svg></a>
+                        <a class="share-btn" data-net="tg" href="#" aria-label="Compartir por Telegram"><svg
+                                viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path
+                                    d="M23.91 3.79 20.3 20.84c-.25 1.21-.98 1.5-2 .94l-5.5-4.07-2.66 2.57c-.3.3-.55.56-1.1.56-.72 0-.6-.27-.84-.95L6.3 13.7l-5.45-1.7c-1.18-.35-1.19-1.16.26-1.75l21.26-8.2c.97-.43 1.9.24 1.53 1.73Z" />
+                            </svg></a>
+                        <a class="share-btn" data-net="x" href="#" aria-label="Compartir en X"><svg viewBox="0 0 24 24"
+                                fill="currentColor" aria-hidden="true">
+                                <path
+                                    d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.451-6.231Zm-1.161 17.52h1.833L7.084 4.126H5.117l11.966 15.644Z" />
+                            </svg></a>
+                        <a class="share-btn" data-net="fb" href="#" aria-label="Compartir en Facebook"><svg
+                                viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path
+                                    d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073Z" />
+                            </svg></a>
+                    </div>
+                </article>
+
             </div>
         </section>
 
@@ -878,6 +1298,8 @@
             <div class="sec-head">
                 <div class="label">Descarga</div>
                 <h2>Gratis. Sin letra chica. Para siempre.</h2>
+            </div>
+            <div class="sec-head p" style="border:none; padding:0; margin:-18px 0 34px;">
                 <p>Todo el código es tuyo: instalalo en tu propia computadora, cambialo, mejoralo. Solo te pedimos que
                     no lo borres de tu memoria cuando te llueva de regalos.</p>
             </div>
@@ -928,7 +1350,7 @@
                 </div>
                 <div class="panel-box">
                     <h3>Qué incluye</h3>
-                    <p style="margin-top:6px; font-size:14.5px; line-height:1.9;">
+                    <p class="setup-list">
                         <span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
                                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 <path d="M4.5 12.5 10 18 19.5 6.5" /></svg></span>Instalación completa del servidor y los
@@ -956,7 +1378,7 @@
         <section id="donar">
             <div class="panel donate">
                 <div class="panel-box" style="background:none; border:none; padding:0;">
-                    <div class="label" style="color:var(--gold); font-size:12px; font-weight:700; letter-spacing:2.5px; text-transform:uppercase;">Una historia honesta</div>
+                    <div class="label">Una historia honesta</div>
                     <p class="quote">Estos juegos nacieron de noches enteras, cientos de horas y un streamer que quería
                         su directo <em>imposible de ignorar</em>.</p>
                     <p class="story">Los usé en mis propios directos antes de regalarlos. Vi cómo la gente volvía por
@@ -988,10 +1410,34 @@
 
         <!-- FOOTER -->
         <footer>
-            <span>Creado con mucho café por <a href="https://www.tiktok.com/@juanjoclassic" target="_blank"
-                    rel="noopener">@juanjoclassic</a> · Licencia MIT</span>
-            <span><a href="https://github.com/mylnzon58/tiktok-live-games" target="_blank" rel="noopener">Repositorio</a>
-                · <a href="#top">Volver arriba ↑</a></span>
+            <div>
+                <span class="foot-sig">Diseñado a mano en Argentina.</span><br />
+                <span style="font-size:13px;">Creado por <a href="https://www.tiktok.com/@juanjoclassic"
+                        target="_blank" rel="noopener">@juanjoclassic</a> · Licencia MIT</span>
+            </div>
+            <div class="foot-share">
+                <a class="share-btn" data-net="wa" href="#" aria-label="Compartir la página por WhatsApp"><svg
+                        viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path
+                            d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z" />
+                    </svg></a>
+                <a class="share-btn" data-net="tg" href="#" aria-label="Compartir la página por Telegram"><svg
+                        viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path
+                            d="M23.91 3.79 20.3 20.84c-.25 1.21-.98 1.5-2 .94l-5.5-4.07-2.66 2.57c-.3.3-.55.56-1.1.56-.72 0-.6-.27-.84-.95L6.3 13.7l-5.45-1.7c-1.18-.35-1.19-1.16.26-1.75l21.26-8.2c.97-.43 1.9.24 1.53 1.73Z" />
+                    </svg></a>
+                <a class="share-btn" data-net="x" href="#" aria-label="Compartir la página en X"><svg
+                        viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path
+                            d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.451-6.231Zm-1.161 17.52h1.833L7.084 4.126H5.117l11.966 15.644Z" />
+                    </svg></a>
+                <a class="share-btn" data-net="fb" href="#" aria-label="Compartir la página en Facebook"><svg
+                        viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path
+                            d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073Z" />
+                    </svg></a>
+                <span><a href="#top">Volver arriba ↑</a></span>
+            </div>
         </footer>
     </div>
 
@@ -1053,7 +1499,7 @@
         }
 
         probeServer(function (hasServer) {
-            var cards = document.querySelectorAll(".card[data-demo]");
+            var cards = document.querySelectorAll("[data-demo]");
             cards.forEach(function (card) {
                 if (hasServer) {
                     card.setAttribute("href", card.getAttribute("data-demo"));
@@ -1105,6 +1551,38 @@
                 document.body.removeChild(ta);
                 done();
             }
+        });
+
+        // ---------- Compartir en redes ----------
+        var SHARE_URL = "https://mylnzon58.github.io/tiktok-live-games/";
+        var SHARE_TEXTS = {
+            "01": "Mirá «Guerra de Titanes»: juegos interactivos para tu directo de TikTok",
+            "02": "Mirá «Plinko de Avatares»: juegos interactivos para tu directo de TikTok",
+            "03": "Mirá «Tap Tap Arena»: juegos interactivos para tu directo de TikTok",
+            "04": "Mirá «Batalla de Países»: juegos interactivos para tu directo de TikTok",
+            "05": "Mirá «Versus Político»: juegos interactivos para tu directo de TikTok",
+            "06": "Mirá «La Bomba»: juegos interactivos para tu directo de TikTok",
+            "07": "Mirá «Carrera de Avatares»: juegos interactivos para tu directo de TikTok"
+        };
+
+        document.querySelectorAll(".share-btn").forEach(function (btn) {
+            btn.addEventListener("click", function (e) {
+                e.preventDefault();
+                var net = btn.getAttribute("data-net");
+                var num = btn.closest(".card") ? btn.closest(".card").querySelector(".shot-num").textContent.trim().slice(0, 2) : null;
+                var text = (num && SHARE_TEXTS[num]) ? SHARE_TEXTS[num] : "Juegos interactivos gratis para tu directo de TikTok";
+                var url = "";
+                if (net === "wa") {
+                    url = "https://wa.me/?text=" + encodeURIComponent(text + " — " + SHARE_URL);
+                } else if (net === "tg") {
+                    url = "https://t.me/share/url?url=" + encodeURIComponent(SHARE_URL) + "&text=" + encodeURIComponent(text);
+                } else if (net === "x") {
+                    url = "https://twitter.com/intent/tweet?text=" + encodeURIComponent(text) + "&url=" + encodeURIComponent(SHARE_URL);
+                } else if (net === "fb") {
+                    url = "https://www.facebook.com/sharer/sharer.php?u=" + encodeURIComponent(SHARE_URL);
+                }
+                window.open(url, "_blank", "noopener,width=680,height=540");
+            });
         });
 
         // ---------- Flujo de configuración US$29 ----------
@@ -1181,6 +1659,19 @@
             wa.setAttribute("href", "https://wa.me/" + number + "?text=" + encodeURIComponent(msg));
             showModal(modalWa);
         });
+
+        // ---------- Reveal on scroll ----------
+        var reveals = document.querySelectorAll(".reveal");
+        if ("IntersectionObserver" in window) {
+            var io = new IntersectionObserver(function (entries) {
+                entries.forEach(function (en) {
+                    if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); }
+                });
+            }, { threshold: 0.12 });
+            reveals.forEach(function (r) { io.observe(r); });
+        } else {
+            reveals.forEach(function (r) { r.classList.add("in"); });
+        }
 
         // Cerrar modal con Escape o clic fuera
         document.addEventListener("keydown", function (e) {
