@@ -1,5 +1,5 @@
-/* ============================================================
-   PIXEL WAR — TikTok LIVE | Full Screen Experience
+﻿/* ============================================================
+   PIXEL WAR â€” TikTok LIVE | Full Screen Experience
    ============================================================ */
 *, *::before, *::after {
     margin: 0;
@@ -31,7 +31,7 @@ body, html {
 #game-container {
     position: relative;
     width: 100%;
-    max-width: 680px; /* Ancho ampliado para aprovechar más espacio lateral */
+    max-width: 680px; /* Ancho ampliado para aprovechar mÃ¡s espacio lateral */
     height: 100%;
     margin: 0 auto;
     background: #000;
@@ -79,7 +79,7 @@ body, html {
 
 .pixel-title {
     font-family: var(--font-title);
-    font-size: 20px;
+    font-size: 26px;
     font-weight: 900;
     color: var(--pixel-green);
     text-shadow: 0 0 10px rgba(46, 213, 115, 0.5);
@@ -89,7 +89,7 @@ body, html {
 .pixel-subtitle {
     display: flex;
     gap: 15px;
-    font-size: 14px;
+    font-size: 19px;
     font-weight: 700;
     color: #ddd;
 }
@@ -102,7 +102,7 @@ body, html {
 
 #timer-box {
     font-family: var(--font-title);
-    font-size: 18px;
+    font-size: 24px;
     font-weight: 900;
     color: var(--pixel-red);
 }
@@ -136,7 +136,7 @@ body, html {
 
 .rank-num {
     font-family: var(--font-title);
-    font-size: 14px;
+    font-size: 19px;
     font-weight: 900;
     color: #ffd700;
     width: 25px;
@@ -150,7 +150,7 @@ body, html {
 }
 
 .rank-name {
-    font-size: 14px;
+    font-size: 19px;
     font-weight: 700;
     white-space: nowrap;
     overflow: hidden;
@@ -160,7 +160,7 @@ body, html {
 
 .rank-score {
     font-family: var(--font-title);
-    font-size: 13px;
+    font-size: 18px;
     font-weight: 700;
     color: var(--pixel-green);
 }
@@ -180,7 +180,7 @@ body, html {
 .floating-text {
     position: absolute;
     font-family: var(--font-title);
-    font-size: 24px;
+    font-size: 32px;
     font-weight: 900;
     text-shadow: 0 0 10px currentColor, 0 3px 6px #000;
     animation: floatUp 1.2s ease-out forwards;
@@ -194,7 +194,7 @@ body, html {
 }
 
 /* =========================================
-   RESPONSIVO PARA MÓVILES / STREAMING
+   RESPONSIVO PARA MÃ“VILES / STREAMING
    ========================================= */
 @media (max-width: 700px) {
     #pixel-header {
@@ -212,19 +212,19 @@ body, html {
     }
     
     .pixel-subtitle span {
-        font-size: 11px;
+        font-size: 15px;
         padding: 2px 5px;
     }
 
-    .pixel-title { font-size: 16px; }
+    .pixel-title { font-size: 21px; }
     
-    #timer-box { font-size: 14px; }
+    #timer-box { font-size: 19px; }
     
     #arena-leaderboard { 
         width: 150px; 
         top: 90px; /* Mas abajo por el header mas alto */
         right: 10px;
     }
-    .rank-name { font-size: 11px; }
-    .rank-score { font-size: 10px; }
+    .rank-name { font-size: 15px; }
+    .rank-score { font-size: 14px; }
 }

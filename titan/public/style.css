@@ -1,4 +1,4 @@
-* {
+﻿* {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -49,7 +49,7 @@ body {
     50% { transform: translateX(-50%) scale(1.12); }
 }
 
-/* --- Guía --- */
+/* --- GuÃ­a --- */
 #powers-guide {
     position: fixed;
     bottom: 46px;
@@ -67,7 +67,7 @@ body {
 
 .guide-title {
     font-family: "Bungee", cursive;
-    font-size: 13px;
+    font-size: 18px;
     color: #fbbf24;
     letter-spacing: 1px;
     margin-bottom: 3px;
@@ -148,7 +148,7 @@ body {
 }
 
 #final-push-overlay .x2-subtitle {
-    font-size: 18px;
+    font-size: 24px;
     font-weight: 800;
     color: #ffd700;
     background: rgba(0, 0, 0, 0.6);
@@ -399,7 +399,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 34px;
+    font-size: 48px;
     background: radial-gradient(circle, #1f2937 0%, #111827 70%);
     border-radius: 50%;
     border: 3px solid #fbbf24;
@@ -496,7 +496,7 @@ body {
 .float-text {
     position: absolute;
     font-family: "Bungee", cursive;
-    font-size: 22px;
+    font-size: 30px;
     color: #fff;
     text-shadow: 0 0 12px rgba(0, 0, 0, 0.8);
     animation: floatUp 1.4s ease-out forwards;
@@ -522,7 +522,7 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 999px;
     padding: 4px 14px;
-    font-size: 12px;
+    font-size: 18px;
     font-weight: 700;
     color: #c7d2fe;
     z-index: 70;
@@ -578,7 +578,7 @@ body {
 }
 
 #victory-overlay .victory-stats {
-    font-size: 18px;
+    font-size: 24px;
     font-weight: 800;
     color: #e2e8f0;
     margin-top: 6px;
@@ -586,7 +586,7 @@ body {
 
 #victory-overlay .victory-mvp {
     margin-top: 14px;
-    font-size: 16px;
+    font-size: 22px;
     font-weight: 700;
     color: #fbbf24;
     display: flex;
@@ -630,11 +630,11 @@ body {
 }
 
 #victory-overlay .podium-rank {
-    font-size: 18px;
+    font-size: 24px;
 }
 
 #victory-overlay .podium-name {
-    font-size: 12px;
+    font-size: 18px;
     font-weight: 800;
     color: #e2e8f0;
     max-width: 90px;
@@ -644,7 +644,7 @@ body {
 }
 
 #victory-overlay .podium-val {
-    font-size: 12px;
+    font-size: 18px;
     font-weight: 800;
     color: #fbbf24;
 }
@@ -667,7 +667,7 @@ body {
     100% { transform: scale(1); }
 }
 
-/* --- Botón sonido --- */
+/* --- BotÃ³n sonido --- */
 #sound-btn {
     position: fixed;
     top: 10px;
@@ -678,7 +678,7 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 999px;
     padding: 6px 12px;
-    font-size: 12px;
+    font-size: 18px;
     font-weight: 700;
     cursor: pointer;
     font-family: "Rajdhani", sans-serif;

@@ -1,5 +1,5 @@
-/* ============================================================
-   TikTok LIVE Countries Ranking — Estilos (Referencia Visual)
+﻿/* ============================================================
+   TikTok LIVE Countries Ranking â€” Estilos (Referencia Visual)
    ============================================================ */
 
 *,
@@ -40,7 +40,7 @@ body {
   display: block;
 }
 
-/* ── Estrellas ── */
+/* â”€â”€ Estrellas â”€â”€ */
 #stars-container {
   position: fixed;
   inset: 0;
@@ -70,7 +70,7 @@ body {
   }
 }
 
-/* ── Partículas ── */
+/* â”€â”€ PartÃ­culas â”€â”€ */
 #particles-container {
   position: fixed;
   inset: 0;
@@ -106,7 +106,7 @@ body {
   }
 }
 
-/* ── Overlay principal ── */
+/* â”€â”€ Overlay principal â”€â”€ */
 #overlay {
   position: relative;
   z-index: 10;
@@ -120,9 +120,9 @@ body {
   box-sizing: border-box;
 }
 
-/* ═══════════════════════════════════
-   HEADER — Marco ornamental estilo referencia
-   ═══════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   HEADER â€” Marco ornamental estilo referencia
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 #header {
   position: relative;
   padding: 10px 10px;
@@ -176,7 +176,7 @@ body {
     order: -1;
     width: 100%;
     justify-content: center;
-    font-size: 24px;
+    font-size: 30px;
   }
 
   #header-inner {
@@ -185,7 +185,7 @@ body {
 }
 
 .title-icon {
-  font-size: 30px;
+  font-size: 38px;
   -webkit-text-fill-color: initial;
 }
 
@@ -234,7 +234,7 @@ body {
   }
 }
 
-/* ── Scale Bar ── */
+/* â”€â”€ Scale Bar â”€â”€ */
 #scale-bar {
   margin-top: 10px;
   padding: 0 80px;
@@ -246,7 +246,7 @@ body {
   display: flex;
   justify-content: space-between;
   font-family: var(--font-display);
-  font-size: 13px;
+  font-size: 18px;
   color: var(--text-secondary);
   margin-bottom: 4px;
   padding: 0 4px;
@@ -269,7 +269,7 @@ body {
   box-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
 }
 
-/* ── Status Badge ── */
+/* â”€â”€ Status Badge â”€â”€ */
 #status-badge {
   display: flex;
   align-items: center;
@@ -279,7 +279,7 @@ body {
   padding: 3px 14px;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.04);
-  font-size: 12px;
+  font-size: 17px;
   color: var(--text-secondary);
 }
 
@@ -313,9 +313,9 @@ body {
   }
 }
 
-/* ═══════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    FIXED INSTRUCTIONS & DONATION POWERS
-   ═══════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 #fixed-instructions {
   width: 90%;
   margin: 10px auto;
@@ -324,7 +324,7 @@ body {
   color: #fff;
   padding: 12px 15px;
   border-radius: 12px;
-  font-size: 15px;
+  font-size: 20px;
   text-align: center;
   z-index: 200;
   backdrop-filter: blur(10px);
@@ -359,7 +359,7 @@ body {
 
 .powers-header {
   font-family: var(--font-display);
-  font-size: 14px;
+  font-size: 19px;
   font-weight: 900;
   text-align: center;
   color: var(--accent-cyan);
@@ -384,7 +384,7 @@ body {
 
 .group-label {
   font-family: var(--font-display);
-  font-size: 9px;
+  font-size: 14px;
   color: var(--accent-gold);
   text-align: center;
   font-weight: 900;
@@ -399,7 +399,7 @@ body {
   background: rgba(255, 255, 255, 0.05);
   padding: 5px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 19px;
 }
 
 .power-item.full-width {
@@ -410,9 +410,9 @@ body {
   border: 1px dashed rgba(255, 255, 255, 0.2);
 }
 
-/* ═══════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    CHAMPION SECTION (12h)
-   ═══════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 #champion-section {
   width: 90%;
   margin: 10px auto;
@@ -428,7 +428,7 @@ body {
 
 .champion-label {
   font-family: var(--font-display);
-  font-size: 13px;
+  font-size: 18px;
   font-weight: 900;
   text-align: center;
   color: var(--accent-gold);
@@ -459,12 +459,12 @@ body {
 
 #champion-name {
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: 21px;
   font-weight: 700;
 }
 
 #champion-country {
-  font-size: 14px;
+  font-size: 19px;
   color: var(--text-secondary);
 }
 
@@ -475,7 +475,7 @@ body {
   padding: 5px 10px;
   border-radius: 8px;
   font-family: var(--font-display);
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 900;
   cursor: pointer;
   margin-top: 4px;
@@ -486,9 +486,9 @@ body {
   transform: scale(1.05);
 }
 
-/* ═══════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    RANKING CONTAINER
-   ═══════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 #ranking-container {
   flex: 1;
   display: flex;
@@ -517,20 +517,20 @@ body {
 }
 
 .empty-icon {
-  font-size: 60px;
+  font-size: 76px;
   margin-bottom: 16px;
   animation: pulse 2s ease-in-out infinite;
 }
 
 .empty-text {
   font-family: var(--font-display);
-  font-size: 22px;
+  font-size: 28px;
   letter-spacing: 2px;
   margin-bottom: 8px;
 }
 
 .empty-sub {
-  font-size: 16px;
+  font-size: 21px;
   color: var(--text-secondary);
 }
 
@@ -546,9 +546,9 @@ body {
   }
 }
 
-/* ═══════════════════════════════════
-   RANK BAR — Estilo referencia TikTok
-   ═══════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   RANK BAR â€” Estilo referencia TikTok
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .rank-row {
   display: flex;
   align-items: center;
@@ -578,7 +578,7 @@ body {
   }
 }
 
-/* Posición número */
+/* PosiciÃ³n nÃºmero */
 .rank-pos {
   font-family: var(--font-display);
   font-size: clamp(14px, 2vw, 18px);
@@ -604,7 +604,7 @@ body {
   font-size: clamp(16px, 2.5vw, 20px);
 }
 
-/* Avatares del país */
+/* Avatares del paÃ­s */
 .rank-avatars {
   display: flex;
   align-items: center;
@@ -634,7 +634,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 21px;
   background: linear-gradient(135deg, rgba(100, 100, 200, 0.4), rgba(60, 60, 120, 0.6));
 }
 
@@ -671,7 +671,7 @@ body {
   color: var(--text-primary);
 }
 
-/* ── Barra de progreso coloreada ── */
+/* â”€â”€ Barra de progreso coloreada â”€â”€ */
 .rank-bar-outer {
   flex-grow: 1;
   height: 28px;
@@ -723,7 +723,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 24px;
   background: linear-gradient(135deg, rgba(253, 203, 110, 0.85), rgba(255, 107, 107, 0.85));
 }
 
@@ -733,7 +733,7 @@ body {
   background: rgba(8, 10, 20, 0.9);
   border: 1px solid rgba(255, 244, 163, 0.65);
   color: #fff7d6;
-  font-size: 12px;
+  font-size: 17px;
   font-weight: 700;
   white-space: nowrap;
   box-shadow: 0 0 12px rgba(253, 203, 110, 0.35);
@@ -763,7 +763,7 @@ body {
   transform: translate(-50%, -50%);
   pointer-events: none;
   z-index: 50;
-  font-size: 18px;
+  font-size: 24px;
   animation: barBurstFloat 1s ease-out forwards;
 }
 
@@ -792,7 +792,7 @@ body {
   border-radius: 999px;
   background: rgba(34, 197, 94, 0.92);
   color: white;
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 900;
   letter-spacing: 0.5px;
   box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
@@ -871,7 +871,7 @@ body {
   }
 }
 
-/* Colores de barra — vibrantes como la referencia */
+/* Colores de barra â€” vibrantes como la referencia */
 .bar-c0 {
   background: linear-gradient(90deg, #ff6b6b, #ee5a24);
 }
@@ -952,7 +952,7 @@ body {
   background: linear-gradient(90deg, #70a1ff, #1e90ff);
 }
 
-/* Barra del líder — dorada */
+/* Barra del lÃ­der â€” dorada */
 .bar-leader {
   background: linear-gradient(90deg, #fbbf24, #f59e0b, #ef4444) !important;
   box-shadow: 0 0 12px rgba(251, 191, 36, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
@@ -988,7 +988,7 @@ body {
   right: 90px;
   top: -8px;
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: 21px;
   font-weight: 700;
   color: var(--accent-green);
   animation: scorePopup 1.5s ease-out forwards;
@@ -1013,12 +1013,12 @@ body {
   }
 }
 
-/* Corona líder */
+/* Corona lÃ­der */
 .rank-crown {
   position: absolute;
   top: -10px;
   left: 60px;
-  font-size: 22px;
+  font-size: 28px;
   animation: crownBounce 1.5s ease-in-out infinite;
   z-index: 5;
   filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.5));
@@ -1051,7 +1051,7 @@ body {
   }
 }
 
-/* Highlight de posición subida */
+/* Highlight de posiciÃ³n subida */
 .rank-row.rank-up {
   animation: rankUp 0.6s ease-out;
 }
@@ -1078,28 +1078,28 @@ body {
 
   .rank-code {
     min-width: 28px;
-    font-size: 11px;
+    font-size: 16px;
   }
 
   .rank-flag {
-    font-size: 20px;
+    font-size: 26px;
     min-width: 24px;
   }
 
   .rank-score {
-    font-size: 14px;
+    font-size: 19px;
     min-width: 50px;
   }
 
   #title {
-    font-size: 16px;
-    /* Forzar título más pequeño en vertical */
+    font-size: 21px;
+    /* Forzar tÃ­tulo mÃ¡s pequeÃ±o en vertical */
   }
 }
 
-/* ═══════════════════════════════════
-   OVERLAYS — Big Gift, Leader, Reset
-   ═══════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   OVERLAYS â€” Big Gift, Leader, Reset
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 /* Big Gift */
 #big-gift-overlay {
@@ -1186,14 +1186,14 @@ body {
 
 #big-gift-username {
   font-family: var(--font-display);
-  font-size: 24px;
+  font-size: 30px;
   font-weight: 700;
   margin-bottom: 6px;
 }
 
 #big-gift-amount {
   font-family: var(--font-display);
-  font-size: 48px;
+  font-size: 60px;
   font-weight: 900;
   background: linear-gradient(90deg, var(--accent-gold), var(--accent-pink));
   -webkit-background-clip: text;
@@ -1203,7 +1203,7 @@ body {
 }
 
 #big-gift-country {
-  font-size: 52px;
+  font-size: 66px;
   margin-top: 8px;
 }
 
@@ -1243,7 +1243,7 @@ body {
 }
 
 .crown-mega {
-  font-size: 90px;
+  font-size: 110px;
   animation: crownSpin 1s ease-in-out;
   filter: drop-shadow(0 0 25px rgba(251, 191, 36, 0.6));
 }
@@ -1263,13 +1263,13 @@ body {
 }
 
 #leader-flag-mega {
-  font-size: 100px;
+  font-size: 120px;
   margin: 8px 0;
 }
 
 #leader-name-mega {
   font-family: var(--font-display);
-  font-size: 36px;
+  font-size: 46px;
   font-weight: 900;
   color: var(--accent-gold);
   text-shadow: 0 0 16px rgba(251, 191, 36, 0.4);
@@ -1278,7 +1278,7 @@ body {
 
 #leader-score-mega {
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 36px;
   color: var(--text-secondary);
   margin-top: 6px;
 }
@@ -1309,7 +1309,7 @@ body {
 }
 
 .trophy-icon {
-  font-size: 90px;
+  font-size: 110px;
   animation: trophyGlow 1.5s ease-in-out infinite alternate;
 }
 
@@ -1332,7 +1332,7 @@ body {
 }
 
 #winner-flag {
-  font-size: 140px;
+  font-size: 170px;
   /* Bandera MASIVA */
   line-height: 1;
   filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.4));
@@ -1376,7 +1376,7 @@ body {
 
 #winner-name {
   font-family: var(--font-display);
-  font-size: 32px;
+  font-size: 40px;
   font-weight: 900;
   color: var(--accent-gold);
   letter-spacing: 3px;
@@ -1384,14 +1384,14 @@ body {
 
 #winner-score {
   font-family: var(--font-display);
-  font-size: 24px;
+  font-size: 30px;
   color: var(--text-secondary);
   margin-top: 6px;
 }
 
 .new-round-text {
   font-family: var(--font-display);
-  font-size: 42px;
+  font-size: 54px;
   font-weight: 900;
   margin-top: 24px;
   background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
@@ -1401,7 +1401,7 @@ body {
   animation: pulse 1s ease-in-out infinite;
 }
 
-/* ── Reacciones flotantes ── */
+/* â”€â”€ Reacciones flotantes â”€â”€ */
 #reactions-container {
   position: fixed;
   right: 15px;
@@ -1415,7 +1415,7 @@ body {
 
 .reaction {
   position: absolute;
-  font-size: 28px;
+  font-size: 36px;
   bottom: -40px;
   animation: floatReaction var(--dur) ease-out forwards;
   pointer-events: none;
@@ -1438,7 +1438,7 @@ body {
   }
 }
 
-/* 💎 LLUVIA DE DIAMANTES (NEUROMARKETING) */
+/* ðŸ’Ž LLUVIA DE DIAMANTES (NEUROMARKETING) */
 .diamond-rain {
   position: fixed;
   top: -100px;

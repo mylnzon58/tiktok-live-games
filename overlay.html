@@ -1,15 +1,15 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>🌎 Ranking de Países — TikTok LIVE</title>
+  <title>ðŸŒŽ Ranking de PaÃ­ses â€” TikTok LIVE</title>
   <meta name="description"
-    content="Overlay de ranking de países en tiempo real para TikTok LIVE basado en regalos recibidos." />
+    content="Overlay de ranking de paÃ­ses en tiempo real para TikTok LIVE basado en regalos recibidos." />
   <link rel="icon"
-    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌎</text></svg>" />
-  <link rel="stylesheet" href="/style.css?v=3" />
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>ðŸŒŽ</text></svg>" />
+  <link rel="stylesheet" href="/style.css?v=4" />
   <link
     href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap"
     rel="stylesheet" />
@@ -31,9 +31,9 @@
           <span id="timer-elapsed">00:00:00</span>
         </div>
         <h1 id="title">
-          <span class="title-icon">⚔️</span>
-          <span class="title-text">BATALLA DE PAÍSES</span>
-          <span class="title-icon">⚔️</span>
+          <span class="title-icon">âš”ï¸</span>
+          <span class="title-text">BATALLA DE PAÃSES</span>
+          <span class="title-icon">âš”ï¸</span>
         </h1>
         <div id="timer-right">
           <span id="timer">07:00</span>
@@ -52,63 +52,63 @@
       </div>
     </header>
 
-    <!-- Status de conexión -->
+    <!-- Status de conexiÃ³n -->
     <div id="status-badge">
       <span id="status-dot"></span>
       <span id="status-text">Conectando...</span>
     </div>
 
-    <!-- Sección de Campeón del Día (12h) -->
+    <!-- SecciÃ³n de CampeÃ³n del DÃ­a (12h) -->
     <div id="champion-section" class="hidden">
-      <div class="champion-label">🏆 CAMPEÓN DEL DÍA 🏆</div>
+      <div class="champion-label">ðŸ† CAMPEÃ“N DEL DÃA ðŸ†</div>
       <div class="champion-card">
         <div id="champion-avatar"></div>
         <div class="champion-info">
           <div id="champion-name">@Usuario</div>
-          <div id="champion-country">🇦🇷 Argentina</div>
-          <button id="follow-winner-btn">👤 SEGUIR AL GANADOR</button>
+          <div id="champion-country">ðŸ‡¦ðŸ‡· Argentina</div>
+          <button id="follow-winner-btn">ðŸ‘¤ SEGUIR AL GANADOR</button>
         </div>
       </div>
     </div>
 
     <!-- Alerta de Instrucciones Fija -->
     <div id="fixed-instructions">
-      ⚠️ Escribe tu país en el chat para entrar a la batalla. Ej: <b>AR</b>, <b>Argentina</b>, <b>MX</b> o
-      <b>México</b>. Luego <b>TAP TAP</b> y <b>REGALOS</b> empujan tu barra. ⚠️
+      âš ï¸ Escribe tu paÃ­s en el chat para entrar a la batalla. Ej: <b>AR</b>, <b>Argentina</b>, <b>MX</b> o
+      <b>MÃ©xico</b>. Luego <b>TAP TAP</b> y <b>REGALOS</b> empujan tu barra. âš ï¸
     </div>
 
-    <!-- Guía de Puntos por Donación -->
+    <!-- GuÃ­a de Puntos por DonaciÃ³n -->
     <div id="donation-powers">
-        <div class="powers-header">💎 PUNTOS POR REGALOS 💎</div>
+        <div class="powers-header">ðŸ’Ž PUNTOS POR REGALOS ðŸ’Ž</div>
         <div class="powers-grid categorized">
         <div class="power-group">
           <span class="group-label">BAJO</span>
-          <div class="power-item">🌹 🌹 🍦 🦊 🍩</div>
+          <div class="power-item">ðŸŒ¹ ðŸŒ¹ ðŸ¦ ðŸ¦Š ðŸ©</div>
         </div>
         <div class="power-group">
           <span class="group-label">MEDIO</span>
-          <div class="power-item">🎊 🥊 🕶️ 🎆 💸</div>
+          <div class="power-item">ðŸŽŠ ðŸ¥Š ðŸ•¶ï¸ ðŸŽ† ðŸ’¸</div>
         </div>
         <div class="power-group">
           <span class="group-label">ALTO</span>
-          <div class="power-item">🌌 🎱 💍 🏮 🪞</div>
+          <div class="power-item">ðŸŒŒ ðŸŽ± ðŸ’ ðŸ® ðŸªž</div>
         </div>
         <div class="power-group">
           <span class="group-label">ULTRA</span>
-          <div class="power-item">🦁 🪐 🚀 🏰 💎</div>
+          <div class="power-item">ðŸ¦ ðŸª ðŸš€ ðŸ° ðŸ’Ž</div>
         </div>
-        <div class="power-item full-width">💎 CADA REGALO SUMA SUS DIAMANTES REALES</div>
-        <div class="power-item full-width">❤️ CADA TAP SUMA 1 PUNTO AL PAÍS</div>
-        <div class="power-item full-width">🔥 MUERTE SÚBITA = PUNTOS X2 EN EL FINAL</div>
+        <div class="power-item full-width">ðŸ’Ž CADA REGALO SUMA SUS DIAMANTES REALES</div>
+        <div class="power-item full-width">â¤ï¸ CADA TAP SUMA 1 PUNTO AL PAÃS</div>
+        <div class="power-item full-width">ðŸ”¥ MUERTE SÃšBITA = PUNTOS X2 EN EL FINAL</div>
       </div>
     </div>
 
     <!-- Ranking -->
     <div id="ranking-container">
       <div id="ranking-empty">
-        <div class="empty-icon">🌎</div>
+        <div class="empty-icon">ðŸŒŽ</div>
         <div class="empty-text">Esperando regalos...</div>
-        <div class="empty-sub">Escribe tu país en el chat para entrar. Luego tap tap y regalos hacen crecer tu barra.</div>
+        <div class="empty-sub">Escribe tu paÃ­s en el chat para entrar. Luego tap tap y regalos hacen crecer tu barra.</div>
       </div>
     </div>
 
@@ -125,10 +125,10 @@
       </div>
     </div>
 
-    <!-- Efecto de cambio de líder -->
+    <!-- Efecto de cambio de lÃ­der -->
     <div id="leader-change-overlay" class="hidden">
       <div id="leader-change-content">
-        <div class="crown-mega">👑</div>
+        <div class="crown-mega">ðŸ‘‘</div>
         <div id="leader-flag-mega"></div>
         <div id="leader-name-mega"></div>
         <div id="leader-score-mega"></div>
@@ -138,7 +138,7 @@
     <!-- Efecto de fin de ronda -->
     <div id="round-reset-overlay" class="hidden">
       <div id="round-reset-content">
-        <div class="trophy-icon">🏆</div>
+        <div class="trophy-icon">ðŸ†</div>
         <!-- Contenedor del ganador donde la bandera es enorme y el avatar va dentro/al lado -->
         <div id="winner-display-container">
           <div id="winner-flag"></div>
@@ -146,7 +146,7 @@
         </div>
         <div id="winner-name"></div>
         <div id="winner-score"></div>
-        <div class="new-round-text">¡NUEVA RONDA!</div>
+        <div class="new-round-text">Â¡NUEVA RONDA!</div>
       </div>
     </div>
 
