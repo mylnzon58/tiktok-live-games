@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>⚔️ Tap Tap Arena — TikTok LIVE</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚔️</text></svg>" />
+    <link rel="stylesheet" href="/arena-game/arena.css?v=53" />
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Rajdhani:wght@600;700&display=swap"
+        rel="stylesheet" />
+</head>
+
+<body>
+    <!-- Overlay Fase Final -->
+    <div id="x2-alpha-overlay">
+        <h1 class="x2-banner">FASE FINAL</h1>
+        <div class="x2-subtitle">IMPACTO REFORZADO</div>
+    </div>
+
+    <!-- Golden Minute Overlay -->
+    <div id="golden-minute-overlay">
+        <h1 class="x2-banner" style="color:#ffd700; text-shadow:0 0 20px #ffaa00;">¡MINUTO DE ORO!</h1>
+        <div class="x2-subtitle" style="border-color:#ffd700; background:rgba(255, 215, 0, 0.12); color:#ffd700;">PUNTOS X2 EN TODO</div>
+    </div>
+
+    <!-- Temporizador Principal Gigante -->
+    <div id="main-round-timer">05:00</div>
+
+    <!-- Guía de Poderes Superior (Nueva) -->
+    <div id="top-powers-guide">
+        <div class="header-guide-title">GUÍA DE PODERES ESPECIALES</div>
+        <div class="header-guide-items">
+            <div class="h-gift"><span class="h-icon">🌹</span><span class="h-label">ROSA: ATAQUE RÁPIDO</span></div>
+            <div class="h-gift"><span class="h-icon">🍩</span><span class="h-label">DONA: IMPACTO + SIERRA</span></div>
+            <div class="h-gift"><span class="h-icon">🌌</span><span class="h-label">GALAXY: RAYO PREMIUM</span></div>
+            <div class="h-gift effective-glow"><span class="h-icon" style="transform: scale(1.2);">🦁</span><span class="h-label" style="color:#ffd700; text-shadow:0px 0px 5px #ffaa00;">LION: MÁS EFECTIVO</span></div>
+            <div class="h-gift"><span class="h-icon">💖</span><span class="h-label">TAPS: DISPARO + CURA</span></div>
+        </div>
+    </div>
+
+    <!-- Visual Announcer (Phase 3) -->
+    <div id="announcer-container"></div>
+
+    <!-- Metas Comunitarias (Neuromarketing) -->
+    <div id="frenzy-bar-container">
+        <div class="frenzy-title">🔥 FRENESÍ COMUNITARIO 🔥</div>
+        <div class="frenzy-track">
+            <div id="frenzy-fill"></div>
+        </div>
+        <div id="frenzy-text">0 / 3000</div>
+    </div>
+
+    <!-- Hall of Fame Lateral (Se moverá por CSS al lateral derecho) -->
+    <div id="top-arena-showcase"></div>
+    <div id="arena-leaderboard"></div>
+
+    <!-- Switch Button para ver overlay de países (opcional) -->
+    <a href="/overlay" id="switch-btn">🌎 Ver Países</a>
+
+    <!-- Botón habilitar Sonido -->
+    <button id="sound-btn">🔇 Activar Sonido</button>
+
+    <!-- El Lienzo de Batalla -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Panel de Desarrollo (Debug Mode) -->
+    <div id="debug-panel" style="display:none; position: fixed; top: 10px; left: 10px; z-index: 10000; background: rgba(0,0,0,0.8); padding: 10px; border: 1px solid #ff4757; border-radius: 8px;">
+        <h3 style="color: #ff4757; margin: 0 0 10px 0; font-family: Rajdhani;">MODO DESARROLLO</h3>
+        <button id="debug-spawn-bot" style="background: #333; color: white; border: 1px solid #666; padding: 5px 10px; cursor: pointer; margin-bottom: 5px; width: 100%;">Spawn Bot</button><br>
+        <button id="debug-gift-rose" style="background: #333; color: white; border: 1px solid #666; padding: 5px 10px; cursor: pointer; margin-bottom: 5px; width: 100%;">Spawn Rosa</button><br>
+        <button id="debug-gift-galaxy" style="background: #333; color: white; border: 1px solid #666; padding: 5px 10px; cursor: pointer; margin-bottom: 5px; width: 100%;">Spawn Galaxia</button><br>
+        <button id="debug-gift-universe" style="background: #333; color: white; border: 1px solid #666; padding: 5px 10px; cursor: pointer; margin-bottom: 5px; width: 100%;">Spawn Universo</button><br>
+        <button id="debug-toggle-sd" style="background: #333; color: white; border: 1px solid #666; padding: 5px 10px; cursor: pointer; width: 100%;">Toggle Fase Final</button>
+    </div>
+
+    <!-- Efectos y UI Flotante HTMl (si los hay) -->
+    <div id="floating-ui-layer"></div>
+
+    <!-- Capa de burbujas de jugadores (encima del canvas y de la UI para que siempre se vean) -->
+    <div id="arena-bubbles" aria-hidden="true"></div>
+    <div id="arena-bubbles-debug" style="display:none; position:fixed; top:12px; right:12px; padding:6px 12px; border-radius:8px; background:rgba(0,0,0,0.85); border:1px solid rgba(255,100,100,0.6); z-index:99998; pointer-events:none; font-size:14px; font-weight:bold; color:#ffcccb;"></div>
+
+    <style>
+        /* Estilos base si es necesario */
+    </style>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/arena-game/arena.js?v=53"></script>
+</body>
+
+</html>

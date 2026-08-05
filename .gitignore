@@ -1,0 +1,9 @@
+node_modules/
+.env
+.DS_Store
+
+# Estado de runtime (no versionar)
+arena_champions.json
+arena_hof.json
+titan_hof.json
+countries_champion.json

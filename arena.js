@@ -1,0 +1,1108 @@
+const socket = io();
+
+// Mensajes de atracción rotativos (neuromarketing: 1 mensaje claro a la vez)
+const ATTRACT_MESSAGES = [
+    { text: "¡TU CARA CAE EN LA PANTALLA!",   sub: "Manda una Rosa para empezar",       color: "#ff4757" },
+    { text: "¡DA TAP TAP!",                     sub: "Cada 3 taps = una bolita tuya",      color: "#ffa502" },
+    { text: "¿QUIÉN LLEGA AL X10?",             sub: "El que dé más Rosas gana",           color: "#2ed573" },
+    { text: "¡ATACA A TUS AMIGOS!",             sub: "Manda más Rosas = más bolas = más puntos", color: "#1e90ff" },
+    { text: "¿LISTO PARA VOLAR?",              sub: "Un León = Bola Gigante que aplasta todo", color: "#a55eea" },
+];
+let attractIdx = 0;
+setInterval(() => { attractIdx = (attractIdx + 1) % ATTRACT_MESSAGES.length; }, 3000);
+
+// ==========================================
+// DOM & CANVAS SETUP
+// ==========================================
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const leaderboardEl = document.getElementById("arena-leaderboard");
+const floatingLayer = document.getElementById("floating-ui-layer");
+
+const DEBUG_MODE = new URLSearchParams(window.location.search).get("debug") === "1";
+
+const gameContainer = document.getElementById("game-container");
+canvas.width = gameContainer.clientWidth;
+canvas.height = gameContainer.clientHeight;
+
+window.addEventListener("resize", () => {
+    canvas.width = gameContainer.clientWidth;
+    canvas.height = gameContainer.clientHeight;
+    initBoard();
+});
+
+// ==========================================
+// ESTADO GLOBAL
+// ==========================================
+let players = {};
+let roundRanking = [];
+let persistentHOF = [];
+
+// ==========================================
+// AUDIO (Web Audio API)
+// ==========================================
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let audioUnlocked = false;
+
+function unlockAudio() {
+    if (audioUnlocked) return;
+    audioCtx.resume().then(() => { audioUnlocked = true; });
+}
+
+function playSynth(freq, type, duration, volume = 0.2) {
+    try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(freq * 0.5, audioCtx.currentTime + duration);
+        gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+    } catch(e) {}
+}
+
+function sfxPeg()      { playSynth(600 + Math.random()*400, 'sine', 0.08, 0.06); }
+function sfxJoin()     { playSynth(440,'sine',0.1,0.1); setTimeout(()=>playSynth(880,'sine',0.12,0.1),120); }
+function sfxGift()     { playSynth(300,'sawtooth',0.3,0.25); setTimeout(()=>playSynth(600,'square',0.2,0.2),150); }
+function sfxMega()     { [80,120,200,300].forEach((f,i)=>setTimeout(()=>playSynth(f,'sawtooth',0.5,0.35),i*60)); }
+function sfxBucket(m)  { playSynth(220*m,'sine',0.4,0.25); }
+function sfxRoundEnd() { [300,200,100].forEach((f,i)=>setTimeout(()=>playSynth(f,'sawtooth',0.3,0.3),i*180)); }
+
+// ==========================================
+// BGM DINÁMICO
+// ==========================================
+const BGM_NOTES = [196.00, 220.00, 261.63, 293.66, 349.23, 392.00];
+const BGM_SEQ   = [0, 2, 4, 2, 5, 4, 2, 0, 1, 3, 1, 0];
+let bgmStep = 0;
+let bgmNext = 0;
+let bgmRunning = false;
+
+function bgmTick() {
+    if (!bgmRunning) return;
+    const t = audioCtx.currentTime;
+    if (t >= bgmNext) {
+        const intensity = Math.min(balls.length, 80) / 80;
+        const step = 0.45 - intensity * 0.33;
+        const octave = intensity > 0.6 ? 2 : 1;
+        const freq = BGM_NOTES[BGM_SEQ[bgmStep % BGM_SEQ.length]] * octave;
+        playSynth(freq, 'sine', step * 0.7, 0.04 + intensity * 0.04);
+        if (bgmStep % 4 === 0) playSynth(55, 'square', 0.18, 0.08);
+        bgmNext = t + step;
+        bgmStep++;
+    }
+    requestAnimationFrame(bgmTick);
+}
+
+function startBGM() {
+    if (bgmRunning) return;
+    bgmRunning = true;
+    bgmNext = audioCtx.currentTime;
+    requestAnimationFrame(bgmTick);
+}
+
+// ==========================================
+// VOZ (TTS)
+// ==========================================
+let voiceQueue = [];
+let isSpeaking = false;
+let lastVoiceTime = 0;
+const VOICE_COOLDOWN = 3000;
+
+function speak(text) {
+    if (!window.speechSynthesis) return;
+    if (Date.now() - lastVoiceTime < VOICE_COOLDOWN) { voiceQueue.push(text); return; }
+    lastVoiceTime = Date.now();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "es-ES"; u.rate = 1.1; u.volume = 0.9;
+    const voices = window.speechSynthesis.getVoices();
+    const v = voices.find(v => v.lang.startsWith("es")) || voices[0];
+    if (v) u.voice = v;
+    u.onend = () => { isSpeaking = false; if (voiceQueue.length) setTimeout(()=>speak(voiceQueue.shift()),400); };
+    isSpeaking = true;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+}
+
+if (window.speechSynthesis) {
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+}
+
+function rnd(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+// ==========================================
+// PLINKO ENGINE
+// ==========================================
+const GRAVITY       = 0.13;   // Lento = más drama
+let BALL_R          = 20;     // Ahora es dinámico
+let PEG_R           = 7;      // Ahora es dinámico
+const BOUNCE        = 0.62;   // Más elástico = más caos
+
+const balls      = [];
+const pegs       = [];
+const buckets    = [];
+const particles  = [];
+const toasts     = [];
+let screenShake  = 0;
+let flashAlpha   = 0;
+let flashColor   = "255,255,255";
+
+// Paleta de colores vibrantes
+const COLORS = ["#ff4757","#2ed573","#1e90ff","#ffa502","#ff6b81","#7bed9f","#eccc68","#00d8d6","#a55eea","#ff7f50"];
+const playerColors = {};
+function getColor(id) {
+    if (!playerColors[id]) playerColors[id] = COLORS[Object.keys(playerColors).length % COLORS.length];
+    return playerColors[id];
+}
+
+// Avatar cache
+const avatarCache = {};
+function getAvatar(url) {
+    if (!url) return null;
+    if (avatarCache[url]) return avatarCache[url];
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+    img.src = url;
+    avatarCache[url] = img;
+    return img;
+}
+
+// Asegurar/crear jugador on-the-fly
+function ensurePlayer(id, name, avatar) {
+    if (!players[id]) players[id] = { id, name: name || id, avatar: avatar || "", score: 0 };
+    return players[id];
+}
+
+// ==========================================
+// BOARD INIT
+// ==========================================
+function initBoard() {
+    pegs.length = 0;
+    buckets.length = 0;
+
+    const startY     = canvas.height * 0.08;
+    const limitY     = canvas.height * 0.70; // 70% lleno de pegs
+    const bY         = canvas.height * 0.85; // 85% inicio buckets
+    const bucketH    = canvas.height * 0.11;
+
+    // maxCols=7 → gapX ~33% más grande → bolas ~30% más grandes con avatares visibles
+    const maxCols = 7; 
+    const gapX = (canvas.width * 0.94) / (maxCols - 1);
+    
+    // gapY ajustado para que quepan más filas sin achicar gapX
+    const gapY = gapX * 1.1; 
+
+    // Tamaños: bolas y pegs grandes y visibles
+    BALL_R = gapX * 0.40; // Reducido para que pasen más fácil por las rendijas
+    PEG_R  = gapX * 0.18;
+
+    let maxPyramidY = 0;
+    const totalExpectedRows = Math.floor((limitY - startY) / gapY) + 1;
+
+    let r = 0;
+    while (true) {
+        const py = startY + r * gapY;
+        if (py > limitY) break; // Si pasamos el 70% de la pantalla, paramos.
+
+        if (py > maxPyramidY) maxPyramidY = py;
+
+        // La pirámide crece hasta maxCols. Luego alterna entre maxCols y maxCols-1 (forma de panel de abeja)
+        let cols = r + 3;
+        if (cols > maxCols) {
+            cols = (r - (maxCols - 3)) % 2 === 0 ? maxCols : maxCols - 1;
+        }
+
+        const rowW = (cols - 1) * gapX;
+        const ox = (canvas.width - rowW) / 2;
+        
+        for (let c = 0; c < cols; c++) {
+            let bombValue = 0;
+            if (r > 1) {
+                // Reducido drásticamente la probabilidad de bombas para que sea más fácil (5% al 20% max)
+                const bombChance = 0.05 + (r / totalExpectedRows) * 0.15; 
+                if (Math.random() < bombChance) {
+                    const rand = Math.random();
+                    // Valores más benévolos, bombas de -1000 y -500 muy raras
+                    if (rand < 0.03)       bombValue = 1000;
+                    else if (rand < 0.12)  bombValue = 500;
+                    else if (rand < 0.40)  bombValue = 100;
+                    else                   bombValue = 50;
+                }
+            }
+            pegs.push({ x: ox + c * gapX, y: startY + r * gapY, lit: 0, isBomb: bombValue > 0, bombValue });
+        }
+        r++;
+    }
+
+    // Buckets con texto y anchos más equilibrados para evitar overlap
+    const mults   = [1, 3, 5, 10, 5, 3, 1];
+    const bColors = ["#1e90ff", "#2ed573", "#a55eea", "#ff4757", "#a55eea", "#2ed573", "#1e90ff"];
+    // Anchos equilibrados: x10 no puede ser tan fino porque el texto no cabe
+    const bWidths = [0.16, 0.15, 0.14, 0.10, 0.14, 0.15, 0.16];
+    let currentX = 0;
+    for (let i = 0; i < mults.length; i++) {
+        const w = canvas.width * bWidths[i];
+        buckets.push({ x: currentX, y: bY, w: w, h: bucketH, mult: mults[i], color: bColors[i], flash: 0 });
+        currentX += w;
+    }
+}
+
+initBoard();
+
+// ==========================================
+// SPAWN BALLS
+// ==========================================
+function spawnBall(player, sizeScale = 1, count = 1, delay = 180) {
+    for (let i = 0; i < count; i++) {
+        setTimeout(() => {
+            // Limitar spawn al ancho de la primera fila de la pirámide
+            const topPegs = pegs.filter(p => p.y === pegs[0].y);
+            const spawnLeft  = topPegs.length ? topPegs[0].x : canvas.width * 0.3;
+            const spawnRight = topPegs.length ? topPegs[topPegs.length - 1].x : canvas.width * 0.7;
+            const spawnX = spawnLeft + Math.random() * (spawnRight - spawnLeft);
+            balls.push({
+                player,
+                x: spawnX,
+                y: -BALL_R * sizeScale - Math.random() * 40,
+                vx: (Math.random() - 0.5) * 4,
+                vy: 1 + Math.random() * 2,
+                r: BALL_R * sizeScale,
+                heavy: sizeScale >= 2.5,
+                color: getColor(player.id),
+                active: true,
+                lastSfxTime: 0,
+                stuckFrames: 0
+            });
+        }, i * delay);
+    }
+}
+
+// Demo balls (idle screen – caen automaticamente con colores vibrantes, sin iconos)
+function spawnDemoBall() {
+    const id = "demo_" + Math.floor(Math.random()*10000);
+    const color = COLORS[Math.floor(Math.random()*COLORS.length)];
+    playerColors[id] = color;
+    const topPegs = pegs.filter(p => p.y === pegs[0].y);
+    const spawnLeft  = topPegs.length ? topPegs[0].x : canvas.width * 0.3;
+    const spawnRight = topPegs.length ? topPegs[topPegs.length - 1].x : canvas.width * 0.7;
+    const spawnX = spawnLeft + Math.random() * (spawnRight - spawnLeft);
+    balls.push({
+        player: { id, name: "", avatar: "" },
+        x: spawnX,
+        y: -BALL_R,
+        vx: (Math.random() - 0.5) * 4,
+        vy: 1,
+        r: BALL_R * 0.65,
+        heavy: false,
+        color,
+        active: true,
+        isDemo: true,
+        lastSfxTime: 0,
+        stuckFrames: 0
+    });
+}
+// Caen cada 1400ms para mantener el tablero vivo sin saturarlo
+setInterval(() => {
+    if (Object.keys(players).filter(k => !k.startsWith("demo_")).length === 0) spawnDemoBall();
+}, 1400);
+
+// ==========================================
+// FLOATING TEXT
+// ==========================================
+function floatText(text, x, y, color) {
+    const d = document.createElement("div");
+    d.className = "floating-score";
+    d.style.cssText = `position:absolute;left:${x}px;top:${y}px;color:${color};font:bold 18px Orbitron,monospace;pointer-events:none;transition:transform 0.8s ease,opacity 0.8s ease;`;
+    d.innerText = text;
+    floatingLayer.appendChild(d);
+    requestAnimationFrame(() => {
+        d.style.transform = "translateY(-60px)";
+        d.style.opacity = "0";
+    });
+    setTimeout(() => d.remove(), 900);
+}
+
+// ==========================================
+// TOAST ANUNCIOS
+// ==========================================
+function toast(text, color = "#fff", duration = 2500) {
+    toasts.push({ text, color, birth: Date.now(), duration });
+}
+
+// ==========================================
+// PARTICLES
+// ==========================================
+function explode(x, y, color, n = 14) {
+    for (let i = 0; i < n; i++) {
+        particles.push({
+            x, y,
+            vx: (Math.random()-0.5)*12,
+            vy: (Math.random()-0.5)*12,
+            life: 1,
+            color,
+            size: Math.random()*4+2
+        });
+    }
+}
+
+// ==========================================
+// LEADERBOARD DOM
+// ==========================================
+function updateLeaderboard() {
+    if (!leaderboardEl) return;
+    leaderboardEl.innerHTML = roundRanking.slice(0, 5).map((p,i) => {
+        const name = p.name || p.n || "?";
+        const score = p.score || p.s || 0;
+        const medals = ["🥇","🥈","🥉","4️⃣","5️⃣"];
+        return `<div class="lb-row">${medals[i]} <span class="lb-name">${name}</span> <span class="lb-score">${score} pts</span></div>`;
+    }).join("");
+}
+
+// ==========================================
+// NARRACIÓN (neuromarketing: urgencia, FOMO, tribu)
+// ==========================================
+const NEURO_IDLE = [
+    () => `¡Lanza una Rosa y tu cara aparece en pantalla!`,
+    () => `¡El que más regala, más bolas tiene y más puntos gana!`,
+    () => `¡Mira esos puntos negativos naranja! ¡Evítalos para mantenerte arriba!`,
+    () => `¡Solo una Rosa y entras al juego ahora mismo!`,
+    () => `¡El JACKPOT x10 está en el centro! ¡Necesitas más bolas para llegar!`,
+    () => `¡Manda un regalito y sube en el ranking antes de que termine la ronda!`,
+];
+const NEURO_LEADER = [
+    (name) => `¡${name} va primero! ¡Manda una Rosa para alcanzarlo, la ronda termina pronto!`,
+    (name) => `¡${name} domina! ¡Lanza regalos para robarle el primer lugar!`,
+    (name) => `¡Solo ${name} está ganando — ¡no dejes que se lleve el torneo solo!`,
+    (name) => `¡${name} tiene más bolas que tú! ¡Manda rosas ahora y súbete al marcador!`,
+];
+
+let lastNarrate = 0;
+function maybeNarrate() {
+    if (Date.now() - lastNarrate < 28000) return;
+    if (!roundRanking.length) return;
+    lastNarrate = Date.now();
+    const top = roundRanking[0];
+    const name = top.name || top.n || "El líder";
+    const fn = Math.random() < 0.55 ? rnd(NEURO_LEADER)(name) : rnd(NEURO_IDLE)();
+    speak(fn);
+}
+
+// ==========================================
+// SOCKET EVENTS
+// ==========================================
+// ==========================================
+// TIMER
+// ==========================================
+let currentTimerSeconds = 0;
+let timerFlash = false;
+
+socket.on("timerUpdate", (seconds) => {
+    currentTimerSeconds = seconds;
+    const mins = String(Math.floor(seconds / 60)).padStart(2, "0");
+    const secs = String(seconds % 60).padStart(2, "0");
+    const timerEl = document.getElementById("main-round-timer");
+    if (timerEl) {
+        timerEl.textContent = `${mins}:${secs}`;
+        // Parpadeo rojo en los últimos 30 segundos
+        timerEl.style.color = seconds <= 30 ? (timerFlash ? "#ff4757" : "#fff") : "#ff4757";
+        timerFlash = !timerFlash;
+    }
+});
+
+socket.on("arena:sync", (data) => {
+    for (const [, m] of Object.entries(data)) {
+        const id = m.i || m.id;
+        if (!id) continue;
+        if (!players[id]) players[id] = { id, name: m.n || m.name || id, avatar: m.a || m.avatar || "", score: m.s || 0 };
+        else { players[id].score = m.s || 0; }
+    }
+});
+
+socket.on("arena:currentRanking", (data) => {
+    roundRanking = data;
+    updateLeaderboard();
+});
+
+socket.on("arena:join", (player) => {
+    ensurePlayer(player.id || player.i, player.name || player.n, player.avatar || player.a);
+    spawnBall(players[player.id || player.i], 1, 1);
+    sfxJoin();
+    speak(rnd([
+        () => `¡${player.name || player.n || "alguien"} entró al juego! ¡Lanza una Rosa para tener más bolas!`,
+        () => `¡Bienvenido ${player.name || player.n || "jugador"}! Manda regalos para subir al top.`,
+        () => `¡${player.name || player.n || "nuevo jugador"} está aquí! ¡Lanza Rosas para ganar más puntos!`
+    ])());
+});
+
+socket.on("arena:likesBatch", (batch) => {
+    for (const data of batch) {
+        ensurePlayer(data.userId, data.userName, "");
+        const player = players[data.userId];
+        const count = Math.max(1, Math.floor((data.likeCount || 1) / 3));
+        spawnBall(player, 0.55, Math.min(count, 4), 80);
+    }
+});
+
+socket.on("arena:gift", (data) => {
+    const aData  = data.attacker || {};
+    const id     = aData.id || aData.i;
+    const name   = aData.name || aData.n || "Donador";
+    const avatar = aData.avatar || aData.a || "";
+    const diamonds = data.diamondsTotal || 1;
+
+    ensurePlayer(id, name, avatar);
+    const player = players[id];
+
+    let count = 1, scale = 1, label = "Rosa";
+
+    if (diamonds >= 30000)      { count = 1;  scale = 4.5; label = "LEON";    sfxMega();  screenShake = 25; speak(`¡${name} mandó un LEÓN! ¡Bola GIGANTE cayendo! ¡Aparta todo!`); }
+    else if (diamonds >= 5000)  { count = 20; scale = 1;   label = "GALAXIA"; sfxMega();  screenShake = 15; speak(`¡${name} lanzó una GALAXIA! ¡Lluvia de veinte bolas! ¡Mira eso!`); }
+    else if (diamonds >= 1000)  { count = 10; scale = 1.2; label = "ATAQUE";  sfxGift();  screenShake = 8;  speak(`¡${name} está jugando en serio! ¡Diez bolas de golpe!`); }
+    else if (diamonds >= 99)    { count = 5;  scale = 1;   label = "REGALO";  sfxGift();  speak(rnd([
+        () => `¡${name} mandó un regalo! ¡Así se sube al marcador!`,
+        () => `¡${name} jugó cinco bolas! ¡Lanza más para llegar al top!`
+    ])()); }
+    else                        { count = 2;  scale = 0.9; label = "Rosa";    sfxPeg(); speak(rnd([
+        () => `¡${name} lanzó una Rosa! ¡Cada Rosa es una bola extra!`,
+        () => `¡${name} está jugando! ¡Manda más Rosas para tener más oportunidades!`
+    ])()); }
+
+    toast(`${name}: ${label}!`, getColor(id), 2500);
+    explode(canvas.width / 2, 80, getColor(id), 20);
+    spawnBall(player, scale, count);
+});
+
+socket.on("arena:roundEnd", () => {
+    const winner = roundRanking[0];
+    const winnerName = winner ? (winner.name || winner.n || "???") : "???";
+    const winnerScore = winner ? (winner.score || winner.s || 0) : 0;
+    toast(`🏆 GANADOR: ${winnerName} (${winnerScore} pts)`, "#ffd700", 5000);
+    flashAlpha = 0.5; flashColor = "255,71,87";
+    sfxRoundEnd();
+    speak(`¡Se acabó la ronda! ¡${winnerName} ganó con ${winnerScore} puntos! ¡Lanza una Rosa para entrar a la SIGUIENTE ronda y arrebatarle el trono!`);
+    setTimeout(() => balls.length = 0, 4000);
+});
+
+// ==========================================
+// RENDER LOOP
+// ==========================================
+function drawBackground() {
+    // Fondo negro con gradiente radial para profundidad
+    const grd = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 0, canvas.width/2, canvas.height/2, canvas.width * 0.8);
+    grd.addColorStop(0, "#0d1224");
+    grd.addColorStop(1, "#03050f");
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Grid de puntos decorativos
+    ctx.fillStyle = "rgba(255,255,255,0.03)";
+    const gs = 40;
+    for (let x = gs; x < canvas.width; x += gs) {
+        for (let y = gs; y < canvas.height; y += gs) {
+            ctx.fillRect(x-1, y-1, 2, 2);
+        }
+    }
+}
+
+    // Dibujar canastas con label explicativo
+function drawBuckets() {
+    for (const b of buckets) {
+        ctx.fillStyle = b.color;
+        ctx.globalAlpha = 0.15 + b.flash * 0.6;
+        ctx.fillRect(b.x, b.y, b.w, b.h);
+        ctx.globalAlpha = 1;
+
+        ctx.strokeStyle = b.color;
+        ctx.lineWidth = b.flash > 0.1 ? 3 : 1.5;
+        ctx.shadowBlur = b.flash > 0.1 ? 20 : 0;
+        ctx.shadowColor = b.color;
+        ctx.strokeRect(b.x + 1, b.y + 1, b.w - 2, b.h - 2);
+        ctx.shadowBlur = 0;
+
+        // Multiplicador grande — limitado por el ancho del bucket para no salir
+        ctx.fillStyle = "#ffffff";
+        ctx.globalAlpha = 0.95;
+        // Limitamos el font-size para que nunca sea más ancho que el bucket
+        const multSize = Math.max(Math.min(Math.round(b.h * 0.38), Math.round(b.w * 0.45)), 12);
+        ctx.font = `bold ${multSize}px Orbitron, monospace`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(`x${b.mult}`, b.x + b.w / 2, b.y + b.h * 0.38);
+
+        // Etiqueta pequena — limitada por el ancho del bucket
+        const labelSize = Math.max(Math.min(Math.round(b.h * 0.18), Math.round(b.w * 0.22)), 8);
+        ctx.font = `bold ${labelSize}px Rajdhani, sans-serif`;
+        ctx.fillStyle = "rgba(255,255,255,0.7)";
+        const label = b.mult === 10 ? "JACKPOT" : b.mult === 5 ? "MEGA" : b.mult === 3 ? "BONUS" : "PUNTOS";
+        ctx.fillText(label, b.x + b.w / 2, b.y + b.h * 0.72);
+        ctx.globalAlpha = 1;
+
+        if (b.flash > 0) b.flash *= 0.88;
+    }
+}
+
+function drawPegs() {
+    const now = Date.now();
+    for (const peg of pegs) {
+        const isLit = peg.lit > 0;
+        const r = PEG_R + (peg.isBomb ? PEG_R * 0.5 : 0); // Bombas 50% más grandes
+        ctx.beginPath();
+        ctx.arc(peg.x, peg.y, r, 0, Math.PI * 2);
+        
+        if (peg.isBomb) {
+            // Color según valor: naranja=-50, rojo=-500, magenta=-1000
+            const pulse = 0.7 + 0.3 * Math.sin(now * 0.005 + peg.x); // pulso animado
+            if (peg.bombValue >= 1000) {
+                ctx.fillStyle = `rgba(180,0,255,${pulse})`;
+                ctx.shadowColor = "#cc00ff";
+            } else if (peg.bombValue >= 500) {
+                ctx.fillStyle = `rgba(220,30,30,${pulse})`;
+                ctx.shadowColor = "#ff0000";
+            } else {
+                ctx.fillStyle = `rgba(255,120,0,${pulse})`;
+                ctx.shadowColor = "#ff7700";
+            }
+            ctx.shadowBlur = 18;
+            ctx.fill();
+
+            // Número negativo DENTRO del crculo
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = "#ffffff";
+            const fontSize = Math.max(Math.floor(r * 0.85), 7);
+            ctx.font = `bold ${fontSize}px Rajdhani, sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(`-${peg.bombValue}`, peg.x, peg.y);
+        } else {
+            ctx.fillStyle = isLit ? "#ffffff" : "#ff4757";
+            ctx.shadowBlur = isLit ? 18 : 6;
+            ctx.shadowColor = isLit ? "#ffffff" : "#ff4757";
+            ctx.fill();
+        }
+
+        if (peg.lit > 0) peg.lit -= 0.04;
+    }
+    ctx.shadowBlur = 0;
+}
+
+function drawBall(b) {
+    ctx.save();
+
+    // Sombra exterior (glow)
+    ctx.shadowBlur = b.heavy ? 35 : 14;
+    ctx.shadowColor = b.color;
+
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+    ctx.fillStyle = b.color;
+    ctx.fill();
+
+    // Avatar (jugador real)
+    const img = getAvatar(b.player.avatar);
+    if (img && img.complete && img.naturalWidth > 0) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(img, b.x - b.r, b.y - b.r, b.r * 2, b.r * 2);
+        ctx.restore();
+    } else if (b.isDemo) {
+        // Demo: círculo con brillo interior, sin emojis de casino
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.r * 0.5, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255,255,255,0.25)";
+        ctx.fill();
+    }
+
+    ctx.shadowBlur = 0;
+
+    // Borde
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+    ctx.strokeStyle = b.heavy ? "#ffffff" : "rgba(255,255,255,0.4)";
+    ctx.lineWidth = b.heavy ? 3 : 1.5;
+    ctx.stroke();
+
+    ctx.restore();
+
+    // Nombre del jugador SOLO si tiene avatar real y bola normal
+    if (!b.isDemo && b.r >= BALL_R * 0.8 && b.player.name) {
+        ctx.fillStyle = "rgba(0,0,0,0.6)";
+        const nameW = Math.min(b.player.name.length * 7, 80);
+        ctx.fillRect(b.x - nameW/2, b.y + b.r + 2, nameW, 16);
+        ctx.fillStyle = "#ffffff";
+        ctx.font = `bold 11px Rajdhani, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillText(b.player.name.substring(0, 12), b.x, b.y + b.r + 4);
+    }
+}
+
+function physicsStep(b) {
+    b.vy += GRAVITY * (b.heavy ? 1.5 : 1);
+    const spd = Math.hypot(b.vx, b.vy);
+    if (spd > 22) { b.vx = b.vx/spd*22; b.vy = b.vy/spd*22; }
+    b.x += b.vx;
+    b.y += b.vy;
+
+    // Paredes
+    if (b.x < b.r)              { b.x = b.r;              b.vx = Math.abs(b.vx) * BOUNCE; }
+    if (b.x > canvas.width-b.r) { b.x = canvas.width-b.r; b.vx = -Math.abs(b.vx) * BOUNCE; }
+
+    // Anti-atascamiento: si la bola casi no se mueve, acumula frames atascada
+    if (spd < 0.5 && Math.abs(b.vy) < 0.5) {
+        b.stuckFrames++;
+        if (b.stuckFrames > 60) {
+            // Empujón lateral aleatorio fuerte para sacarla
+            b.vx += (Math.random() > 0.5 ? 2 : -2);
+            b.vy -= 2;
+            b.stuckFrames = 0;
+        }
+    } else {
+        b.stuckFrames = 0;
+    }
+
+    // Pegs
+    const now = Date.now();
+    for (const peg of pegs) {
+        const dx = b.x - peg.x, dy = b.y - peg.y;
+        const dist = Math.hypot(dx, dy);
+        const min = b.r + PEG_R;
+        if (dist < min && dist > 0) {
+            const nx = dx/dist, ny = dy/dist;
+            b.x += nx*(min-dist);
+            b.y += ny*(min-dist);
+            const dot = b.vx*nx + b.vy*ny;
+            if (dot < 0) {
+                b.vx -= (1+BOUNCE)*dot*nx;
+                b.vy -= (1+BOUNCE)*dot*ny;
+            }
+            peg.lit = 1;
+            
+            // Si es bomba, castigo!
+            if (peg.isBomb && !b.isDemo) {
+                // Explosión más grande proporcional al daño
+                explode(b.x, b.y, "#ff0000", peg.bombValue >= 500 ? 30 : 18);
+                if (now - b.lastSfxTime > 100) {
+                    floatText(`-${peg.bombValue} pts`, b.x, b.y - 15, "#ff0000");
+                    socket.emit("arena:bombHit", { targetId: b.player.id, loss: peg.bombValue });
+                }
+                sfxRoundEnd();
+                return false; // DESTRUYE LA BOLA
+            }
+            
+            // Sin sonido en rebotes normales para no saturar el audio del live
+            // (solo se conservan los sonidos de bombas, buckets y regalos)
+        }
+    }
+
+    // Bola pesada empuja a otras
+    if (b.heavy) {
+        for (const o of balls) {
+            if (o === b || !o.active) continue;
+            const dx = o.x-b.x, dy = o.y-b.y;
+            const dist = Math.hypot(dx,dy);
+            const min = b.r+o.r;
+            if (dist < min && dist > 0) {
+                const nx=dx/dist, ny=dy/dist;
+                o.x += nx*(min-dist);
+                o.y += ny*(min-dist);
+                o.vx += nx*6; o.vy += ny*3;
+            }
+        }
+    }
+
+    // Caída en bucket
+    if (b.y > canvas.height - 75) {
+        b.active = false;
+        for (const bucket of buckets) {
+            if (b.x > bucket.x && b.x < bucket.x + bucket.w) {
+                bucket.flash = 1;
+                const pName = b.player.name || "";
+                const m = bucket.mult;
+
+                // Explosion proporcional al multiplicador
+                explode(b.x, b.y, b.color, m === 10 ? 40 : m === 5 ? 22 : 10);
+
+                if (!b.isDemo) {
+                    if (m === 10) {
+                        // JACKPOT — pantalla entera
+                        flashAlpha = 0.45; flashColor = "255,215,0";
+                        screenShake = 18;
+                        toast(`${pName} ¡JACKPOT x10! +PUNTOS MAXIMOS`, "#ffd700", 4000);
+                        floatText(`JACKPOT x10`, b.x, b.y - 40, "#ffd700");
+                        sfxBucket(10);
+                        setTimeout(()=>sfxBucket(10), 200);
+                        speak(`¡${pName} cayó en el DIEZ! ¡JACKPOT! ¡Máximos puntos!`);
+                    } else if (m === 5) {
+                        flashAlpha = 0.2; flashColor = "165,90,234";
+                        screenShake = 8;
+                        toast(`${pName} ganó x5 ¡Muy bien!`, "#a55eea", 2500);
+                        floatText(`x5!`, b.x, b.y - 30, "#a55eea");
+                        sfxBucket(5);
+                        if (Math.random() < 0.4) speak(`¡${pName} en el cinco! ¡Bien jugado!`);
+                    } else if (m === 3) {
+                        flashAlpha = 0.1; flashColor = "46,213,115";
+                        toast(`${pName} ganó x3`, "#2ed573", 2000);
+                        floatText(`x3`, b.x, b.y - 25, "#2ed573");
+                        sfxBucket(3);
+                    } else {
+                        floatText(`x1`, b.x, b.y - 20, "#1e90ff");
+                        // Sin sonido para no saturar en x1
+                    }
+                    socket.emit("arena:tapAttack", { targetId: b.player.id, mult: m });
+                }
+                break;
+            }
+        }
+        return false;
+    }
+    return true;
+}
+
+// ==========================================
+// REY GLOBAL (TOP DE VICTORIAS)
+// ==========================================
+let globalKingData = null;
+socket.on("arena:globalKing", (king) => {
+    globalKingData = king;
+});
+
+// SCOREBOARD EN CANVAS (top 5 durante juego)
+// ==========================================
+function drawScoreboard() {
+    const startY = 40; // Debajo de los textos de atraccion
+
+    // =============================================
+    // DERECHA: REY GLOBAL (ganador de más rondas)
+    // =============================================
+    if (globalKingData) {
+        const boardW = Math.min(canvas.width * 0.45, 230);
+        const boardX = canvas.width - boardW - 10;
+        const rowH = 50;
+
+        // Fondo dorado con glow
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = "#ffd700";
+        ctx.fillStyle = "rgba(255,215,0,0.25)";
+        ctx.strokeStyle = "#ffd700";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(boardX, startY, boardW, rowH, 10);
+        ctx.fill();
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        ctx.font = `bold 16px Rajdhani, sans-serif`;
+        ctx.fillStyle = "#ffd700";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(`\u{1F451} REY`, boardX + 8, startY + rowH / 2);
+
+        const name = (globalKingData.name || "?").substring(0, 8);
+        const avatarUrl = globalKingData.avatar || "";
+        const avatarSize = 34;
+        const avatarX = boardX + 60;
+        const avatarY = startY + rowH / 2 - avatarSize / 2;
+
+        if (avatarUrl) {
+            const img = getAvatar(avatarUrl);
+            if (img && img.complete) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(avatarX + avatarSize/2, avatarY + avatarSize/2, avatarSize/2, 0, Math.PI*2);
+                ctx.clip();
+                ctx.drawImage(img, avatarX, avatarY, avatarSize, avatarSize);
+                ctx.restore();
+            }
+        }
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = `bold 14px Rajdhani, sans-serif`;
+        ctx.fillText(name, avatarX + avatarSize + 8, startY + rowH / 2 - 7);
+
+        ctx.fillStyle = "#ffd700";
+        ctx.font = `bold 12px Rajdhani, sans-serif`;
+        ctx.fillText(`${globalKingData.victories} VICTORIAS`, avatarX + avatarSize + 8, startY + rowH / 2 + 9);
+    }
+
+    // =============================================
+    // IZQUIERDA: TOP 5 DE LA RONDA
+    // =============================================
+    if (roundRanking.length === 0) return;
+    
+    const top = roundRanking.slice(0, 5);
+    const rowH = 50;
+    const boardW = Math.min(canvas.width * 0.45, 230);
+    const boardX = 10;
+    const medals = ["1", "2", "3", "4", "5"];
+    const medalColors = ["#ffd700", "#c0c0c0", "#cd7f32", "#87ceeb", "#87ceeb"];
+
+    // Fondo con borde verde elegante
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
+    ctx.strokeStyle = "rgba(46, 213, 115, 0.6)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(boardX, startY, boardW, top.length * rowH + 28, 10);
+    ctx.fill();
+    ctx.stroke();
+
+    // Título
+    ctx.font = `bold 13px Orbitron, monospace`;
+    ctx.fillStyle = "#2ed573";
+    ctx.textAlign = "center";
+    ctx.fillText("TOP RONDA", boardX + boardW / 2, startY + 14);
+
+    top.forEach((p, i) => {
+        const name  = (p.name || p.n || "?").substring(0, 8);
+        const score = p.score || p.s || 0;
+        const y     = startY + 24 + i * rowH;
+        const color = getColor(p.id || p.i || name);
+        const avatarUrl = p.avatar || p.a || "";
+
+        // Medalla / número
+        ctx.font = `bold 15px Rajdhani, sans-serif`;
+        ctx.fillStyle = medalColors[i];
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(`#${medals[i]}`, boardX + 8, y + rowH / 2);
+
+        // Barra de color del jugador
+        ctx.fillStyle = color;
+        ctx.fillRect(boardX + 28, y + 6, 4, rowH - 12);
+
+        // Avatar
+        const avatarSize = 34;
+        const avatarX = boardX + 38;
+        const avatarY = y + rowH / 2 - avatarSize / 2;
+        if (avatarUrl) {
+            const img = getAvatar(avatarUrl);
+            if (img && img.complete) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(avatarX + avatarSize/2, avatarY + avatarSize/2, avatarSize/2, 0, Math.PI*2);
+                ctx.clip();
+                ctx.drawImage(img, avatarX, avatarY, avatarSize, avatarSize);
+                ctx.restore();
+                // Anillo
+                ctx.beginPath();
+                ctx.arc(avatarX + avatarSize/2, avatarY + avatarSize/2, avatarSize/2, 0, Math.PI*2);
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            } else {
+                ctx.fillStyle = "#333";
+                ctx.beginPath();
+                ctx.arc(avatarX + avatarSize/2, avatarY + avatarSize/2, avatarSize/2, 0, Math.PI*2);
+                ctx.fill();
+            }
+        } else {
+            ctx.fillStyle = "#333";
+            ctx.beginPath();
+            ctx.arc(avatarX + avatarSize/2, avatarY + avatarSize/2, avatarSize/2, 0, Math.PI*2);
+            ctx.fill();
+        }
+
+        // Nombre
+        ctx.fillStyle = "#ffffff";
+        ctx.font = `bold 14px Rajdhani, sans-serif`;
+        ctx.fillText(name, avatarX + avatarSize + 8, y + rowH / 2 - 8);
+
+        // Puntos en verde
+        ctx.fillStyle = "#2ed573";
+        ctx.font = `bold 12px Orbitron, monospace`;
+        ctx.fillText(`${score} pts`, avatarX + avatarSize + 8, y + rowH / 2 + 8);
+    });
+}
+
+function drawIdleScreen() {
+    const t = Date.now() * 0.001;
+    const msg = ATTRACT_MESSAGES[attractIdx];
+
+    // Panel central semitransparente — único bloque de texto
+    const panelW = Math.min(canvas.width * 0.82, 420);
+    const panelH = 110;
+    const panelX = canvas.width / 2 - panelW / 2;
+    const panelY = canvas.height * 0.35 - panelH / 2;
+
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
+    ctx.beginPath();
+    ctx.roundRect(panelX, panelY, panelW, panelH, 16);
+    ctx.fill();
+
+    // Borde coloreado del panel
+    ctx.strokeStyle = msg.color;
+    ctx.lineWidth = 2;
+    ctx.shadowBlur = 18;
+    ctx.shadowColor = msg.color;
+    ctx.beginPath();
+    ctx.roundRect(panelX, panelY, panelW, panelH, 16);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // MENSAJE PRINCIPAL — grande, claro, UN texto
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = `bold ${Math.min(28, canvas.width * 0.058)}px Rajdhani, sans-serif`;
+    ctx.fillStyle = msg.color;
+    ctx.fillText(msg.text, canvas.width / 2, panelY + 38);
+
+    // SUB-MENSAJE — acción concreta
+    ctx.font = `${Math.min(17, canvas.width * 0.036)}px Rajdhani, sans-serif`;
+    ctx.fillStyle = "rgba(255,255,255,0.8)";
+    ctx.fillText(msg.sub, canvas.width / 2, panelY + 76);
+
+    // Flecha animada abajo del panel (CTA)
+    const arrowY = Math.sin(t * 4) * 6;
+    ctx.font = `bold 20px Rajdhani, sans-serif`;
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    ctx.fillText("▼  TAP TAP PARA EMPEZAR  ▼", canvas.width / 2, panelY + panelH + 28 + arrowY);
+}
+
+function drawToasts() {
+    const now = Date.now();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (let i = toasts.length - 1; i >= 0; i--) {
+        const a = toasts[i];
+        const elapsed = now - a.birth;
+        if (elapsed > a.duration) { toasts.splice(i, 1); continue; }
+        const p = elapsed / a.duration;
+        const alpha = p < 0.1 ? p / 0.1 : p > 0.7 ? (1-p)/0.3 : 1;
+        const scale = p < 0.1 ? 0.5 + p * 5 : 1;
+        ctx.save();
+        ctx.translate(canvas.width/2, 80 + i * 42);
+        ctx.scale(scale, scale);
+        ctx.globalAlpha = alpha;
+        ctx.font = `bold 20px Orbitron, monospace`;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = a.color;
+        ctx.fillStyle = a.color;
+        ctx.fillText(a.text, 0, 0);
+        ctx.shadowBlur = 0;
+        ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+}
+
+function drawParticles() {
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx; p.y += p.vy; p.vy += 0.2; p.life -= 0.022;
+        if (p.life <= 0) { particles.splice(i, 1); continue; }
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+}
+
+function loop() {
+    // Screen shake
+    ctx.save();
+    if (screenShake > 0) {
+        ctx.translate((Math.random()-0.5)*screenShake, (Math.random()-0.5)*screenShake);
+        screenShake *= 0.88;
+        if (screenShake < 0.5) screenShake = 0;
+    }
+
+    drawBackground();
+
+    // Siempre dibujar el tablero (pegs y buckets)
+    drawBuckets();
+    drawPegs();
+
+    // Pantalla de espera (sin jugadores reales)
+    if (Object.keys(players).filter(k => !k.startsWith("demo_")).length === 0) {
+        drawIdleScreen();
+    }
+
+    // Física y dibujo de bolas
+    for (let i = balls.length - 1; i >= 0; i--) {
+        const b = balls[i];
+        if (!b.active) { balls.splice(i, 1); continue; }
+        const alive = physicsStep(b);
+        if (!alive) { balls.splice(i, 1); continue; }
+        drawBall(b);
+    }
+
+    drawParticles();
+    drawToasts();
+
+    // Scoreboard en canvas (top 3 siempre visible durante el juego)
+    const hasRealPlayers = Object.keys(players).filter(k => !k.startsWith("demo_") && !k.startsWith("local_")).length > 0;
+    if (hasRealPlayers) drawScoreboard();
+
+    // Flash overlay
+    if (flashAlpha > 0.01) {
+        ctx.fillStyle = `rgba(${flashColor},${flashAlpha})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        flashAlpha *= 0.82;
+    }
+
+    ctx.restore();
+
+    maybeNarrate();
+    requestAnimationFrame(loop);
+}
+
+// ==========================================
+// INTERACCIÓN LOCAL
+// ==========================================
+let tapDebounce = 0;
+function onTap(e) {
+    unlockAudio();
+    startBGM();
+    // Limitar a 1 tap visual cada 400ms para no saturar
+    const now = Date.now();
+    if (now - tapDebounce < 400) return;
+    tapDebounce = now;
+    const p = { id: "local_tap", name: "TAP", avatar: "" };
+    ensurePlayer(p.id, p.name, p.avatar);
+    spawnBall(players[p.id], 0.55, 1, 0);
+    sfxPeg();
+}
+
+canvas.addEventListener("mousedown",  onTap);
+canvas.addEventListener("touchstart", (e) => { e.preventDefault(); onTap(e); }, { passive: false });
+
+// ==========================================
+// DEBUG PANEL
+// ==========================================
+if (DEBUG_MODE) {
+    document.getElementById("debug-panel").style.display = "block";
+
+    document.getElementById("debug-spawn-bot")?.addEventListener("click", () => {
+        const id = "bot_" + Date.now();
+        const p = ensurePlayer(id, "Bot_" + Math.floor(Math.random()*99), "");
+        spawnBall(players[id], 1, 3);
+        toast("Bot spawneado", "#2ed573");
+    });
+
+    document.getElementById("debug-gift-rose")?.addEventListener("click", () => {
+        const id = "rose_" + Date.now();
+        const p = ensurePlayer(id, "RoseGifter", "");
+        spawnBall(players[id], 1, 5);
+        sfxGift();
+        toast("🌹 Rosa simulada", "#ff6b81");
+    });
+
+    document.getElementById("debug-gift-galaxy")?.addEventListener("click", () => {
+        const id = "galaxy_" + Date.now();
+        const p = ensurePlayer(id, "GalaxyGifter", "");
+        spawnBall(players[id], 4.5, 1);
+        screenShake = 20; sfxMega();
+        toast("🦁 León simulado", "#ffa502");
+    });
+}
+
+// ==========================================
+// ARRANQUE
+// ==========================================
+requestAnimationFrame(loop);

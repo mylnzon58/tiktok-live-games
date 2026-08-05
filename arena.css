@@ -1,0 +1,230 @@
+/* ============================================================
+   PIXEL WAR — TikTok LIVE | Full Screen Experience
+   ============================================================ */
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --pixel-green: #2ed573;
+    --pixel-red: #ff4757;
+    --font-ui: 'Rajdhani', sans-serif;
+    --font-title: 'Orbitron', sans-serif;
+}
+
+body, html {
+    width: 100%;
+    height: 100%;
+    background: #000;
+    overflow: hidden;
+    font-family: var(--font-ui);
+    color: white;
+    user-select: none;
+    touch-action: none;
+}
+
+/* =========================================
+   CANVAS FULL SCREEN (RESTRINGIDO)
+   ========================================= */
+#game-container {
+    position: relative;
+    width: 100%;
+    max-width: 680px; /* Ancho ampliado para aprovechar más espacio lateral */
+    height: 100%;
+    margin: 0 auto;
+    background: #000;
+    overflow: hidden;
+}
+
+#gameCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    display: block;
+}
+
+/* =========================================
+   UI LAYER (Overlays invisibles sobre el canvas)
+   ========================================= */
+#ui-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    pointer-events: none; /* Deja pasar los clicks al canvas */
+    display: flex;
+    flex-direction: column;
+}
+
+/* =========================================
+   HEADER (Minimalista)
+   ========================================= */
+#pixel-header {
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    border-bottom: 2px solid var(--pixel-green);
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+}
+
+.pixel-title {
+    font-family: var(--font-title);
+    font-size: 26px;
+    font-weight: 900;
+    color: var(--pixel-green);
+    text-shadow: 0 0 10px rgba(46, 213, 115, 0.5);
+    margin: 0;
+}
+
+.pixel-subtitle {
+    display: flex;
+    gap: 15px;
+    font-size: 19px;
+    font-weight: 700;
+    color: #ddd;
+}
+
+.pixel-subtitle span {
+    background: rgba(255,255,255,0.1);
+    padding: 3px 8px;
+    border-radius: 4px;
+}
+
+#timer-box {
+    font-family: var(--font-title);
+    font-size: 24px;
+    font-weight: 900;
+    color: var(--pixel-red);
+}
+
+/* =========================================
+   LEADERBOARD (Minimalista flotante)
+   ========================================= */
+#arena-leaderboard {
+    position: absolute;
+    top: 70px;
+    right: 15px;
+    width: 220px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    backdrop-filter: blur(5px);
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.leaderboard-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 5px 8px;
+    border-radius: 4px;
+}
+
+.rank-num {
+    font-family: var(--font-title);
+    font-size: 19px;
+    font-weight: 900;
+    color: #ffd700;
+    width: 25px;
+}
+
+.rank-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.rank-name {
+    font-size: 19px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+}
+
+.rank-score {
+    font-family: var(--font-title);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--pixel-green);
+}
+
+/* =========================================
+   TEXTOS FLOTANTES
+   ========================================= */
+#floating-ui-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.floating-text {
+    position: absolute;
+    font-family: var(--font-title);
+    font-size: 32px;
+    font-weight: 900;
+    text-shadow: 0 0 10px currentColor, 0 3px 6px #000;
+    animation: floatUp 1.2s ease-out forwards;
+    pointer-events: none;
+}
+
+@keyframes floatUp {
+    0% { opacity: 1; transform: translateY(0) scale(0.8); }
+    20% { transform: translateY(-15px) scale(1.2); }
+    100% { opacity: 0; transform: translateY(-80px) scale(1); }
+}
+
+/* =========================================
+   RESPONSIVO PARA MÓVILES / STREAMING
+   ========================================= */
+@media (max-width: 700px) {
+    #pixel-header {
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        text-align: center;
+    }
+    
+    .pixel-subtitle { 
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 5px;
+    }
+    
+    .pixel-subtitle span {
+        font-size: 15px;
+        padding: 2px 5px;
+    }
+
+    .pixel-title { font-size: 21px; }
+    
+    #timer-box { font-size: 19px; }
+    
+    #arena-leaderboard { 
+        width: 150px; 
+        top: 90px; /* Mas abajo por el header mas alto */
+        right: 10px;
+    }
+    .rank-name { font-size: 15px; }
+    .rank-score { font-size: 14px; }
+}

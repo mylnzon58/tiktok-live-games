@@ -1,0 +1,24 @@
+{
+  "name": "tiktok-live-games",
+  "version": "1.0.0",
+  "description": "Siete juegos interactivos para TikTok LIVE: reaccionan a regalos, likes y chat en tiempo real",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "lint": "eslint server.js lib titan arena-game versus bomba carrera",
+    "check": "node --check server.js && node --check lib/countries-manager.js && node --check lib/arena-manager.js && node --check titan/titan-manager.js && node --check versus/versus-manager.js && node --check bomba/bomba-manager.js && node --check carrera/carrera-manager.js"
+  },
+  "dependencies": {
+    "axios": "^1.13.6",
+    "express": "^5.2.1",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
+    "tiktok-live-connector": "^2.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.4"
+  }
+}
