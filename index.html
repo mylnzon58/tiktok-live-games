@@ -717,7 +717,8 @@
 
         /* ---------- DONATE ---------- */
         .donate {
-            background: var(--card);
+            display: block;
+            gap: 0;
         }
 
         .donate .label {
@@ -726,7 +727,7 @@
             letter-spacing: 0.16em;
             text-transform: uppercase;
             color: var(--gold);
-            margin-bottom: 16px;
+            margin-bottom: 18px;
         }
 
         .donate .quote {
@@ -745,15 +746,20 @@
         .donate p.story {
             color: var(--muted);
             max-width: 680px;
-            margin-top: 16px;
+            margin-top: 18px;
             font-size: 15px;
         }
 
-        .alias-box {
+        .donate p.story + p.story {
+            margin-top: 12px;
+        }
+
+        .donate .alias-box {
             display: inline-flex;
+            flex-wrap: wrap;
             align-items: center;
             gap: 12px;
-            margin-top: 20px;
+            margin-top: 24px;
             padding: 12px 18px;
             border-radius: 10px;
             border: 1px dashed rgba(154, 116, 40, 0.45);
@@ -764,7 +770,7 @@
             color: var(--gold);
         }
 
-        .alias-box button {
+        .donate .alias-box button {
             font-family: var(--font-mono);
             font-size: 10.5px;
             letter-spacing: 0.12em;
@@ -778,14 +784,22 @@
             transition: background 0.15s;
         }
 
-        .alias-box button:hover {
+        .donate .alias-box button:hover {
             background: rgba(154, 116, 40, 0.2);
         }
 
-        .donate-foot {
-            margin-top: 14px;
+        .donate .actions {
+            margin-top: 22px;
+        }
+
+        .donate .donate-foot {
+            margin-top: 18px;
             font-size: 13px;
             color: var(--dim);
+        }
+
+        #donar {
+            padding-bottom: 44px;
         }
 
         .setup-list {
@@ -1428,33 +1442,31 @@
 
         <!-- DONACIONES -->
         <section id="donar">
-            <div class="panel donate">
-                <div class="panel-box" style="background:none; border:none; padding:0;">
-                    <div class="label">Una historia honesta</div>
-                    <p class="quote">Los probé en mis propios directos: <em>generaron regalos, no miles</em>.</p>
-                    <p class="story">Hice estos juegos de noches enteras de trabajo y los usé en vivo. Me dieron
-                        algunos dólares, no fortunas — pero sé por otros streamers que en el momento justo explotan:
-                        batallas que se encienden y gente que vuelve cada noche.</p>
-                    <p class="story">No te prometo cifras mágicas. Te prometo un directo que juega con la gente. Si
-                        una noche memorable te llenó el bolsillo, devolvé el gesto con un cafecito; si no, usalos
-                        feliz.</p>
-                    <div class="alias-box">
-                        <span>Alias: <b>juanmonzon</b></span>
-                        <button id="btn-copy-alias">Copiar alias</button>
-                    </div>
-                    <div class="actions" style="margin-top:14px;">
-                        <a class="btn btn-ghost" href="https://www.buymeacoffee.com/digitaldevel" target="_blank"
-                            rel="noopener"><svg class="btn-ico" viewBox="0 0 24 24" fill="none"
-                                stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-                                stroke-linejoin="round" aria-hidden="true">
-                                <path d="M4 9.5h13v5.2a4.3 4.3 0 0 1-4.3 4.3H8.3A4.3 4.3 0 0 1 4 14.7V9.5Z" />
-                                <path d="M17 11.5h1.6a2.4 2.4 0 0 1 0 4.8H17" />
-                                <path d="M7.7 7.4c0-1.1.9-1.1.9-2.2M11.9 7.4c0-1.1.9-1.1.9-2.2" />
-                            </svg> Invitar un cafecito</a>
-                    </div>
-                    <p class="donate-foot">Argentina: alias Brubank <b>juanmonzon</b> · Internacional: Buy Me a Coffee.
-                        Opcional, de corazón.</p>
+            <div class="panel-box donate">
+                <div class="label">Una historia honesta</div>
+                <p class="quote">Los probé en mis propios directos: <em>generaron regalos, no miles</em>.</p>
+                <p class="story">Hice estos juegos de noches enteras de trabajo y los usé en vivo. Me dieron
+                    algunos dólares, no fortunas — pero sé por otros streamers que en el momento justo explotan:
+                    batallas que se encienden y gente que vuelve cada noche.</p>
+                <p class="story">No te prometo cifras mágicas. Te prometo un directo que juega con la gente. Si
+                    una noche memorable te llenó el bolsillo, devolvé el gesto con un cafecito; si no, usalos
+                    feliz.</p>
+                <div class="alias-box">
+                    <span>Alias: <b>juanmonzon</b></span>
+                    <button id="btn-copy-alias">Copiar alias</button>
                 </div>
+                <div class="actions">
+                    <a class="btn btn-ghost" href="https://www.buymeacoffee.com/digitaldevel" target="_blank"
+                        rel="noopener"><svg class="btn-ico" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                            stroke-linejoin="round" aria-hidden="true">
+                            <path d="M4 9.5h13v5.2a4.3 4.3 0 0 1-4.3 4.3H8.3A4.3 4.3 0 0 1 4 14.7V9.5Z" />
+                            <path d="M17 11.5h1.6a2.4 2.4 0 0 1 0 4.8H17" />
+                            <path d="M7.7 7.4c0-1.1.9-1.1.9-2.2M11.9 7.4c0-1.1.9-1.1.9-2.2" />
+                        </svg> Invitar un cafecito</a>
+                </div>
+                <p class="donate-foot">Argentina: alias Brubank <b>juanmonzon</b> · Internacional: Buy Me a Coffee.
+                    Opcional, de corazón.</p>
             </div>
         </section>
 
