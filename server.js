@@ -29,9 +29,7 @@ const versusManager = require("./versus/versus-manager")(io);
 const titanManager = require("./titan/titan-manager")(io);
 const bombaManager = require("./bomba/bomba-manager")(io);
 const carreraManager = require("./carrera/carrera-manager")(io);
-const ruletaManager = require("./ruleta/ruleta-manager")(io);
 const subastaManager = require("./subasta/subasta-manager")(io);
-const slotsManager = require("./slots/slots-manager")(io);
 const giftCatalog = createGiftCatalog();
 
 const championsStorage = createStorage("arena_champions.json", []);
@@ -150,12 +148,8 @@ app.use("/titan", express.static(path.join(__dirname, "titan/public")));
 app.use("/bomba", express.static(path.join(__dirname, "bomba/public")));
 // Carrera de Avatares: regalos impulsan a tu avatar hacia la meta
 app.use("/carrera", express.static(path.join(__dirname, "carrera/public")));
-// Ruleta de la Fortuna: chat elige color, regalos apuestan y giran
-app.use("/ruleta", express.static(path.join(__dirname, "ruleta/public")));
 // Subasta Real: regalos son pujas por un premio
 app.use("/subasta", express.static(path.join(__dirname, "subasta/public")));
-// Tragamonedas Live: regalos jalan la palanca, triple símbolo = jackpot
-app.use("/slots", express.static(path.join(__dirname, "slots/public")));
 // Overlay de países (secundario)
 app.get("/overlay", (req, res) => res.sendFile(path.join(__dirname, "overlay.html")));
 app.get("/api/gifts", (req, res) => res.json(giftCatalog.getCatalogSnapshot()));
@@ -798,9 +792,7 @@ function bindTikTokListeners(connection) {
             countriesManager.handleCountriesGift(event);
             bombaManager.handleBombaGift(event);
             carreraManager.handleCarreraGift(event);
-            ruletaManager.handleRuletaGift(event);
             subastaManager.handleSubastaGift(event);
-            slotsManager.handleSlotsGift(event);
         } catch (error) {
             console.error("Gift error:", error.message);
         }
@@ -818,9 +810,7 @@ function bindTikTokListeners(connection) {
         countriesManager.handleCountriesLike(event);
         bombaManager.handleBombaLike(event);
         carreraManager.handleCarreraLike(event);
-        ruletaManager.handleRuletaLike(event);
         subastaManager.handleSubastaLike(event);
-        slotsManager.handleSlotsLike(event);
     });
 
     connection.on("chat", (rawData) => {
@@ -835,9 +825,7 @@ function bindTikTokListeners(connection) {
         countriesManager.handleCountriesChat(event);
         bombaManager.handleBombaChat(event);
         carreraManager.handleCarreraChat(event);
-        ruletaManager.handleRuletaChat(event);
         subastaManager.handleSubastaChat(event);
-        slotsManager.handleSlotsChat(event);
     });
 }
 
@@ -861,9 +849,7 @@ io.on("connection", (socket) => {
     countriesManager.syncClient(socket);
     bombaManager.syncClient(socket);
     carreraManager.syncClient(socket);
-    ruletaManager.syncClient(socket);
     subastaManager.syncClient(socket);
-    slotsManager.syncClient(socket);
 
     socket.on("arena:tapAttack", (data) => {
         const targetId = data.targetId;
@@ -1007,7 +993,5 @@ server.listen(PORT, () => {
     countriesManager.start();
     bombaManager.start();
     carreraManager.start();
-    ruletaManager.start();
     subastaManager.start();
-    slotsManager.start();
 });

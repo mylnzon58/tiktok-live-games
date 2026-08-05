@@ -14,9 +14,7 @@ Proyecto de juegos interactivos para streamers de TikTok LIVE (para OBS/Streamla
 | `/versus` | **Versus Político** | Milei vs Cristina: el chat vota con keywords |
 | `/bomba` | **La Bomba** | Patata caliente: pásala con regalos, taps o escribiendo PASA |
 | `/carrera` | **Carrera de Avatares** | Regalos impulsan tu avatar; el primero en meta gana |
-| `/ruleta` | **Ruleta de la Fortuna** | Chat elige color, regalos apuestan; VERDE paga x10 |
 | `/subasta` | **Subasta Real** | Cada regalo es una puja; el mayor pujador gana el premio |
-| `/slots` | **Tragamonedas Live** | Regalos jalan la palanca; triple símbolo = JACKPOT x25 |
 
 Separación conceptual obligatoria:
 - Los juegos comparten servidor y conexión LIVE, pero son productos distintos con su propio cliente.
@@ -33,8 +31,8 @@ La arquitectura está separada por responsabilidad (cada manager es dueño del e
 - `lib/live-event-adapter.js`: normalización de eventos de TikTok LIVE
 - `lib/storage.js`: persistencia JSON de estado de runtime
 - `titan/titan-manager.js` y `versus/versus-manager.js`: estado autoritativo de sus juegos
-- `bomba/bomba-manager.js`, `carrera/carrera-manager.js`, `ruleta/ruleta-manager.js`, `subasta/subasta-manager.js`, `slots/slots-manager.js`: estado autoritativo de los juegos nuevos
-- Clientes (`arena-game/arena.js`, `arena.js`, `overlay.js`, `titan/public/game.js`, `versus/public/app.js`, `bomba/public/game.js`, `carrera/public/game.js`, `ruleta/public/game.js`, `subasta/public/game.js`, `slots/public/game.js`): render, UI y efectos — nunca deciden puntajes
+- `bomba/bomba-manager.js`, `carrera/carrera-manager.js`, `subasta/subasta-manager.js`: estado autoritativo de los juegos nuevos
+- Clientes (`arena-game/arena.js`, `arena.js`, `overlay.js`, `titan/public/game.js`, `versus/public/app.js`, `bomba/public/game.js`, `carrera/public/game.js`, `subasta/public/game.js`): render, UI y efectos — nunca deciden puntajes
 
 Los JSON de runtime (`arena_champions.json`, `arena_hof.json`, `titan_hof.json`, `countries_champion.json`, `bomba_hof.json`) no se versionan. El catálogo `gift-catalog.json` sí es editable y versionable.
 
@@ -290,16 +288,6 @@ Eventos `carrera:*` (Carrera de Avatares `/carrera`):
 | `carrera:motivate` | Frases del locutor |
 | `carrera:roundEnd` | Fin de carrera con ganador y podio |
 
-Eventos `ruleta:*` (Ruleta de la Fortuna `/ruleta`):
-
-| Evento | Descripción |
-|--------|-------------|
-| `ruleta:sync` | Estado completo (apuestas por color, timer, ganadores) |
-| `ruleta:spin` | Un regalo hace girar la ruleta |
-| `ruleta:result` | Color ganador, multiplicador y premios |
-| `ruleta:motivate` | Frases del locutor |
-| `ruleta:roundEnd` | Fin de ronda con podio y total de giros |
-
 Eventos `subasta:*` (Subasta Real `/subasta`):
 
 | Evento | Descripción |
@@ -308,16 +296,6 @@ Eventos `subasta:*` (Subasta Real `/subasta`):
 | `subasta:bid` | Nueva puja de un jugador |
 | `subasta:winner` | Ganador de la subasta con podio |
 | `subasta:motivate` | Frases del locutor |
-
-Eventos `slots:*` (Tragamonedas Live `/slots`):
-
-| Evento | Descripción |
-|--------|-------------|
-| `slots:sync` | Estado completo (rodillos, stats, ganadores) |
-| `slots:spin` | Un regalo jala la palanca |
-| `slots:result` | Símbolos, jackpot y premio del giro |
-| `slots:motivate` | Frases del locutor |
-| `slots:roundEnd` | Fin de ronda con podio y stats |
 
 Entradas cliente→servidor (debug interno, solo desarrollo):
 
@@ -363,14 +341,8 @@ mylnzon58GameRankPaisTik/
 ├── carrera/              ← Carrera de Avatares (/carrera)
 │   ├── carrera-manager.js
 │   └── public/ (index.html, game.js, style.css)
-├── ruleta/               ← Ruleta de la Fortuna (/ruleta)
-│   ├── ruleta-manager.js
-│   └── public/ (index.html, game.js, style.css)
 ├── subasta/              ← Subasta Real (/subasta)
 │   ├── subasta-manager.js
-│   └── public/ (index.html, game.js, style.css)
-├── slots/                ← Tragamonedas Live (/slots)
-│   ├── slots-manager.js
 │   └── public/ (index.html, game.js, style.css)
 ├── lib/
 │   ├── arena-manager.js
