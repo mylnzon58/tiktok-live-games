@@ -16,7 +16,7 @@ const { GAME_CONFIG } = require("./lib/game-config");
 loadEnvFile();
 
 const PORT = process.env.PORT || 3000;
-const DEFAULT_TIKTOK_USERNAME = "juanjoclassic";
+const DEFAULT_TIKTOK_USERNAME = "";
 const CHROME_SYNC_INTERVAL_MS = 60000;
 
 const app = express();
