@@ -3,10 +3,16 @@
 
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>TikTok LIVE Games — Juegos interactivos gratis para streamers</title>
     <meta name="description"
         content="Siete juegos gratuitos para tu directo de TikTok: reaccionan a regalos, likes y chat. Descargá el código, configuralo en 5 minutos y transmití con TikTok Studio. Open source." />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="TikTok LIVE Games — 7 juegos interactivos gratis para directos" />
+    <meta property="og:description" content="Juegos en vivo para TikTok Studio que reaccionan a regalos, likes y chat. Open source." />
+    <meta property="og:image" content="https://mylnzon58.github.io/tiktok-live-games/img/preview-titan.png" />
+    <meta property="og:url" content="https://mylnzon58.github.io/tiktok-live-games/" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231E1C18'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-family='Georgia,serif' font-size='18' fill='%23F6F3EC'%3ET%3C/text%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -39,18 +45,18 @@
         }
 
         [data-theme="dark"] {
-            --bg: #0c0e12;
-            --bg-soft: #12151b;
-            --card: #141820;
-            --line: rgba(255, 255, 255, 0.07);
-            --line-strong: rgba(255, 255, 255, 0.15);
-            --text: #ece9e1;
-            --muted: #9aa3b2;
-            --dim: #5f6875;
+            --bg: #000000;
+            --bg-soft: #121214;
+            --card: #1C1C1E;
+            --line: #2C2C2E;
+            --line-strong: #3A3A3C;
+            --text: #F5F5F7;
+            --muted: #98989D;
+            --dim: #636366;
             --gold: #c9a34c;
             --gold-bright: #e3bf6a;
-            --gold-soft: rgba(201, 163, 76, 0.12);
-            --green: #4ade80;
+            --gold-soft: rgba(201, 163, 76, 0.14);
+            --green: #30D158;
         }
 
         html {
@@ -58,16 +64,15 @@
         }
 
         body {
-            background:
-                radial-gradient(1100px 480px at 85% -12%, rgba(154, 116, 40, 0.07), transparent 60%),
-                radial-gradient(800px 420px at -8% 22%, rgba(90, 110, 160, 0.04), transparent 60%),
-                var(--bg);
+            background: var(--bg);
             color: var(--text);
             font-family: var(--font-body);
             font-size: 16px;
             line-height: 1.5;
+            font-variant-numeric: tabular-nums;
             min-height: 100vh;
             -webkit-font-smoothing: antialiased;
+            padding-bottom: env(safe-area-inset-bottom, 0px);
             transition: background 0.25s ease, color 0.25s ease;
         }
 
